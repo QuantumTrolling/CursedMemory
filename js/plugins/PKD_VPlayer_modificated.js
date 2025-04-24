@@ -1,53 +1,56 @@
-/*:
- * @plugindesc [Companion] Instant video animation switcher for PKD_VPlayer — removes flicker when replacing animations (MV only).
- * @author ChatGPT
- *
- * @help
- * This plugin adds a global function `ReplaceVAnimInstant` that allows you to
- * instantly replace a looping video animation created with PKD_VPlayer
- * without any visual flicker.
- *
- * Usage:
- *    ReplaceVAnimInstant(ID, NEW_FILE_NAME, X, Y, IS_LOOP)
- *
- * Example:
- *    ReplaceVAnimInstant(1, "shirashin_set_thinking", 0, 120, true);
- *
- * If the animation with the given ID doesn't exist, it will be created.
- *
- * Requirements:
- *    - PKD_VPlayer.js (Basic or Pro version)
- *    - RPG Maker MV
- */
+(function () {
 
-(function() {
-
-window.ReplaceVAnimSmooth = function(oldId, tempId, newName, x = 0, y = 0, isLoop = true) {
-    // Показываем новую анимацию с временным ID
-    ShowVAnimOnSpriteset(tempId, newName, x, y, isLoop);
-
-    const checkReady = () => {
-        const vm = SceneManager._scene._getVM(tempId);
-        if (vm && vm.isLoaded()) {
-            // Удаляем старую анимацию
-            DeleteVAnim(oldId);
-
-            // Ждём один кадр, чтобы гарантировать удаление
-            requestAnimationFrame(() => {
-                const newVM = SceneManager._scene._getVM(tempId);
-                if (newVM) {
-                    // Присваиваем новую анимацию старому ID
-                    SceneManager._scene._vwStorage[oldId] = newVM;
-                    delete SceneManager._scene._vwStorage[tempId];
+    // Кэш для восстановления
+    window._VAnimRestoreCache = window._VAnimRestoreCache || {};
+    
+    // Плавная замена анимации
+    window.ReplaceVAnimSmooth = function(oldId, tempId, newName, x = 0, y = 0, isLoop = true) {
+        ShowVAnimOnSpriteset(tempId, newName, x, y, isLoop);
+    
+        const checkReady = () => {
+            const vm = SceneManager._scene._getVM(tempId);
+            if (vm && vm.isLoaded()) {
+                DeleteVAnim(oldId);
+    
+                requestAnimationFrame(() => {
+                    const newVM = SceneManager._scene._getVM(tempId);
+                    if (newVM) {
+                        // Переназначаем новый спрайт
+                        SceneManager._scene._vwStorage[oldId] = newVM;
+                        delete SceneManager._scene._vwStorage[tempId];
+    
+                        // Сохраняем данные в кэш на случай выхода в меню
+                        window._VAnimRestoreCache[oldId] = {
+                            id: oldId,
+                            name: newName,
+                            x: x,
+                            y: y,
+                            isLoop: isLoop
+                        };
+                    }
+                });
+            } else {
+                requestAnimationFrame(checkReady);
+            }
+        };
+    
+        requestAnimationFrame(checkReady);
+    };
+    
+    // При возвращении на карту — восстанавливаем анимации вручную
+    const _Scene_Map_start = Scene_Map.prototype.start;
+    Scene_Map.prototype.start = function () {
+        _Scene_Map_start.call(this);
+    
+        if (window._VAnimRestoreCache) {
+            for (const id in window._VAnimRestoreCache) {
+                const data = window._VAnimRestoreCache[id];
+                if (!SceneManager._scene._getVM(id)) {
+                    ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
                 }
-            });
-        } else {
-            // Повторная проверка загрузки
-            requestAnimationFrame(checkReady);
+            }
         }
     };
-
-    requestAnimationFrame(checkReady);
-};
-
-})();
+    
+    })();
+    
