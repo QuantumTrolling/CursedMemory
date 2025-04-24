@@ -80,5 +80,6 @@ var $plugins =
 {"name":"TranslationManagerFix","status":true,"description":"Patch to add missing method translateIfNeed to TranslationManager for compatibility with SceneGlossary.","parameters":{}},
 {"name":"TranslateGlossaryNotes","status":true,"description":"Enable translation of <SGDescription:> and similar tags using SRD_TranslationEngine's translation system.","parameters":{}},
 {"name":"VE_LoopAnimation_LayerFix","status":true,"description":"","parameters":{}},
-{"name":"fix_backlog","status":true,"description":"","parameters":{}}
+{"name":"fix_backlog","status":true,"description":"","parameters":{}},
+{"name":"DynamicBacklogTranslation","status":true,"description":"Dynamic translation for YEP_X_MessageBacklog using SRD_TranslationEngine. Messages update when language changes.","parameters":{}}
 ];
