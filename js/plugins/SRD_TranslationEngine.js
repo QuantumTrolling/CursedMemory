@@ -518,26 +518,44 @@ $.loadNoteData = function() {
 };
 
 $.parseNoteData = function(data) {
-	var updateFields = null;
-	data.note.replace(/<(.*)[ ]Translation>((?:(?!<\/)[\s\S])*)<\/(.*)[ ]Translation>/gi, function(match, m1, m2, m3) {
-		if(m1 !== m3) return match;
-		if(data._tt_translations === undefined) data._tt_translations = {};
-		m2.replace(/\[(.*)\]:\n*((?:(?!\[.*\])[\s\S])*)\s*/gi, function(match2, name, value) {
-			if(name && value && typeof(data[name]) === 'string') {
-				if(value.indexOf('\n', value.length - 1) > 0) {
-					value = value.substring(0, value.length - 1);
-				}
-				if(data._tt_translations[m1] === undefined) data._tt_translations[m1] = {};
-				data._tt_translations[m1][name] = value;
-				if(updateFields === null) updateFields = [];
-				if(!updateFields.contains(name)) updateFields.push(name);
-			}
-			return match2;
-		}.bind(this));
-		return match;
-	}.bind(this));
-	return updateFields;
+    var updateFields = null;
+    data.note.replace(/<(.*)\s+Translation>([\s\S]*?)<\/\1\s+Translation>/gi, function(match, m1, m2) {
+        if(data._tt_translations === undefined) data._tt_translations = {};
+
+        var lines = m2.split(/\r?\n/);
+        var currentKey = null;
+        var currentValue = '';
+
+        lines.forEach(function(line) {
+            var result = line.match(/^\[(.*?)\]:(.*)$/);
+            if (result) {
+                // Сохраняем предыдущую пару, если была
+                if (currentKey !== null) {
+                    if (!data._tt_translations[m1]) data._tt_translations[m1] = {};
+                    data._tt_translations[m1][currentKey] = currentValue.trim();
+                    if (updateFields === null) updateFields = [];
+                    if (!updateFields.contains(currentKey)) updateFields.push(currentKey);
+                }
+                currentKey = result[1].trim();
+                currentValue = result[2].trim();
+            } else if (currentKey !== null) {
+                currentValue += '\n' + line.trim();
+            }
+        });
+
+        // Сохраняем последнюю пару
+        if (currentKey !== null) {
+            if (!data._tt_translations[m1]) data._tt_translations[m1] = {};
+            data._tt_translations[m1][currentKey] = currentValue.trim();
+            if (updateFields === null) updateFields = [];
+            if (!updateFields.contains(currentKey)) updateFields.push(currentKey);
+        }
+
+        return match;
+    });
+    return updateFields;
 };
+
 
 $.applyUpdateFields = function(data, updateFields) {
 	for(var i = 0; i < updateFields.length; i++) {
