@@ -82,5 +82,6 @@ var $plugins =
 {"name":"VE_LoopAnimation_LayerFix","status":true,"description":"","parameters":{}},
 {"name":"fix_backlog","status":true,"description":"","parameters":{}},
 {"name":"SRD_CEBattleIntro","status":true,"description":"Allows you to use a Common Event as your battle intro.","parameters":{"Common Event ID":"102","Auto Transition":"true","Normal BI Duration":"60"}},
-{"name":"FixTranslationOption","status":true,"description":"[Fix] Force language option of SRD_TranslationEngine to work on mobile/webview (Android, iOS, HTML5 exports) v1.1","parameters":{}}
+{"name":"FixTranslationOption","status":true,"description":"[Fix] Force language option of SRD_TranslationEngine to work on mobile/webview (Android, iOS, HTML5 exports) v1.1","parameters":{}},
+{"name":"FixTranslationEngineBrackets","status":true,"description":"Fix for SRD_TranslationEngine: Allow [ and ] inside translated texts without breaking parsing (no need to escape them).\\nUse freely! Made by ChatGPT.","parameters":{}}
 ];
