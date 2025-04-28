@@ -1,101 +1,63 @@
 /*:
- * @plugindesc [Fix] Force SRD_TranslationEngine language option to work properly on mobile/web (Android, iOS, HTML5) v2.1 FULL FIX
+ * @plugindesc [Full Fix] Correctly enables SRD_TranslationEngine language switching on mobile/web v3.0 (instant update, no reload) 
  * @author ChatGPT
  *
  * @help
- * Fixes missing language list and broken language switching in SRD_TranslationEngine on mobile.
- * Place BELOW SRD_TranslationEngine.js
+ * Full mobile fix for SRD_TranslationEngine.
+ * Language switching works immediately, without errors.
+ * Place BELOW SRD_TranslationEngine.js.
  */
 
 (function() {
     if (!SRD || !SRD.TranslationEngine) {
-        console.error('SRD_TranslationEngine is required for SRD_TranslationEngine_FixMobile.js!');
+        console.error('SRD_TranslationEngine is required for this fix!');
         return;
     }
 
-    if (!SRD.TranslationEngine.optionName) {
-        SRD.TranslationEngine.optionName = PluginManager.parameters('SRD_TranslationEngine')['Option Name'] || 'Language';
-    }
+    const params = PluginManager.parameters('SRD_TranslationEngine');
 
-    // === FORCE LOAD LANGUAGE LIST CORRECTLY
-    const srdParams = PluginManager.parameters('SRD_TranslationEngine');
     if (!Array.isArray(SRD.TranslationEngine.languages) || SRD.TranslationEngine.languages.length === 0) {
         try {
-            SRD.TranslationEngine.languages = JSON.parse(srdParams['Languages']);
-            console.log('Fixed: Loaded languages from plugin parameters:', SRD.TranslationEngine.languages);
+            SRD.TranslationEngine.languages = JSON.parse(params['Languages']) || [];
         } catch (e) {
-            console.error('Failed to parse Languages in SRD_TranslationEngine', e);
+            console.error('Failed to parse Languages in SRD_TranslationEngine.', e);
             SRD.TranslationEngine.languages = [];
         }
     }
-    if (!SRD.TranslationEngine.sourceName) {
-        SRD.TranslationEngine.sourceName = srdParams['Source Language Name'] || 'English';
-    }
+
+    SRD.TranslationEngine.sourceName = SRD.TranslationEngine.sourceName || params['Source Language Name'] || 'English';
+    SRD.TranslationEngine.optionName = SRD.TranslationEngine.optionName || params['Option Name'] || 'Language';
 
     if (Utils.isNwjs()) {
         console.log('FixTranslationOption: NW.js detected, fix disabled on PC.');
         return;
     }
 
-    // === Inject language option into options menu
-    const alias_addGeneralOptions = Window_Options.prototype.addGeneralOptions;
+    // Force adding the option
+    const _Window_Options_addGeneralOptions = Window_Options.prototype.addGeneralOptions;
     Window_Options.prototype.addGeneralOptions = function() {
-        alias_addGeneralOptions.call(this);
+        _Window_Options_addGeneralOptions.call(this);
         this.addCommand(SRD.TranslationEngine.optionName, 'language');
     };
 
-    const alias_statusText = Window_Options.prototype.statusText;
+    // Show language name
+    const _Window_Options_statusText = Window_Options.prototype.statusText;
     Window_Options.prototype.statusText = function(index) {
         const symbol = this.commandSymbol(index);
         const value = this.getConfigValue(symbol);
-
         if (symbol === 'language') {
-            const langs = SRD.TranslationEngine.languages || [];
-            const source = SRD.TranslationEngine.sourceName || 'English';
-            if (value === 0) return source;
-            return langs[value - 1] || 'Unknown';
+            if (value === 0) return SRD.TranslationEngine.sourceName;
+            return SRD.TranslationEngine.languages[value - 1] || 'Unknown';
         }
-        return alias_statusText.call(this, index);
+        return _Window_Options_statusText.call(this, index);
     };
 
     function safeLangLength() {
-        if (SRD && SRD.TranslationEngine && Array.isArray(SRD.TranslationEngine.languages)) {
-            return SRD.TranslationEngine.languages.length;
-        }
-        return 0;
+        return SRD.TranslationEngine.languages.length;
     }
 
-    const alias_cursorRight = Window_Options.prototype.cursorRight;
-    Window_Options.prototype.cursorRight = function(wrap) {
-        const index = this.index();
-        const symbol = this.commandSymbol(index);
-        if (symbol === 'language') {
-            const value = this.getConfigValue(symbol);
-            const total = safeLangLength() + 1;
-            const newValue = (value + 1) % total;
-            this.changeValue(symbol, newValue);
-            applyLanguageImmediately(newValue);
-        } else {
-            alias_cursorRight.call(this, wrap);
-        }
-    };
-
-    const alias_cursorLeft = Window_Options.prototype.cursorLeft;
-    Window_Options.prototype.cursorLeft = function(wrap) {
-        const index = this.index();
-        const symbol = this.commandSymbol(index);
-        if (symbol === 'language') {
-            const value = this.getConfigValue(symbol);
-            const total = safeLangLength() + 1;
-            const newValue = (value + total - 1) % total;
-            this.changeValue(symbol, newValue);
-            applyLanguageImmediately(newValue);
-        } else {
-            alias_cursorLeft.call(this, wrap);
-        }
-    };
-
-    const alias_processOk = Window_Options.prototype.processOk;
+    // Handle input
+    const _Window_Options_processOk = Window_Options.prototype.processOk;
     Window_Options.prototype.processOk = function() {
         const index = this.index();
         const symbol = this.commandSymbol(index);
@@ -106,17 +68,73 @@
             this.changeValue(symbol, newValue);
             applyLanguageImmediately(newValue);
         } else {
-            alias_processOk.call(this);
+            _Window_Options_processOk.call(this);
+        }
+    };
+
+    const _Window_Options_cursorRight = Window_Options.prototype.cursorRight;
+    Window_Options.prototype.cursorRight = function(wrap) {
+        const index = this.index();
+        const symbol = this.commandSymbol(index);
+        if (symbol === 'language') {
+            const value = this.getConfigValue(symbol);
+            const total = safeLangLength() + 1;
+            const newValue = (value + 1) % total;
+            this.changeValue(symbol, newValue);
+            applyLanguageImmediately(newValue);
+        } else {
+            _Window_Options_cursorRight.call(this, wrap);
+        }
+    };
+
+    const _Window_Options_cursorLeft = Window_Options.prototype.cursorLeft;
+    Window_Options.prototype.cursorLeft = function(wrap) {
+        const index = this.index();
+        const symbol = this.commandSymbol(index);
+        if (symbol === 'language') {
+            const value = this.getConfigValue(symbol);
+            const total = safeLangLength() + 1;
+            const newValue = (value + total - 1) % total;
+            this.changeValue(symbol, newValue);
+            applyLanguageImmediately(newValue);
+        } else {
+            _Window_Options_cursorLeft.call(this, wrap);
         }
     };
 
     function applyLanguageImmediately(langIndex) {
-        if (!SRD.TranslationEngine) return;
         ConfigManager.language = langIndex;
         ConfigManager.save();
-        if (SRD.TranslationEngine.loadLanguage) {
-            SRD.TranslationEngine.loadLanguage();
-        }
+
+        const filename = langIndex === 0 
+            ? 'translations/Source.json' 
+            : `translations/${SRD.TranslationEngine.languages[langIndex - 1]}.json`;
+
+        loadTranslationFile(filename);
+    }
+
+    function loadTranslationFile(filename) {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', filename);
+        xhr.overrideMimeType('application/json');
+        xhr.onload = function() {
+            if (xhr.status < 400) {
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    SRD.TranslationEngine._translations = data;
+                    SceneManager._scene && SceneManager._scene.refresh && SceneManager._scene.refresh();
+                    console.log('Language changed successfully:', filename);
+                } catch (e) {
+                    console.error('Failed to parse translation file:', filename, e);
+                }
+            } else {
+                console.error('Failed to load translation file:', filename);
+            }
+        };
+        xhr.onerror = function() {
+            console.error('Error loading translation file:', filename);
+        };
+        xhr.send();
     }
 
 })();
