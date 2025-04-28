@@ -1,6 +1,19 @@
 (function () {
 
-    window._VAnimRestoreCache = window._VAnimRestoreCache || {};
+    // Инициализация кэша в $gameSystem
+    const _GameSystem_initialize = Game_System.prototype.initialize;
+    Game_System.prototype.initialize = function() {
+        _GameSystem_initialize.call(this);
+        this._VAnimRestoreCache = {};
+    };
+
+    // Быстрая ссылка на кэш
+    function VAnimRestoreCache() {
+        if (!$gameSystem._VAnimRestoreCache) {
+            $gameSystem._VAnimRestoreCache = {};
+        }
+        return $gameSystem._VAnimRestoreCache;
+    }
 
     window.ReplaceVAnimSmooth = function(oldId, tempId, newName, x = 0, y = 0, isLoop = true) {
         // Создаём новую временную анимацию
@@ -11,8 +24,8 @@
             if (newVM && newVM.isLoaded()) {
                 // Удаляем старую анимацию
                 DeleteVAnim(oldId);
-                if (window._VAnimRestoreCache[oldId]) {
-                    delete window._VAnimRestoreCache[oldId];
+                if (VAnimRestoreCache()[oldId]) {
+                    delete VAnimRestoreCache()[oldId];
                 }
 
                 // Переносим новую анимацию на место старой
@@ -20,7 +33,7 @@
                 delete SceneManager._scene._vwStorage[tempId];
 
                 // Обновляем кэш для восстановления
-                window._VAnimRestoreCache[oldId] = {
+                VAnimRestoreCache()[oldId] = {
                     id: oldId,
                     name: newName,
                     x: x,
@@ -39,9 +52,10 @@
     Scene_Map.prototype.start = function () {
         _Scene_Map_start.call(this);
 
-        if (window._VAnimRestoreCache) {
-            for (const id in window._VAnimRestoreCache) {
-                const data = window._VAnimRestoreCache[id];
+        const cache = VAnimRestoreCache();
+        if (cache) {
+            for (const id in cache) {
+                const data = cache[id];
                 if (!SceneManager._scene._getVM(id)) {
                     ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
                 }
@@ -53,8 +67,9 @@
     const _DeleteVAnim = window.DeleteVAnim;
     window.DeleteVAnim = function(id) {
         _DeleteVAnim(id);
-        if (window._VAnimRestoreCache && window._VAnimRestoreCache[id]) {
-            delete window._VAnimRestoreCache[id];
+        const cache = VAnimRestoreCache();
+        if (cache && cache[id]) {
+            delete cache[id];
         }
     };
 
