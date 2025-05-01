@@ -1977,6 +1977,7 @@ Game_Actor.prototype.setProfile = function(profile) {
 	this._profileChanged = true;
 };
 
+  
 //=============================================================================
 //
 // ▼ End of Plugin
