@@ -73,4 +73,23 @@
         }
     };
 
+
+// Восстановление анимаций при возврате из меню (если Scene_Map активен)
+const _SceneManager_onSceneStart = SceneManager.onSceneStart;
+SceneManager.onSceneStart = function () {
+    _SceneManager_onSceneStart.call(this);
+
+    if (SceneManager._scene instanceof Scene_Map) {
+        const cache = VAnimRestoreCache();
+        if (cache) {
+            for (const id in cache) {
+                const data = cache[id];
+                if (!SceneManager._scene._getVM(id)) {
+                    ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
+                }
+            }
+        }
+    }
+};
+
 })();
