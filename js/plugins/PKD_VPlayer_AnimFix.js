@@ -1,5 +1,6 @@
+
 /*:
- * @plugindesc Fix for ReplaceVAnimSmooth restoring wrong animations after menu (CallMenu.js compatible). Full override of animation restoration system. @author ChatGPT
+ * @plugindesc Fix for ReplaceVAnimSmooth restoring wrong animations after menu (CallMenu.js + Galv_ScreenButtons compatible). Full override of animation restoration system. @author ChatGPT
  * @target MV
  */
 
@@ -18,11 +19,9 @@
         return $gameSystem._VAnimRestoreCache;
     }
 
-    // Сохраняем анимации при вызове меню
-    const _Scene_Map_callMenu = Scene_Map.prototype.callMenu;
-    Scene_Map.prototype.callMenu = function () {
-        const scene = this;
-        if (scene._vwStorage) {
+    function saveCurrentAnimationsToCache() {
+        const scene = SceneManager._scene;
+        if (scene && scene._vwStorage) {
             const cache = VAnimRestoreCache();
             for (const id in scene._vwStorage) {
                 const vm = scene._vwStorage[id];
@@ -34,12 +33,29 @@
                         y: vm.y,
                         isLoop: vm._loop
                     };
-                    console.log(`🔄 [Fix] Saved animation before menu: [${id}] ${vm.filename}`);
+                    console.log(`🔄 [Fix] Saved animation before menu/button: [${id}] ${vm.filename}`);
                 }
             }
         }
+    }
+
+    // Сохраняем анимации при вызове меню
+    const _Scene_Map_callMenu = Scene_Map.prototype.callMenu;
+    Scene_Map.prototype.callMenu = function () {
+        saveCurrentAnimationsToCache();
         _Scene_Map_callMenu.call(this);
     };
+
+    // Поддержка кнопок Galv_ScreenButtons, если они вызывают меню через eval
+    if (Scene_Base.prototype.gButtonScript) {
+        const _gButtonScript = Scene_Base.prototype.gButtonScript;
+        Scene_Base.prototype.gButtonScript = function(script) {
+            if (script.includes("SceneManager.push(Scene_Menu") || script.includes("SceneManager.goto(Scene_Menu")) {
+                saveCurrentAnimationsToCache();
+            }
+            _gButtonScript.call(this, script);
+        };
+    }
 
     // Полностью переопределяем восстановление
     Game_Map.prototype._reloadVWStorage = function () {
@@ -84,7 +100,6 @@
         requestAnimationFrame(checkReady);
     };
 
-    // Также очищаем кэш при удалении
     const _DeleteVAnim = window.DeleteVAnim;
     window.DeleteVAnim = function (id) {
         _DeleteVAnim(id);
