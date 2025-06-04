@@ -1,13 +1,12 @@
+
 (function () {
 
-    // Инициализация кэша в $gameSystem
     const _GameSystem_initialize = Game_System.prototype.initialize;
     Game_System.prototype.initialize = function() {
         _GameSystem_initialize.call(this);
         this._VAnimRestoreCache = {};
     };
 
-    // Быстрая ссылка на кэш
     function VAnimRestoreCache() {
         if (!$gameSystem._VAnimRestoreCache) {
             $gameSystem._VAnimRestoreCache = {};
@@ -16,23 +15,19 @@
     }
 
     window.ReplaceVAnimSmooth = function(oldId, tempId, newName, x = 0, y = 0, isLoop = true) {
-        // Создаём новую временную анимацию
         ShowVAnimOnSpriteset(tempId, newName, x, y, isLoop);
 
         const checkReady = () => {
             const newVM = SceneManager._scene._getVM(tempId);
             if (newVM && newVM.isLoaded()) {
-                // Удаляем старую анимацию
-                DeleteVAnim(oldId);
-                if (VAnimRestoreCache()[oldId]) {
-                    delete VAnimRestoreCache()[oldId];
+
+                if (SceneManager._scene._getVM(oldId)) {
+                    DeleteVAnim(oldId);
                 }
 
-                // Переносим новую анимацию на место старой
                 SceneManager._scene._vwStorage[oldId] = newVM;
                 delete SceneManager._scene._vwStorage[tempId];
 
-                // Обновляем кэш для восстановления
                 VAnimRestoreCache()[oldId] = {
                     id: oldId,
                     name: newName,
@@ -40,6 +35,11 @@
                     y: y,
                     isLoop: isLoop
                 };
+
+                // 🛠 КРИТИЧЕСКОЕ ДОБАВЛЕНИЕ — сохраняем в карту
+                if ($gameMap && $gameMap._saveVW) {
+                    $gameMap._saveVW(oldId, newName, x, y, isLoop, 1);
+                }
             } else {
                 requestAnimationFrame(checkReady);
             }
@@ -63,7 +63,6 @@
         }
     };
 
-    // Патч для удаления из кэша при обычном удалении анимации
     const _DeleteVAnim = window.DeleteVAnim;
     window.DeleteVAnim = function(id) {
         _DeleteVAnim(id);
@@ -73,15 +72,12 @@
         }
     };
 
+    const _SceneManager_onSceneStart = SceneManager.onSceneStart;
+    SceneManager.onSceneStart = function () {
+        _SceneManager_onSceneStart.call(this);
 
-// Восстановление анимаций при возврате из меню (если Scene_Map активен)
-const _SceneManager_onSceneStart = SceneManager.onSceneStart;
-SceneManager.onSceneStart = function () {
-    _SceneManager_onSceneStart.call(this);
-
-    if (SceneManager._scene instanceof Scene_Map) {
-        const cache = VAnimRestoreCache();
-        if (cache) {
+        if (SceneManager._scene instanceof Scene_Map) {
+            const cache = VAnimRestoreCache();
             for (const id in cache) {
                 const data = cache[id];
                 if (!SceneManager._scene._getVM(id)) {
@@ -89,7 +85,6 @@ SceneManager.onSceneStart = function () {
                 }
             }
         }
-    }
-};
+    };
 
 })();

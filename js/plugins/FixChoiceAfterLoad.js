@@ -50,35 +50,33 @@
         }
     };
 
-    const _Scene_Map_start = Scene_Map.prototype.start;
-    Scene_Map.prototype.start = function() {
-        _Scene_Map_start.call(this);
+	const __FixChoiceAfterLoad_Scene_Map_start = Scene_Map.prototype.start;
+	Scene_Map.prototype.start = function() {
+		__FixChoiceAfterLoad_Scene_Map_start.call(this); // <--- важно!
 
-        if (isNameInputScene()) {
-            // Безопасность: если вдруг имя вводится на карте — всё равно игнорируем
-            $gameSystem._savedChoiceData = null;
-            $gameSystem._savedChoiceCallback = null;
-            return;
+		f (isNameInputScene()) {
+			$gameSystem._savedChoiceData = null;
+			$gameSystem._savedChoiceCallback = null;
+			return;
+		}
+
+    const data = $gameSystem._savedChoiceData;
+    const fnStr = $gameSystem._savedChoiceCallback;
+
+    if (data && data.callbackSet && fnStr) {
+        try {
+            $gameMessage.setChoices(data.choices, data.defaultType, data.cancelType);
+            const fnBody = fnStr.match(/function\\s*\\(\\s*n\\s*\\)\\s*\\{([\\s\\S]*)\\}$/)[1];
+            const restoredFn = new Function("n", fnBody);
+            $gameMessage.setChoiceCallback(restoredFn);
+        } catch (e) {
+            console.warn("Ошибка восстановления выбора:", e);
+            $gameMessage.setChoiceCallback(null);
         }
+    }
 
-        const data = $gameSystem._savedChoiceData;
-        const fnStr = $gameSystem._savedChoiceCallback;
-
-        if (data && data.callbackSet && fnStr) {
-            try {
-                $gameMessage.setChoices(data.choices, data.defaultType, data.cancelType);
-                const fnBody = fnStr.match(/function\s*\(\s*n\s*\)\s*\{([\s\S]*)\}$/)[1];
-                const restoredFn = new Function("n", fnBody);
-                $gameMessage.setChoiceCallback(restoredFn);
-            } catch (e) {
-                console.warn("Ошибка восстановления выбора:", e);
-                $gameMessage.setChoiceCallback(null);
-            }
-        }
-
-        // Очищаем даже если ничего не было восстановлено
-        $gameSystem._savedChoiceData = null;
-        $gameSystem._savedChoiceCallback = null;
-    };
+    $gameSystem._savedChoiceData = null;
+    $gameSystem._savedChoiceCallback = null;
+};
 
 })();
