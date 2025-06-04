@@ -79,7 +79,7 @@ var $plugins =
 {"name":"GALV_MessageSoundEffects","status":true,"description":"Play sound effects when during Show Text event commands.","parameters":{"Delay Time":"5","Default Talk SE":"text,10,100","Default Confirm SE":"click,10,150","-----------":"","Quick SE 1":"text, 5, 100 ","Quick SE 2":"author_text, 5, 100 ","Quick SE 3":"","Quick SE 4":""}},
 {"name":"SRD_TranslationEngine","status":true,"description":"Provides game developers with an in-game tool for building and managing translations/localizations for their game's text.","parameters":{"Source Language Name":"English","Languages":"[\"Russian\"]","Default Language":"Russian","Provide Option?":"true","Option Name":"Language","Allow Message Update?":"true"}},
 {"name":"TranslationManagerFix","status":true,"description":"Patch to add missing TranslationManager methods for SceneGlossary compatibility with SRD_TranslationEngine.js","parameters":{}},
-{"name":"TranslateGlossaryNotes","status":true,"description":"Enable translation of <SGDescription:> and similar tags using SRD_TranslationEngine's translation system.","parameters":{}},
+{"name":"TranslateGlossaryNotes","status":false,"description":"Enable dynamic translation of <SGDescription:...> using SRD_TranslationEngine for glossary support (e.g., SceneGlossary). Supports language switching in-game.","parameters":{}},
 {"name":"VE_LoopAnimation_LayerFix","status":true,"description":"","parameters":{}},
 {"name":"fix_backlog","status":true,"description":"","parameters":{}},
 {"name":"SRD_CEBattleIntro","status":true,"description":"Allows you to use a Common Event as your battle intro.","parameters":{"Common Event ID":"102","Auto Transition":"true","Normal BI Duration":"60"}},
