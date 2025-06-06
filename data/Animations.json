@@ -48,6 +48,6 @@ null,
 {"id":46,"animation1Hue":0,"animation1Name":"wings2","animation2Hue":0,"animation2Name":"","frames":[[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]]],"name":"Луна2","position":1,"timings":[]},
 {"id":47,"animation1Hue":0,"animation1Name":"wings3","animation2Hue":0,"animation2Name":"","frames":[[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]]],"name":"Луна3","position":1,"timings":[]},
 {"id":48,"animation1Hue":0,"animation1Name":"wings4","animation2Hue":0,"animation2Name":"","frames":[[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[0,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]],[[1,16,-210,60,0,0,255,0]]],"name":"Луна4","position":1,"timings":[]},
-{"id":49,"animation1Hue":0,"animation1Name":"","animation2Hue":0,"animation2Name":"","frames":[[]],"name":"","position":1,"timings":[]},
+{"id":49,"animation1Hue":0,"animation1Name":"zloi","animation2Hue":0,"animation2Name":"","frames":[[[0,0,0,100,0,0,255,1]]],"name":"Гудфрид ярость","position":1,"timings":[]},
 {"id":50,"animation1Hue":0,"animation1Name":"","animation2Hue":0,"animation2Name":"","frames":[[]],"name":"","position":1,"timings":[]}
 ]
