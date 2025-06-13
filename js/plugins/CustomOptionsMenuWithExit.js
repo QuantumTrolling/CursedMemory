@@ -33,16 +33,17 @@
         return _Window_Options_statusText.call(this, index);
     };
 
-    const _Window_Options_commandName = Window_Options.prototype.commandName;
-    Window_Options.prototype.commandName = function(symbol) {
-        switch (symbol) {
-            case 'bgmVolume': return 'Музыка';
-            case 'bgsVolume': return 'Эмбиент';
-            case 'seVolume': return 'Эффекты';
-            case 'meVolume': return null; // Hide ME volume
-        }
-        return Window_Command.prototype.commandName.call(this, symbol);
-    };
+	const _Window_Options_commandName = Window_Options.prototype.commandName;
+	Window_Options.prototype.commandName = function(symbol) {
+		switch (symbol) {
+			case 'bgmVolume': return 'Music';
+			case 'bgsVolume': return 'Ambient';
+			case 'seVolume': return 'Effects';
+			case 'meVolume': return null; // Hide ME volume
+    }
+		return Window_Command.prototype.commandName.call(this, symbol);
+	};
+
 
     // Filter out ME volume from list
     const _Window_Options_addVolumeOptions = Window_Options.prototype.addVolumeOptions;
@@ -61,7 +62,7 @@
     const _Window_TitleCommand_makeCommandList = Window_TitleCommand.prototype.makeCommandList;
     Window_TitleCommand.prototype.makeCommandList = function() {
         _Window_TitleCommand_makeCommandList.call(this);
-        this.addCommand('Выйти из игры', 'exitGame');
+        this.addCommand('Exit', 'exitGame');
     };
 
     const _Scene_Title_createCommandWindow = Scene_Title.prototype.createCommandWindow;
