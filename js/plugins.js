@@ -89,5 +89,6 @@ var $plugins =
 {"name":"TitleCommandPosition","status":true,"description":"Changes the position of the title command window.","parameters":{"Offset X":"-190","Offset Y":"-200","Width":"240","Background":"0"}},
 {"name":"PKD_VPlayer_AnimFix","status":true,"description":"Fix for ReplaceVAnimSmooth to properly restore animations after menu (for PKD_VPlayer_modificated). Includes debug logs.","parameters":{}},
 {"name":"SaveCurrentVAnimations","status":true,"description":"Utility: Adds SaveCurrentVAnimations() global function to cache current visual animations for ReplaceVAnimSmooth support.","parameters":{}},
-{"name":"CustomOptionsMenuWithExit","status":true,"description":"Customizes the Options Menu and Title Screen: removes unwanted options, renames sound settings, and adds an Exit Game button.","parameters":{}}
+{"name":"CustomOptionsMenuWithExit","status":true,"description":"Customizes the Options Menu and Title Screen: removes unwanted options, renames sound settings, and adds an Exit Game button.","parameters":{}},
+{"name":"BattleTranslationFix","status":true,"description":"Fix for translating enemy/skill/state names in battle using SRD_TranslationEngine. Works live with language switch. | by ChatGPT","parameters":{}}
 ];
