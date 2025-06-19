@@ -284,8 +284,8 @@ Imported["SumRndmDde Name Input Upgrade"] = true;
 				Input.keyMapper[i] = _.numberz.substring(i-48,i-47);
 			}
 			for(var i = 65; i <= 90; i++) {
-				Input.keyMapper[i] = _.letterz.substring(i-65,i-64);
-			}
+    Input.keyMapper[i] = String.fromCharCode(i).toLowerCase();
+}
 			Input.keyMapper[8] = "backspace";
 			Input.keyMapper[13] = "enter";
 			Input.keyMapper[32] = "space";
@@ -345,7 +345,16 @@ Imported["SumRndmDde Name Input Upgrade"] = true;
 		    this.createNameExplanation();
 		    this._lettersSet = false;
 		    this._isShiftPressed = false;
-		    this.setLetters();
+		    
+// Добавляем поддержку русских символов напрямую
+var russianKeys = {
+    192: "ё", 219: "х", 221: "ъ", 186: "ж", 222: "э", 188: "б", 190: "ю"
+};
+for (const code in russianKeys) {
+    Input.keyMapper[code] = russianKeys[code];
+}
+
+        this.setLetters();
 		};
 
 		Scene_Name.prototype.createNameExplanation = function() {
@@ -364,29 +373,33 @@ Imported["SumRndmDde Name Input Upgrade"] = true;
 		    _Scene_Name_popScene.call(this);
 		};
 
-		Scene_Name.prototype.checkKeyInput = function() {
-			for(var i = 0; i < _.letterz.length; i++) {
-				var letr = _.letterz.substring(i,i+1);
-				if(Input.isTriggered(letr)) {
-					if(this._isShiftPressed) letr = letr.toUpperCase();
-			    	this._editWindow.add(letr);
-			    	this._editWindow.refresh();
-			    }
-			}
-			for(var i = 0; i < _.numberz.length; i++) {
-				var num = _.numberz.substring(i,i+1);
-				if(Input.isTriggered(num)) {
-					if(this._isShiftPressed) num = _.symbolz.substring(i,i+1);
-			    	this._editWindow.add(num);
-			    	this._editWindow.refresh();
-			    }
-			}
-			if(this._isShiftPressed) {
-			    if(!Input.isPressed("shift")) this._isShiftPressed = false;
-			} else {
-				if(Input.isPressed("shift")) this._isShiftPressed = true;
-			}
-			if(Input.isTriggered("enter")) {
+		
+Scene_Name.prototype.checkKeyInput = function() {
+    for (let i = 65; i <= 90; i++) {
+        const char = String.fromCharCode(i).toLowerCase();
+        if (Input.isTriggered(char)) {
+            let ch = this._isShiftPressed ? char.toUpperCase() : char;
+            this._editWindow.add(ch);
+            this._editWindow.refresh();
+        }
+    }
+
+    for (let i = 1072; i <= 1103; i++) {
+        let ch = String.fromCharCode(i);
+        if (Input.isTriggered(ch)) {
+            if (this._isShiftPressed) ch = ch.toUpperCase();
+            this._editWindow.add(ch);
+            this._editWindow.refresh();
+        }
+    }
+
+    if (this._isShiftPressed) {
+        if (!Input.isPressed("shift")) this._isShiftPressed = false;
+    } else {
+        if (Input.isPressed("shift")) this._isShiftPressed = true;
+    }
+
+    if(Input.isTriggered("enter")) {
 				this.onInputOk();
 			}
 			if(Input.isTriggered("space")) {
