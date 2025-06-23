@@ -1,5 +1,5 @@
 /*:
- * @plugindesc [FixChoiceAfterLoad_Strict] Восстановление выбора после загрузки. Полностью игнорирует ввод имени (в том числе с Name Input Upgrade). @author ChatGPT
+ * @plugindesc [FixChoiceAfterLoad_Strict] Восстановление выбора после загрузки. Полностью игнорирует ввод имени (в том числе с Name Input Upgrade). @author Midnight Crew
  */
 
 (function () {

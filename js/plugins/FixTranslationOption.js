@@ -1,6 +1,6 @@
 /*:
  * @plugindesc [Full Fix] Correctly enables SRD_TranslationEngine language switching on mobile/web v3.0 (instant update, no reload) 
- * @author ChatGPT
+ * @author Midnight Crew
  *
  * @help
  * Full mobile fix for SRD_TranslationEngine.

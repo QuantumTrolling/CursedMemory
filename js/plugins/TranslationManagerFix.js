@@ -1,6 +1,6 @@
 /*:
  * @plugindesc Patch to add missing TranslationManager methods for SceneGlossary compatibility with SRD_TranslationEngine.js
- * @author ChatGPT
+ * @author Midnight Crew
  * 
  * @help
  * This plugin defines TranslationManager.translateIfNeed() and getTranslatePromise()

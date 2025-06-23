@@ -1,6 +1,6 @@
 /*:
- * @plugindesc Fix for translating enemy/skill/state names in battle using SRD_TranslationEngine. Works live with language switch. | by ChatGPT
- * @author ChatGPT
+ * @plugindesc Fix for translating enemy/skill/state names in battle using SRD_TranslationEngine. Works live with language switch. 
+ * @author Midnight Crew
  * 
  * @help
  * - Place BELOW SRD_TranslationEngine.js

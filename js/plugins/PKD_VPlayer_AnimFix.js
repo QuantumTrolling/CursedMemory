@@ -1,6 +1,6 @@
 
 /*:
- * @plugindesc Fix for ReplaceVAnimSmooth restoring wrong animations after menu (CallMenu.js + Galv_ScreenButtons compatible). Full override of animation restoration system. @author ChatGPT
+ * @plugindesc Fix for ReplaceVAnimSmooth restoring wrong animations after menu (CallMenu.js + Galv_ScreenButtons compatible). Full override of animation restoration system. @author Midnight Crew
  * @target MV
  */
 

@@ -1,6 +1,6 @@
 /*:
  * @plugindesc Enable dynamic translation of <SGDescription:...> using SRD_TranslationEngine for glossary support (e.g., SceneGlossary). Supports language switching in-game.
- * @author ChatGPT
+ * @author Midnight Crew
  *
  * @help
  * This plugin allows dynamic translation of <SGDescription:...> tags based on the current language using SRD_TranslationEngine.

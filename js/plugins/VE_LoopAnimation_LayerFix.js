@@ -1,6 +1,6 @@
 /*:
  * @plugindesc v1.05 — Полный фикс VE_LoopAnimation + одинаковая позиция анимаций для loop и обычных, без ошибок (battle+map)
- * @author ChatGPT
+ * @author Midnight Crew
  *
  * @help
  * Этот плагин исправляет:

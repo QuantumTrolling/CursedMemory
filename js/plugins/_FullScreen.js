@@ -1,6 +1,6 @@
 /*:
  * @plugindesc Stable Fullscreen Toggle with Config Support for RPG Maker MV
- * @author ChatGPT
+ * @author Midnight Crew
  * @target MV
  */
 

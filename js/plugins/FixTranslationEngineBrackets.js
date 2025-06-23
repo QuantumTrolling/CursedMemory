@@ -1,6 +1,6 @@
 /*:
- * @plugindesc Real fix for SRD_TranslationEngine to allow [ and ] inside texts safely. No conflicts, no escapers needed. Full multilines support! | Author: ChatGPT
- * @author ChatGPT
+ * @plugindesc Real fix for SRD_TranslationEngine to allow [ and ] inside texts safely. No conflicts, no escapers needed. Full multilines support! 
+ * @author Midnight Crew
  *
  * @help
  * Place this plugin BELOW SRD_TranslationEngine.

@@ -1,6 +1,6 @@
 
 /*:
- * @plugindesc Utility: Adds SaveCurrentVAnimations() global function to cache current visual animations for ReplaceVAnimSmooth support. @author ChatGPT
+ * @plugindesc Utility: Adds SaveCurrentVAnimations() global function to cache current visual animations for ReplaceVAnimSmooth support. @author Midnight Crew
  * @target MV
  */
 

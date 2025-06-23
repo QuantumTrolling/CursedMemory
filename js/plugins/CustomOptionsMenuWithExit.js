@@ -1,6 +1,6 @@
 
 /*:
- * @plugindesc Customizes the Options Menu and Title Screen: removes unwanted options, renames sound settings, and adds an Exit Game button. Fixes volume % display. @author ChatGPT
+ * @plugindesc Customizes the Options Menu and Title Screen: removes unwanted options, renames sound settings, and adds an Exit Game button. Fixes volume % display. @author Midnight Crew
  * @target MV
  */
 
