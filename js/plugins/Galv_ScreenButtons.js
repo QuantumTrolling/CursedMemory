@@ -311,7 +311,7 @@ Sprite_GButton.prototype.initialize = function(gameBtn) {
 Sprite_GButton.prototype.setupButton = function(b) {
 	this._btn = b;
 	this.bitmap = ImageManager.loadSystem(b.image);
-	var h = this.bitmap.height / 2;
+	var h = this.bitmap.height;
 	var w = this.bitmap.width;
 	this.setColdFrame(0, 0, w, h);
 	this.setHotFrame(0, h, w, h);
