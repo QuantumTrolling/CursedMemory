@@ -93,5 +93,6 @@ var $plugins =
 {"name":"SaveCurrentVAnimations","status":true,"description":"Utility: Adds SaveCurrentVAnimations() global function to cache current visual animations for ReplaceVAnimSmooth support.","parameters":{}},
 {"name":"BattleTranslationFix","status":true,"description":"Fix for translating enemy/skill/state names in battle using SRD_TranslationEngine. Works live with language switch. | by ChatGPT","parameters":{}},
 {"name":"Irina_PerformanceUpgrade","status":true,"description":"<PerformanceUpgrade> for RPG Maker MV version 1.6.2.","parameters":{"":"","AnimationHue":"true","BlurMenuBackground":"false","BlurIntensity":"0.5","CacheTextColors":"true","EnemyHue":"true","PixiContainerFlush":"true","SkipUnnecessarySnapshots":"true"}},
-{"name":"MAC_High_Hz_Fixes","status":true,"description":"(v1.1) Fixes various issues on high refresh rate monitors","parameters":{}}
+{"name":"MAC_High_Hz_Fixes","status":true,"description":"(v1.1) Fixes various issues on high refresh rate monitors","parameters":{}},
+{"name":"Trade_Slider","status":true,"description":"[v1.3] Торговый ползунок с раздражением и нормальным интерфейсом. RPG Maker MV. Центрировано, без перекрытий.","parameters":{"Price Variable ID":"141","Irritation Variable ID":"142","Irritation Icon ID":"84"}}
 ];
