@@ -1,31 +1,31 @@
 /*:
- * @plugindesc [v1.3] Торговый ползунок с раздражением и нормальным интерфейсом. RPG Maker MV. Центрировано, без перекрытий.
+ * @plugindesc [v1.4] Торговый ползунок с раздражением и нормальным интерфейсом. Поддержка ID иконки через команду плагина. RPG Maker MV.
  * @author ChatGPT
  * 
  * @param Price Variable ID
  * @desc ID переменной, в которую сохраняется предложенная цена
- * @default 200
+ * @default 141
  * 
  * @param Irritation Variable ID
  * @desc ID переменной уровня раздражения
- * @default 201
+ * @default 142
  * 
  * @param Irritation Icon ID
- * @desc ID иконки для раздражения
+ * @desc ID иконки для раздражения (по умолчанию, если не указан в команде)
  * @default 84
  * 
  * @help
  * Команда плагина:
- *   ShowSlider min max step x y
+ *   ShowSlider min max step x y [irritationIconId]
  * Пример:
- *   ShowSlider 100 500 50 200 100
+ *   ShowSlider 100 500 50 200 100 122
  */
 
 (function () {
   const parameters = PluginManager.parameters('');
-  const priceVarId = Number(parameters['Price Variable ID'] || 200);
-  const irritationVarId = Number(parameters['Irritation Variable ID'] || 201);
-  const irritationIconId = Number(parameters['Irritation Icon ID'] || 84);
+  const priceVarId = Number(parameters['Price Variable ID'] || 141);
+  const irritationVarId = Number(parameters['Irritation Variable ID'] || 142);
+  const defaultIrritationIconId = Number(parameters['Irritation Icon ID'] || 84);
 
   const pluginCommand = Game_Interpreter.prototype.pluginCommand;
   Game_Interpreter.prototype.pluginCommand = function (command, args) {
@@ -36,13 +36,14 @@
       const step = Number(args[2]);
       const posX = Number(args[3] || 0);
       const posY = Number(args[4] || 0);
+      const iconId = Number(args[5]) || defaultIrritationIconId;
       SceneManager.push(Scene_Slider);
-      SceneManager.prepareNextScene(min, max, step, posX, posY);
+      SceneManager.prepareNextScene(min, max, step, posX, posY, iconId);
     }
   };
 
-  SceneManager.prepareNextScene = function (min, max, step, x, y) {
-    this._sliderParams = { min, max, step, x, y };
+  SceneManager.prepareNextScene = function (min, max, step, x, y, iconId) {
+    this._sliderParams = { min, max, step, x, y, iconId };
   };
 
   function Scene_Slider() {
@@ -59,7 +60,7 @@
   Scene_Slider.prototype.create = function () {
     Scene_Base.prototype.create.call(this);
     const p = SceneManager._sliderParams;
-    this._sliderWindow = new Window_MouseSlider(p.min, p.max, p.step, p.x, p.y);
+    this._sliderWindow = new Window_MouseSlider(p.min, p.max, p.step, p.x, p.y, p.iconId);
     this.addChild(this._sliderWindow);
 
     const commandY = this._sliderWindow.y + this._sliderWindow.height + 10;
@@ -74,18 +75,19 @@
     SceneManager.pop();
   };
 
-  function Window_MouseSlider(min, max, step, px, py) {
+  function Window_MouseSlider(min, max, step, px, py, iconId) {
     this._min = min;
     this._max = max;
     this._step = step;
     this._value = min;
+    this._irritationIconId = iconId || defaultIrritationIconId;
+
     const width = 400;
     const height = 180;
     const x = px || (Graphics.boxWidth - width) / 2;
     const y = py || (Graphics.boxHeight - height) / 2;
     Window_Base.prototype.initialize.call(this, x, y, width, height);
 
-    // Центрированный ползунок
     this._sliderWidth = this.width - this.padding * 2 - 40;
     this._sliderX = (this.contentsWidth() - this._sliderWidth) / 2;
     this._sliderY = 60;
@@ -120,7 +122,7 @@
     const level = Math.min(irritation, 5);
     const barW = Math.floor((width - 36) * (level / 5));
     const iconY = y - 2;
-    this.drawIcon(irritationIconId, x, iconY);
+    this.drawIcon(this._irritationIconId, x, iconY - 10);
 
     const barX = x + 36;
     const barWidth = width - 36;
@@ -140,7 +142,7 @@
     this.drawText(this._min, this._sliderX - 10, sliderTop - 30, 80, 'left');
     this.drawText(this._max, this._sliderX + this._sliderWidth - 70, sliderTop - 30, 80, 'right');
     this.drawText(this._value.toString(), 0, sliderTop - 30, this.contentsWidth(), 'center');
-	this.drawIcon(313, this._sliderX + 180, sliderTop - 28);
+    this.drawIcon(313, this._sliderX + 180, sliderTop - 28);
 
     const sliderY = sliderTop + 8;
     this.contents.fillRect(this._sliderX, sliderY, this._sliderWidth, 4, this.gaugeBackColor());
