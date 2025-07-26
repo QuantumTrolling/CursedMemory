@@ -38,12 +38,12 @@
       const posY = Number(args[4] || 0);
       const iconId = Number(args[5]) || defaultIrritationIconId;
       SceneManager.push(Scene_Slider);
-      SceneManager.prepareNextScene(min, max, step, posX, posY, iconId);
+      SceneManager.prepareSliderScene(min, max, step, posX, posY, iconId);
     }
   };
 
-  SceneManager.prepareNextScene = function (min, max, step, x, y, iconId) {
-    this._sliderParams = { min, max, step, x, y, iconId };
+  SceneManager.prepareSliderScene = function (min, max, step, x, y, iconId) {
+    this._sliderSceneParams = { min, max, step, x, y, iconId };
   };
 
   function Scene_Slider() {
@@ -59,7 +59,7 @@
 
   Scene_Slider.prototype.create = function () {
     Scene_Base.prototype.create.call(this);
-    const p = SceneManager._sliderParams;
+    const p = SceneManager._sliderSceneParams;
     this._sliderWindow = new Window_MouseSlider(p.min, p.max, p.step, p.x, p.y, p.iconId);
     this.addChild(this._sliderWindow);
 
