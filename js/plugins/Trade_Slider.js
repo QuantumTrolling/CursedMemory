@@ -1,19 +1,20 @@
+
 /*:
- * @plugindesc [v1.4] Торговый ползунок с раздражением и нормальным интерфейсом. Поддержка ID иконки через команду плагина. RPG Maker MV.
+ * @plugindesc [v1.5 FIXED] Торговый ползунок без затемнения. Поверх карты. Без чёрного фона. Поддержка иконки раздражения. RPG Maker MV.
  * @author ChatGPT
- * 
+ *
  * @param Price Variable ID
  * @desc ID переменной, в которую сохраняется предложенная цена
  * @default 141
- * 
+ *
  * @param Irritation Variable ID
  * @desc ID переменной уровня раздражения
  * @default 142
- * 
+ *
  * @param Irritation Icon ID
- * @desc ID иконки для раздражения (по умолчанию, если не указан в команде)
+ * @desc ID иконки для раздражения (по умолчанию)
  * @default 84
- * 
+ *
  * @help
  * Команда плагина:
  *   ShowSlider min max step x y [irritationIconId]
@@ -37,42 +38,54 @@
       const posX = Number(args[3] || 0);
       const posY = Number(args[4] || 0);
       const iconId = Number(args[5]) || defaultIrritationIconId;
-      SceneManager.push(Scene_Slider);
-      SceneManager.prepareSliderScene(min, max, step, posX, posY, iconId);
+      if (SceneManager._scene.addSlider) {
+        SceneManager._scene.addSlider(min, max, step, posX, posY, iconId);
+      }
     }
   };
 
-  SceneManager.prepareSliderScene = function (min, max, step, x, y, iconId) {
-    this._sliderSceneParams = { min, max, step, x, y, iconId };
-  };
+  Scene_Base.prototype.addSlider = function (min, max, step, x, y, iconId) {
+    if (this._sliderWindow) return;
 
-  function Scene_Slider() {
-    this.initialize(...arguments);
-  }
-
-  Scene_Slider.prototype = Object.create(Scene_Base.prototype);
-  Scene_Slider.prototype.constructor = Scene_Slider;
-
-  Scene_Slider.prototype.initialize = function () {
-    Scene_Base.prototype.initialize.call(this);
-  };
-
-  Scene_Slider.prototype.create = function () {
-    Scene_Base.prototype.create.call(this);
-    const p = SceneManager._sliderSceneParams;
-    this._sliderWindow = new Window_MouseSlider(p.min, p.max, p.step, p.x, p.y, p.iconId);
+    this._sliderWindow = new Window_MouseSlider(min, max, step, x, y, iconId);
     this.addChild(this._sliderWindow);
 
     const commandY = this._sliderWindow.y + this._sliderWindow.height + 10;
-    this._commandWindow = new Window_SliderCommand(this._sliderWindow.x + 120, commandY);
-    this._commandWindow.setHandler('ok', this.onOfferOk.bind(this));
-    this.addChild(this._commandWindow);
-  };
+    this._sliderCommandWindow = new Window_SliderCommand(this._sliderWindow.x + 120, commandY);
+    this._isSliderActive = true;
+  $gameMap._interpreter.setWaitMode("slider");
+    this._sliderCommandWindow.setHandler('ok', () => {
+      $gameVariables.setValue(priceVarId, this._sliderWindow._value);
+      SoundManager.playOk();
+      this.removeChild(this._sliderWindow);
+      this.removeChild(this._sliderCommandWindow);
+      this._sliderWindow = null;
+      this._sliderCommandWindow = null;
+    });
 
-  Scene_Slider.prototype.onOfferOk = function () {
-    $gameVariables.setValue(priceVarId, this._sliderWindow._value);
-    SoundManager.playOk();
-    SceneManager.pop();
+    this.addChild(this._sliderCommandWindow);
+    this._closeSlider = () => {
+      this.removeChild(this._sliderWindow);
+      this.removeChild(this._sliderCommandWindow);
+      this._sliderWindow = null;
+      this._sliderCommandWindow = null;
+      this._isSliderActive = false;
+      $gameMap._interpreter._waitMode = "";
+    };
+
+    this._sliderCommandWindow.setHandler('ok', () => {
+      $gameVariables.setValue(priceVarId, this._sliderWindow._value);
+      SoundManager.playOk();
+      this._closeSlider();
+    });
+
+    this._sliderCommandWindow.setHandler('cancel', () => {
+      SoundManager.playCancel();
+      this._closeSlider();
+    });
+
+    
+
   };
 
   function Window_MouseSlider(min, max, step, px, py, iconId) {
@@ -134,11 +147,9 @@
     this.contents.clear();
 
     const sliderTop = 60;
-    const labelHeight = 24;
     const knobHeight = this._sliderHeight;
 
     this.drawText("ТОРГОВЛЯ", 0, 0, this.contentsWidth(), 'center');
-
     this.drawText(this._min, this._sliderX - 10, sliderTop - 30, 80, 'left');
     this.drawText(this._max, this._sliderX + this._sliderWidth - 70, sliderTop - 30, 80, 'right');
     this.drawText(this._value.toString(), 0, sliderTop - 30, this.contentsWidth(), 'center');
@@ -178,5 +189,30 @@
   Window_SliderCommand.prototype.numVisibleRows = function () {
     return 1;
   };
-
 })();
+
+// Приостанавливаем прогресс сцены, если активно торговое окно
+const _Scene_Base_updateMain = Scene_Base.prototype.updateMain;
+Scene_Base.prototype.updateMain = function () {
+  if (this._isSliderActive) {
+    this.updateChildren(); // Только обновляем окна и интерфейс
+  } else {
+    _Scene_Base_updateMain.call(this);
+  }
+};
+
+
+// Блокировка событий и диалогов, пока активно окно торгов
+const _Game_Interpreter_updateWaitMode = Game_Interpreter.prototype.updateWaitMode;
+Game_Interpreter.prototype.updateWaitMode = function() {
+  if (this._waitMode === "slider") {
+    const scene = SceneManager._scene;
+    if (scene && scene._isSliderActive) {
+      return true; // Продолжаем ждать
+    } else {
+      this._waitMode = "";
+      return false;
+    }
+  }
+  return _Game_Interpreter_updateWaitMode.call(this);
+};
