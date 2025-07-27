@@ -53,6 +53,8 @@
     const commandY = this._sliderWindow.y + this._sliderWindow.height + 10;
     this._sliderCommandWindow = new Window_SliderCommand(this._sliderWindow.x + 120, commandY);
     this._isSliderActive = true;
+    this._original_callMenu = Scene_Map.prototype.callMenu;
+    Scene_Map.prototype.callMenu = function () {};
   $gameMap._interpreter.setWaitMode("slider");
     this._sliderCommandWindow.setHandler('ok', () => {
       $gameVariables.setValue(priceVarId, this._sliderWindow._value);
@@ -71,6 +73,10 @@
       this._sliderCommandWindow = null;
       this._isSliderActive = false;
       $gameMap._interpreter._waitMode = "";
+      if (this._original_callMenu) {
+        Scene_Map.prototype.callMenu = this._original_callMenu;
+        this._original_callMenu = null;
+      }
     };
 
     this._sliderCommandWindow.setHandler('ok', () => {
@@ -80,8 +86,6 @@
     });
 
     this._sliderCommandWindow.setHandler('cancel', () => {
-      SoundManager.playCancel();
-      this._closeSlider();
     });
 
     
@@ -92,7 +96,12 @@
     this._min = min;
     this._max = max;
     this._step = step;
-    this._value = min;
+    const initVal = $gameVariables.value(priceVarId);
+    if (initVal && initVal >= min && initVal <= max) {
+      this._value = Math.round(initVal / step) * step;
+    } else {
+      this._value = min;
+    }
     this._irritationIconId = iconId || defaultIrritationIconId;
 
     const width = 400;
@@ -189,6 +198,9 @@
   Window_SliderCommand.prototype.numVisibleRows = function () {
     return 1;
   };
+  Window_SliderCommand.prototype.processCancel = function() {
+  // Игнорируем нажатие ESC / ПКМ
+};
 })();
 
 // Приостанавливаем прогресс сцены, если активно торговое окно
