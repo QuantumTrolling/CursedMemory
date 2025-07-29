@@ -55,6 +55,7 @@
     this._isSliderActive = true;
     this._original_callMenu = Scene_Map.prototype.callMenu;
     Scene_Map.prototype.callMenu = function () {};
+    $gameSwitches.setValue(65, true);
   $gameMap._interpreter.setWaitMode("slider");
     this._sliderCommandWindow.setHandler('ok', () => {
       $gameVariables.setValue(priceVarId, this._sliderWindow._value);
@@ -73,6 +74,7 @@
       this._sliderCommandWindow = null;
       this._isSliderActive = false;
       $gameMap._interpreter._waitMode = "";
+      $gameSwitches.setValue(65, false);
       if (this._original_callMenu) {
         Scene_Map.prototype.callMenu = this._original_callMenu;
         this._original_callMenu = null;
