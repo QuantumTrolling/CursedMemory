@@ -160,7 +160,7 @@
     const sliderTop = 60;
     const knobHeight = this._sliderHeight;
 
-    this.drawText("ТОРГОВЛЯ", 0, 0, this.contentsWidth(), 'center');
+    this.drawText("TRADING", 0, 0, this.contentsWidth(), 'center');
     this.drawText(this._min, this._sliderX - 10, sliderTop - 30, 80, 'left');
     this.drawText(this._max, this._sliderX + this._sliderWidth - 70, sliderTop - 30, 80, 'right');
     this.drawText(this._value.toString(), 0, sliderTop - 30, this.contentsWidth(), 'center');
@@ -174,7 +174,7 @@
     this.contents.fillRect(knobX, sliderTop, 12, knobHeight, this.normalColor());
 
     const irritationY = sliderTop + 50;
-    this.drawText("Раздражение", 0, irritationY - 30, this.contentsWidth(), 'center');
+    this.drawText("Irritation", 0, irritationY - 30, this.contentsWidth(), 'center');
     this.drawIrritationBar(0, irritationY + 10, this.contentsWidth(), 14);
   };
 
@@ -190,7 +190,7 @@
   };
 
   Window_SliderCommand.prototype.makeCommandList = function () {
-    this.addCommand("Предложить", 'ok');
+    this.addCommand("Propose", 'ok');
   };
 
   Window_SliderCommand.prototype.windowWidth = function () {
