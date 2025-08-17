@@ -346,15 +346,7 @@ Imported["SumRndmDde Name Input Upgrade"] = true;
 		    this._lettersSet = false;
 		    this._isShiftPressed = false;
 		    
-// Добавляем поддержку русских символов напрямую
-var russianKeys = {
-    192: "ё", 219: "х", 221: "ъ", 186: "ж", 222: "э", 188: "б", 190: "ю"
-};
-for (const code in russianKeys) {
-    Input.keyMapper[code] = russianKeys[code];
-}
-
-        this.setLetters();
+this.setLetters();
 		};
 
 		Scene_Name.prototype.createNameExplanation = function() {
@@ -374,79 +366,7 @@ for (const code in russianKeys) {
 		};
 
 		
-Scene_Name.prototype.checkKeyInput = function() {
-    for (let i = 65; i <= 90; i++) {
-        const char = String.fromCharCode(i).toLowerCase();
-        if (Input.isTriggered(char)) {
-            let ch = this._isShiftPressed ? char.toUpperCase() : char;
-            this._editWindow.add(ch);
-            this._editWindow.refresh();
-        }
-    }
 
-    for (let i = 1072; i <= 1103; i++) {
-        let ch = String.fromCharCode(i);
-        if (Input.isTriggered(ch)) {
-            if (this._isShiftPressed) ch = ch.toUpperCase();
-            this._editWindow.add(ch);
-            this._editWindow.refresh();
-        }
-    }
-
-    if (this._isShiftPressed) {
-        if (!Input.isPressed("shift")) this._isShiftPressed = false;
-    } else {
-        if (Input.isPressed("shift")) this._isShiftPressed = true;
-    }
-
-    if(Input.isTriggered("enter")) {
-				this.onInputOk();
-			}
-			if(Input.isTriggered("space")) {
-			    this._editWindow.add(" ");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("backspace")) {
-			    this._editWindow.back();
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("semicolon")) {
-			    this._editWindow.add("ж");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("equal")) {
-			    this._editWindow.add("=");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("minus")) {
-			    this._editWindow.add("-");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("comma")) {
-			    this._editWindow.add("б");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("period")) {
-			    this._editWindow.add("ю");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("quote")) {
-			    this._editWindow.add("э");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("tilde")) {
-			    this._editWindow.add("ё");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("open_bracket")) {
-			    this._editWindow.add("х");
-			    this._editWindow.refresh();
-			}
-			if(Input.isTriggered("close_bracket")) {
-			    this._editWindow.add("ъ");
-			    this._editWindow.refresh();
-			}
-		};
 
 		function Window_NameExplanation() {
 		    this.initialize.apply(this, arguments);
@@ -548,3 +468,54 @@ Scene_Name.prototype.checkKeyInput = function() {
 	};
 
 })(SRD.NameInput);
+
+// =====================
+// ДОБАВКА: Универсальный ввод символов (поддержка любой раскладки)
+// =====================
+(function() {
+    let _nameInputHandler = null;
+
+    const _Scene_Name_create = Scene_Name.prototype.create;
+    Scene_Name.prototype.create = function() {
+        _Scene_Name_create.call(this);
+        _nameInputHandler = (e) => {
+            if(!(SceneManager._scene instanceof Scene_Name)) return;
+            const scene = SceneManager._scene;
+            let char = e.key;
+            if(char.length === 1) {
+                scene._editWindow.add(char);
+                scene._editWindow.refresh();
+                e.preventDefault();
+            } else if(char === "Backspace") {
+                scene._editWindow.back();
+                scene._editWindow.refresh();
+                e.preventDefault();
+            } else if(char === "Enter") {
+                scene.onInputOk();
+                e.preventDefault();
+            } else if(char === " ") {
+                scene._editWindow.add(" ");
+                scene._editWindow.refresh();
+                e.preventDefault();
+            }
+        };
+        document.addEventListener("keydown", _nameInputHandler);
+    };
+
+    const _Scene_Name_popScene = Scene_Name.prototype.popScene;
+    Scene_Name.prototype.popScene = function() {
+        if(_nameInputHandler) {
+            document.removeEventListener("keydown", _nameInputHandler);
+            _nameInputHandler = null;
+        }
+        _Scene_Name_popScene.call(this);
+    };
+})();
+
+
+// =====================
+// FIX: provide a no-op checkKeyInput to keep compatibility
+// =====================
+if (!Scene_Name.prototype.checkKeyInput) {
+    Scene_Name.prototype.checkKeyInput = function(){ /* handled by universal keydown listener */ };
+}
