@@ -8,7 +8,7 @@
  */
 
 (function() {
-    const TRANSLATABLE_TAGS = ['SGDescription', 'SGCategory']; // можно добавить больше
+    const TRANSLATABLE_TAGS = ['SGDescription', 'SGDescription2', 'SGCategory']; // можно добавить больше
 
     const _DataManager_isDatabaseLoaded = DataManager.isDatabaseLoaded;
     DataManager.isDatabaseLoaded = function() {
