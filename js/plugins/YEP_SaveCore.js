@@ -1345,9 +1345,15 @@ Scene_File.prototype.performActionLoad = function() {
 };
 
 Scene_File.prototype.onLoadSuccess = function() {
+    // Обновляем версию сохранения до версии игры
+    $gameSystem._versionId = $dataSystem.versionId;
+
     SoundManager.playLoad();
     this.fadeOutAll();
-    this.reloadMapIfUpdated();
+
+    // Отключаем принудительный рестарт карты
+    // this.reloadMapIfUpdated();
+
     SceneManager.goto(Scene_Map);
     this._loadSuccess = true;
 };
