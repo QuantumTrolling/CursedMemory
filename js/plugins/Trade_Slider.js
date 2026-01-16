@@ -1,85 +1,72 @@
-
 /*:
- * @plugindesc [v1.5 FIXED] Торговый ползунок без затемнения. Поверх карты. Без чёрного фона. Поддержка иконки раздражения. RPG Maker MV.
+ * @plugindesc [v1.7] Торговый ползунок поверх карты. Max из переменной. Кастомный заголовок через команду. RPG Maker MV.
  * @author ChatGPT
  *
  * @param Price Variable ID
- * @desc ID переменной, в которую сохраняется предложенная цена
  * @default 141
  *
  * @param Irritation Variable ID
- * @desc ID переменной уровня раздражения
  * @default 142
  *
  * @param Irritation Icon ID
- * @desc ID иконки для раздражения (по умолчанию)
  * @default 84
  *
  * @help
- * Команда плагина:
- *   ShowSlider min max step x y [irritationIconId]
- * Пример:
- *   ShowSlider 100 500 50 200 100 122
+ * ShowSlider min max step x y [iconId] [title]
+ *
+ * max:
+ *  - число
+ *  - v[ID]
+ *
+ * title:
+ *  - текст (через _ вместо пробелов)
  */
 
 (function () {
+
   const parameters = PluginManager.parameters('');
   const priceVarId = Number(parameters['Price Variable ID'] || 141);
   const irritationVarId = Number(parameters['Irritation Variable ID'] || 142);
   const defaultIrritationIconId = Number(parameters['Irritation Icon ID'] || 84);
 
-  const pluginCommand = Game_Interpreter.prototype.pluginCommand;
+  function parseValue(arg) {
+    if (typeof arg !== "string") return Number(arg);
+    const match = arg.match(/^v\[(\d+)\]$/i);
+    if (match) return Number($gameVariables.value(Number(match[1])) || 0);
+    return Number(arg);
+  }
+
+  const _pluginCommand = Game_Interpreter.prototype.pluginCommand;
   Game_Interpreter.prototype.pluginCommand = function (command, args) {
-    pluginCommand.call(this, command, args);
+    _pluginCommand.call(this, command, args);
+
     if (command === "ShowSlider") {
       const min = Number(args[0]);
-      const max = Number(args[1]);
+      let max = parseValue(args[1]);
       const step = Number(args[2]);
-      const posX = Number(args[3] || 0);
-      const posY = Number(args[4] || 0);
+      const x = Number(args[3] || 0);
+      const y = Number(args[4] || 0);
       const iconId = Number(args[5]) || defaultIrritationIconId;
+      const title = args[6] ? args.slice(6).join(" ").replace(/_/g, " ") : "TRADING";
+
+      if (max <= min) max = min + step;
+
       if (SceneManager._scene.addSlider) {
-        SceneManager._scene.addSlider(min, max, step, posX, posY, iconId);
+        SceneManager._scene.addSlider(min, max, step, x, y, iconId, title);
       }
     }
   };
 
-  Scene_Base.prototype.addSlider = function (min, max, step, x, y, iconId) {
+  Scene_Base.prototype.addSlider = function (min, max, step, x, y, iconId, title) {
     if (this._sliderWindow) return;
 
-    this._sliderWindow = new Window_MouseSlider(min, max, step, x, y, iconId);
+    this._sliderWindow = new Window_MouseSlider(min, max, step, x, y, iconId, title);
     this.addChild(this._sliderWindow);
 
     const commandY = this._sliderWindow.y + this._sliderWindow.height + 10;
     this._sliderCommandWindow = new Window_SliderCommand(this._sliderWindow.x + 120, commandY);
-    this._isSliderActive = true;
-    this._original_callMenu = Scene_Map.prototype.callMenu;
-    Scene_Map.prototype.callMenu = function () {};
-    $gameSwitches.setValue(65, true);
-  $gameMap._interpreter.setWaitMode("slider");
-    this._sliderCommandWindow.setHandler('ok', () => {
-      $gameVariables.setValue(priceVarId, this._sliderWindow._value);
-      SoundManager.playOk();
-      this.removeChild(this._sliderWindow);
-      this.removeChild(this._sliderCommandWindow);
-      this._sliderWindow = null;
-      this._sliderCommandWindow = null;
-    });
 
-    this.addChild(this._sliderCommandWindow);
-    this._closeSlider = () => {
-      this.removeChild(this._sliderWindow);
-      this.removeChild(this._sliderCommandWindow);
-      this._sliderWindow = null;
-      this._sliderCommandWindow = null;
-      this._isSliderActive = false;
-      $gameMap._interpreter._waitMode = "";
-      $gameSwitches.setValue(65, false);
-      if (this._original_callMenu) {
-        Scene_Map.prototype.callMenu = this._original_callMenu;
-        this._original_callMenu = null;
-      }
-    };
+    $gameMap._interpreter.setWaitMode("slider");
 
     this._sliderCommandWindow.setHandler('ok', () => {
       $gameVariables.setValue(priceVarId, this._sliderWindow._value);
@@ -87,29 +74,35 @@
       this._closeSlider();
     });
 
-    this._sliderCommandWindow.setHandler('cancel', () => {
-    });
+    this.addChild(this._sliderCommandWindow);
 
-    
-
+    this._closeSlider = () => {
+      this.removeChild(this._sliderWindow);
+      this.removeChild(this._sliderCommandWindow);
+      this._sliderWindow = null;
+      this._sliderCommandWindow = null;
+      $gameMap._interpreter._waitMode = "";
+    };
   };
 
-  function Window_MouseSlider(min, max, step, px, py, iconId) {
+  function Window_MouseSlider(min, max, step, px, py, iconId, title) {
     this._min = min;
     this._max = max;
     this._step = step;
+    this._titleText = title || "TRADING";
+
     const initVal = $gameVariables.value(priceVarId);
-    if (initVal && initVal >= min && initVal <= max) {
-      this._value = Math.round(initVal / step) * step;
-    } else {
-      this._value = min;
-    }
+    this._value = (initVal >= min && initVal <= max)
+      ? Math.round(initVal / step) * step
+      : min;
+
     this._irritationIconId = iconId || defaultIrritationIconId;
 
     const width = 400;
     const height = 180;
     const x = px || (Graphics.boxWidth - width) / 2;
     const y = py || (Graphics.boxHeight - height) / 2;
+
     Window_Base.prototype.initialize.call(this, x, y, width, height);
 
     this._sliderWidth = this.width - this.padding * 2 - 40;
@@ -125,12 +118,14 @@
 
   Window_MouseSlider.prototype.update = function () {
     Window_Base.prototype.update.call(this);
+
     if (TouchInput.isTriggered()) {
       const mx = TouchInput.x - this.x - this.padding;
       const my = TouchInput.y - this.y - this.padding;
 
       if (mx >= this._sliderX && mx <= this._sliderX + this._sliderWidth &&
           my >= this._sliderY && my <= this._sliderY + this._sliderHeight + 10) {
+
         const ratio = (mx - this._sliderX) / this._sliderWidth;
         const rawValue = this._min + (this._max - this._min) * ratio;
         this._value = Math.round(rawValue / this._step) * this._step;
@@ -145,12 +140,10 @@
     const irritation = $gameVariables.value(irritationVarId) || 0;
     const level = Math.min(irritation, 5);
     const barW = Math.floor((width - 36) * (level / 5));
-    const iconY = y - 2;
-    this.drawIcon(this._irritationIconId, x, iconY - 10);
 
+    this.drawIcon(this._irritationIconId, x, y - 12);
     const barX = x + 36;
-    const barWidth = width - 36;
-    this.contents.fillRect(barX, y, barWidth, height, this.gaugeBackColor());
+    this.contents.fillRect(barX, y, width - 36, height, this.gaugeBackColor());
     this.contents.fillRect(barX, y, barW, height, '#FFD700');
   };
 
@@ -158,20 +151,17 @@
     this.contents.clear();
 
     const sliderTop = 60;
-    const knobHeight = this._sliderHeight;
 
-    this.drawText("TRADING", 0, 0, this.contentsWidth(), 'center');
+    this.drawText(this._titleText, 0, 0, this.contentsWidth(), 'center');
     this.drawText(this._min, this._sliderX - 10, sliderTop - 30, 80, 'left');
     this.drawText(this._max, this._sliderX + this._sliderWidth - 70, sliderTop - 30, 80, 'right');
-    this.drawText(this._value.toString(), 0, sliderTop - 30, this.contentsWidth(), 'center');
-    this.drawIcon(313, this._sliderX + 180, sliderTop - 28);
+    this.drawText(String(this._value), 0, sliderTop - 30, this.contentsWidth(), 'center');
 
-    const sliderY = sliderTop + 8;
-    this.contents.fillRect(this._sliderX, sliderY, this._sliderWidth, 4, this.gaugeBackColor());
+    this.contents.fillRect(this._sliderX, sliderTop + 8, this._sliderWidth, 4, this.gaugeBackColor());
 
     const pos = (this._value - this._min) / (this._max - this._min);
     const knobX = this._sliderX + Math.round(pos * this._sliderWidth) - 6;
-    this.contents.fillRect(knobX, sliderTop, 12, knobHeight, this.normalColor());
+    this.contents.fillRect(knobX, sliderTop, 12, this._sliderHeight, this.normalColor());
 
     const irritationY = sliderTop + 50;
     this.drawText("Irritation", 0, irritationY - 30, this.contentsWidth(), 'center');
@@ -184,49 +174,11 @@
 
   Window_SliderCommand.prototype = Object.create(Window_Command.prototype);
   Window_SliderCommand.prototype.constructor = Window_SliderCommand;
-
-  Window_SliderCommand.prototype.initialize = function (x, y) {
-    Window_Command.prototype.initialize.call(this, x, y);
-  };
-
   Window_SliderCommand.prototype.makeCommandList = function () {
     this.addCommand("Propose", 'ok');
   };
+  Window_SliderCommand.prototype.windowWidth = () => 160;
+  Window_SliderCommand.prototype.numVisibleRows = () => 1;
+  Window_SliderCommand.prototype.processCancel = function () {};
 
-  Window_SliderCommand.prototype.windowWidth = function () {
-    return 160;
-  };
-
-  Window_SliderCommand.prototype.numVisibleRows = function () {
-    return 1;
-  };
-  Window_SliderCommand.prototype.processCancel = function() {
-  // Игнорируем нажатие ESC / ПКМ
-};
 })();
-
-// Приостанавливаем прогресс сцены, если активно торговое окно
-const _Scene_Base_updateMain = Scene_Base.prototype.updateMain;
-Scene_Base.prototype.updateMain = function () {
-  if (this._isSliderActive) {
-    this.updateChildren(); // Только обновляем окна и интерфейс
-  } else {
-    _Scene_Base_updateMain.call(this);
-  }
-};
-
-
-// Блокировка событий и диалогов, пока активно окно торгов
-const _Game_Interpreter_updateWaitMode = Game_Interpreter.prototype.updateWaitMode;
-Game_Interpreter.prototype.updateWaitMode = function() {
-  if (this._waitMode === "slider") {
-    const scene = SceneManager._scene;
-    if (scene && scene._isSliderActive) {
-      return true; // Продолжаем ждать
-    } else {
-      this._waitMode = "";
-      return false;
-    }
-  }
-  return _Game_Interpreter_updateWaitMode.call(this);
-};
