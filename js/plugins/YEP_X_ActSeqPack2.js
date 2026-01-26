@@ -669,7 +669,8 @@ BattleManager.actionFace = function(name, actionArgs) {
       var destX = eval(actionArgs[1]) || 0;
       var destY = eval(actionArgs[2]) || 0;
       movers.forEach(function(mover) {
-        mover.spriteFacePoint(destX, destY);
+        // mover.spriteFacePoint(destX, destY);
+        mover.spriteFaceAwayPoint(destX, destY);
       });
     } else if (['AWAY FROM POINT', 'AWAY FROM POSITION', 'AWAY FROM COORDINATE',
     'AWAY FROM SCREEN', 'AWAY FROM SCREEN POS',
@@ -677,7 +678,8 @@ BattleManager.actionFace = function(name, actionArgs) {
       var destX = eval(actionArgs[1]) || 0;
       var destY = eval(actionArgs[2]) || 0;
       movers.forEach(function(mover) {
-        mover.spriteFaceAwayPoint(destX, destY);
+        // mover.spriteFaceAwayPoint(destX, destY);
+        mover.spriteFacePoint(destX, destY);
       });
     } else if (cmd.match(/AWAY[ ]FROM[ ](.*)/i)) {
       var targets = this.makeActionTargets(String(RegExp.$1));
@@ -691,7 +693,8 @@ BattleManager.actionFace = function(name, actionArgs) {
       destX /= targets.length;
       destY /= targets.length;
       movers.forEach(function(mover) {
-        mover.spriteFaceAwayPoint(destX, destY);
+        // mover.spriteFaceAwayPoint(destX, destY);
+        mover.spriteFacePoint(destX, destY);
       }, this);
     } else {
       var targets = this.makeActionTargets(actionArgs[0]);
@@ -705,7 +708,8 @@ BattleManager.actionFace = function(name, actionArgs) {
       destX /= targets.length;
       destY /= targets.length;
       movers.forEach(function(mover) {
-        mover.spriteFacePoint(destX, destY);
+        // mover.spriteFacePoint(destX, destY);
+        mover.spriteFaceAwayPoint(destX, destY);
       }, this);
     }
     return false;
@@ -867,6 +871,7 @@ BattleManager.actionMove = function(name, actionArgs) {
     var movers = this.makeActionTargets(name);
     if (movers.length < 1) return true;
     var cmd = actionArgs[0].toUpperCase();
+
     if (['HOME', 'ORIGIN'].contains(cmd)) {
       var frames = actionArgs[1] || 12;
       movers.forEach(function(mover) {
@@ -905,7 +910,7 @@ BattleManager.actionMove = function(name, actionArgs) {
         var offsetY = BattleManager.actionMoveOffsetY(actionArgs, mover, mover);
         mover.battler().moveToPoint(destX + offsetX, destY + offsetY, frames);
         mover.requestMotion('walk');
-        mover.spriteFacePoint(destX, destY);
+        mover.spriteFacePoint(destX, destY);      
       });
     } else {
       var targets = this.makeActionTargets(actionArgs[0]);
@@ -913,42 +918,43 @@ BattleManager.actionMove = function(name, actionArgs) {
       var type = actionArgs[1].toUpperCase();
       if (targets.length < 1) return false;
       for (var i = 0; i < movers.length; ++i) {
-      	var mover = movers[i];
-      	if (!mover) continue;
-      	if (['BASE', 'FOOT', 'FEET'].contains(type)) {
-	        var destX = this.actionMoveX(mover, targets, 'center');
-	        var destY = this.actionMoveY(mover, targets, 'foot');
-	      } else if (['CENTER', 'MIDDLE'].contains(type)) {
-	        var destX = this.actionMoveX(mover, targets, 'center');
-	        var destY = this.actionMoveY(mover, targets, 'center');
-	      } else if (['HEAD', 'TOP'].contains(type)) {
-	        var destX = this.actionMoveX(mover, targets, 'center');
-	        var destY = this.actionMoveY(mover, targets, 'head');
-	      } else if (['FRONT BASE', 'FRONT FOOT', 'FRONT FEET',
-	      'FRONT'].contains(type)) {
-	        var destX = this.actionMoveX(mover, targets, 'front');
-	        var destY = this.actionMoveY(mover, targets, 'foot');
-	      } else if (['BACK BASE', 'BACK FOOT', 'BACK FEET',
-	      'BACK'].contains(type)) {
-	      	var destX = this.actionMoveX(mover, targets, 'back');
-	        var destY = this.actionMoveY(mover, targets, 'foot');
-	      } else if (['FRONT CENTER', 'FRONT MIDDLE'].contains(type)) {
-	        var destX = this.actionMoveX(mover, targets, 'front');
-	        var destY = this.actionMoveY(mover, targets, 'center');
-	      } else if (['BACK CENTER', 'BACK MIDDLE',].contains(type)) {
-	        var destX = this.actionMoveX(mover, targets, 'back');
-	        var destY = this.actionMoveY(mover, targets, 'center');
-	      } else if (['FRONT HEAD', 'FRONT TOP'].contains(type)) {
-	        var destX = this.actionMoveX(mover, targets, 'front');
-	        var destY = this.actionMoveY(mover, targets, 'head');
-	      } else if (['BACK HEAD', 'BACK TOP'].contains(type)) {
-	        var destX = this.actionMoveX(mover, targets, 'back');
-	        var destY = this.actionMoveY(mover, targets, 'head');
-	      }
+          var mover = movers[i];
+          if (!mover) continue;
+          if (['BASE', 'FOOT', 'FEET'].contains(type)) {
+            var destX = this.actionMoveX(mover, targets, 'center');
+            var destY = this.actionMoveY(mover, targets, 'foot');
+          } else if (['CENTER', 'MIDDLE'].contains(type)) {
+            var destX = this.actionMoveX(mover, targets, 'center');
+            var destY = this.actionMoveY(mover, targets, 'center');
+          } else if (['HEAD', 'TOP'].contains(type)) {
+            var destX = this.actionMoveX(mover, targets, 'center');
+            var destY = this.actionMoveY(mover, targets, 'head');
+          } else if (['FRONT BASE', 'FRONT FOOT', 'FRONT FEET',
+          'FRONT'].contains(type)) {
+            var destX = this.actionMoveX(mover, targets, 'back'); // FRONT <-> BACK -- WORKS
+            var destY = this.actionMoveY(mover, targets, 'foot');
+          } else if (['BACK BASE', 'BACK FOOT', 'BACK FEET',
+          'BACK'].contains(type)) {
+              var destX = this.actionMoveX(mover, targets, 'front'); // FRONT <-> BACK -- WORKS
+            var destY = this.actionMoveY(mover, targets, 'foot');
+          } else if (['FRONT CENTER', 'FRONT MIDDLE'].contains(type)) {
+            var destX = this.actionMoveX(mover, targets, 'back'); // FRONT <-> BACK -- WORKS
+            var destY = this.actionMoveY(mover, targets, 'center');
+          } else if (['BACK CENTER', 'BACK MIDDLE',].contains(type)) {
+            var destX = this.actionMoveX(mover, targets, 'front'); // FRONT <-> BACK -- WORKS
+            var destY = this.actionMoveY(mover, targets, 'center');
+          } else if (['FRONT HEAD', 'FRONT TOP'].contains(type)) {
+            var destX = this.actionMoveX(mover, targets, 'back'); // FRONT <-> BACK -- WORKS
+            var destY = this.actionMoveY(mover, targets, 'head');
+          } else if (['BACK HEAD', 'BACK TOP'].contains(type)) {
+            var destX = this.actionMoveX(mover, targets, 'front'); // FRONT <-> BACK -- WORKS
+            var destY = this.actionMoveY(mover, targets, 'head');
+          }
         var offsetX = this.actionMoveOffsetX(actionArgs, mover, targets[0]);
         var offsetY = this.actionMoveOffsetY(actionArgs, mover, targets[0]);
-	      mover.battler().moveToPoint(destX + offsetX, destY + offsetY, frames);
-        mover.spriteFacePoint(destX, destY);
+          mover.battler().moveToPoint(destX + offsetX, destY + offsetY, frames);
+        // mover.spriteFacePoint(destX, destY);
+        mover.spriteFaceAwayPoint(destX, destY);
       }
     }
     return true;

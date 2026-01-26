@@ -2696,3 +2696,4 @@ require('nw.gui').Window.get().showDevTools();
 
 } // Yanfly.BEC.version
 }; // YEP_BattleEngineCore
+

@@ -2480,7 +2480,10 @@ BattleManager.refreshAllBattlers = function() {
   var length = members.length;
   for (var i = 0; i < length; ++i) {
     var member = members[i];
-    if (member) member.refresh();
+    if (member){
+	member.refresh();
+	member.setMirror(true);
+	}
   }
 };
 

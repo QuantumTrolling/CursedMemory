@@ -4064,11 +4064,11 @@ Game_Battler.prototype.setMirror = function(value) {
 };
 
 Game_Battler.prototype.spriteFaceForward = function() {
-    this.setMirror(false);
+    this.setMirror(true); // Default: false
 };
 
 Game_Battler.prototype.spriteFaceBackward = function() {
-    this.setMirror(true);
+    this.setMirror(false); // Default: true
 };
 
 Game_Battler.prototype.spriteFacePoint = function(pointX, pointY) {
