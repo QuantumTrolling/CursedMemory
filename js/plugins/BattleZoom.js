@@ -130,7 +130,7 @@ var _SceneBattle_update = Scene_Battle.prototype.update;
 Scene_Battle.prototype.update = function() {
     _SceneBattle_update.call(this);
 
-    if (this._actorCommandWindow && this._actorCommandWindow.active) {
+    if (this._skillWindow && this._skillWindow.active || this._actorCommandWindow && this._actorCommandWindow.active) {
         var actor = this._actorCommandWindow._actor;
         if (actor) {
             BattleCamera.focus(
