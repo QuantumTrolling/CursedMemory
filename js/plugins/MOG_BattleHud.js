@@ -2917,7 +2917,15 @@ Battle_Hud.prototype.refresh_meter_flow = function(sprite, value, value_max, typ
 // * Refresh Number
 //==============================
 Battle_Hud.prototype.refresh_number = function(sprites,value,img_data,x,y,type) {
-    numbers = Math.abs(value).toString().split("");  
+    numbers = Math.abs(value).toString().split("");
+	    // === Центрирование MP по координате ===
+    // type для MP в MOG = 1 (HP=0, MP=1, TP=2)
+    if (type === 1) {
+        var digitWidth = img_data[2];
+        var digits = numbers.length;
+        x += (digitWidth * (digits - 1)) / 2;
+    }
+
 	var nx = 0;
 	var ny = 0;
 	var dir = 1;
