@@ -1,8 +1,9 @@
 //=============================================================================
-// OctopathLikeBattleCamera_CTB_StaticBG_NoSway_NoSkew.js
+// OctopathLikeBattleCamera_CTB_PIXELPERFECT_CENTERED.js
 //=============================================================================
 /*:
- * @plugindesc Камера для MV + YEP CTB с фоном без sway и наклона, только зум и следование за персонажами
+ * @plugindesc Pixel-perfect battle camera for RPG Maker MV + YEP CTB.
+ * No blur, no sway, no skew. Camera centers exactly on battler body.
  * @author ChatGPT
  */
 
@@ -10,8 +11,25 @@
 'use strict';
 
 // -----------------------------------------------------------------------------
-// Utils
+// GLOBAL NO-BLUR FIX
 // -----------------------------------------------------------------------------
+if (window.PIXI) {
+    PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+}
+
+// -----------------------------------------------------------------------------
+// UTILS
+// -----------------------------------------------------------------------------
+function snap(value) {
+    return Math.round(value);
+}
+
+function snapScale(value) {
+    if (value >= 1.125) return 1.125;
+    if (value >= 1.0625) return 1.0625;
+    return 1.0;
+}
+
 function findBattlerSprite(battler) {
     if (!BattleManager._spriteset || !battler) return null;
     var sprites = BattleManager._spriteset.battlerSprites();
@@ -21,51 +39,65 @@ function findBattlerSprite(battler) {
     return null;
 }
 
+// Центр корпуса спрайта (НЕ по ногам)
+function getSpriteCenter(sprite) {
+    if (!sprite || !sprite.bitmap || !sprite.bitmap.isReady()) {
+        return { x: sprite.x, y: sprite.y };
+    }
+
+    var height = sprite.bitmap.height;
+    var anchorY = sprite.anchor ? sprite.anchor.y : 1;
+
+    return {
+        x: sprite.x,
+        y: sprite.y - (height * anchorY / 2)
+    };
+}
+
 // -----------------------------------------------------------------------------
-// Battle Camera Core
+// BATTLE CAMERA CORE
 // -----------------------------------------------------------------------------
 var BattleCamera = {
     x: 0,
     y: 0,
     scale: 1.0,
-    skew: 0.0,
 
     tx: 0,
     ty: 0,
     tScale: 1.0,
-    tSkew: 0.0,
 
     followSprite: null,
     focusedBattler: null,
     forcedCenter: false,
-    offsetY: 0,
 
     speed: 0.15,
 
     update: function() {
-        // Плавное движение камеры без sway и наклона
         if (this.forcedCenter) {
             this.tx = 0;
             this.ty = 0;
         } else if (this.followSprite) {
-            this.tx = Graphics.width / 2 - this.followSprite.x;
-            this.ty = Graphics.height / 2 - (this.followSprite.y + this.offsetY);
+            var center = getSpriteCenter(this.followSprite);
+            this.tx = Graphics.width / 2 - center.x;
+            this.ty = Graphics.height / 2 - center.y;
         }
 
         this.x += (this.tx - this.x) * this.speed;
         this.y += (this.ty - this.y) * this.speed;
         this.scale += (this.tScale - this.scale) * this.speed;
-        this.skew += (this.tSkew - this.skew) * this.speed;
+
+        // PIXEL LOCK
+        this.x = snap(this.x);
+        this.y = snap(this.y);
+        this.scale = snapScale(this.scale);
     },
 
-    focus: function(sprite, battler, scale, offsetY) {
+    focus: function(sprite, battler, scale) {
         if (!sprite || this.focusedBattler === battler) return;
         this.focusedBattler = battler;
         this.followSprite = sprite;
         this.forcedCenter = false;
-        this.tScale = scale || 1.08;
-        this.tSkew = 0; // наклон убран
-        this.offsetY = offsetY || 0;
+        this.tScale = scale || 1.0625;
     },
 
     focusCenter: function() {
@@ -73,21 +105,17 @@ var BattleCamera = {
         this.focusedBattler = null;
         this.followSprite = null;
         this.tScale = 1.0;
-        this.tSkew = 0;
-        this.offsetY = 0;
     },
 
     soften: function() {
         this.forcedCenter = false;
         this.focusedBattler = null;
-        this.tScale = 1.02;
-        this.tSkew = 0;
-        this.offsetY = 0;
+        this.tScale = 1.0;
     }
 };
 
 // -----------------------------------------------------------------------------
-// Spriteset_Battle update
+// SPRITESET_BATTLE UPDATE
 // -----------------------------------------------------------------------------
 var _SB_update = Spriteset_Battle.prototype.update;
 Spriteset_Battle.prototype.update = function() {
@@ -95,61 +123,62 @@ Spriteset_Battle.prototype.update = function() {
 
     BattleCamera.update();
 
-    // 1. Battlefield (персонажи + враги + попапы)
     var bf = this._battleField;
     bf.x = BattleCamera.x;
     bf.y = BattleCamera.y;
     bf.scale.x = BattleCamera.scale;
     bf.scale.y = BattleCamera.scale;
-    bf.skew.x = BattleCamera.skew;
 
-    // 2. Персонажи и враги получают skew
+    // NEAREST для всех баттлеров (страховка от блюра)
     var sprites = this.battlerSprites();
     for (var i = 0; i < sprites.length; i++) {
-        sprites[i].skew.x = BattleCamera.skew;
+        if (sprites[i].texture && sprites[i].texture.baseTexture) {
+            sprites[i].texture.baseTexture.scaleMode = PIXI.SCALE_MODES.NEAREST;
+        }
     }
 
-    // 3. Фоновый спрайт статичен и центрирован
+    // Статичный фон без зума
     if (this._customBattleback && this._customBattleback.bitmap.isReady()) {
-        const screenWidth = Graphics.width;
-        const screenHeight = Graphics.height;
-        const bgWidth = this._customBattleback.bitmap.width;
-        const bgHeight = this._customBattleback.bitmap.height;
+        var sw = Graphics.width;
+        var sh = Graphics.height;
+        var bw = this._customBattleback.bitmap.width;
+        var bh = this._customBattleback.bitmap.height;
 
         this._customBattleback.scale.x = 1;
         this._customBattleback.scale.y = 1;
-        this._customBattleback.x = (screenWidth - bgWidth) / 2;
-        this._customBattleback.y = (screenHeight - bgHeight) / 2;
+        this._customBattleback.x = snap((sw - bw) / 2);
+        this._customBattleback.y = snap((sh - bh) / 2);
     }
 };
 
 // -----------------------------------------------------------------------------
-// ACTOR TURN
+// ACTOR TURN (CTB / COMMAND SELECTION)
 // -----------------------------------------------------------------------------
 var _SceneBattle_update = Scene_Battle.prototype.update;
 Scene_Battle.prototype.update = function() {
     _SceneBattle_update.call(this);
 
-    if (this._skillWindow && this._skillWindow.active || this._actorCommandWindow && this._actorCommandWindow.active) {
+    if ((this._skillWindow && this._skillWindow.active) ||
+        (this._actorCommandWindow && this._actorCommandWindow.active)) {
+
         var actor = this._actorCommandWindow._actor;
         if (actor) {
             BattleCamera.focus(
                 findBattlerSprite(actor),
                 actor,
-                1.08,
-                0
+                1.0625
             );
         }
     }
 
-    if ((this._enemyWindow && this._enemyWindow.active) || 
+    if ((this._enemyWindow && this._enemyWindow.active) ||
         (this._actorWindow && this._actorWindow.active)) {
         BattleCamera.focusCenter();
     }
 };
 
 // -----------------------------------------------------------------------------
-// ENEMY TURN
+// ENEMY / ACTION START
 // -----------------------------------------------------------------------------
 var _BM_startAction = BattleManager.startAction;
 BattleManager.startAction = function() {
@@ -160,39 +189,16 @@ BattleManager.startAction = function() {
 
     var sprite = findBattlerSprite(subject);
     if (sprite) {
-        var enemyFocusOffset = -80;
-        var offsetY = subject.isEnemy() ? enemyFocusOffset : 0;
         BattleCamera.focus(
             sprite,
             subject,
-            subject.isEnemy() ? 1.06 : 1.1,
-            offsetY
+            subject.isEnemy() ? 1.0625 : 1.125
         );
     }
 };
 
 // -----------------------------------------------------------------------------
-// Action start → keep following during movement
-// -----------------------------------------------------------------------------
-var _WBL_performActionStart = Window_BattleLog.prototype.performActionStart;
-Window_BattleLog.prototype.performActionStart = function(subject, action) {
-    _WBL_performActionStart.call(this, subject, action);
-
-    if (!subject) return;
-    var sprite = findBattlerSprite(subject);
-    if (!sprite) return;
-
-    var enemyFocusOffset = -80;
-    var offsetY = subject.isEnemy() ? enemyFocusOffset : 0;
-    BattleCamera.followSprite = sprite;
-    BattleCamera.forcedCenter = false;
-    BattleCamera.tScale = subject.isEnemy() ? 1.12 : 1.14;
-    BattleCamera.tSkew = 0; // наклон убран
-    BattleCamera.offsetY = offsetY;
-};
-
-// -----------------------------------------------------------------------------
-// End action → мягко отпустить камеру
+// END ACTION
 // -----------------------------------------------------------------------------
 var _BM_endAction = BattleManager.endAction;
 BattleManager.endAction = function() {
@@ -200,14 +206,4 @@ BattleManager.endAction = function() {
     BattleCamera.soften();
 };
 
-// -----------------------------------------------------------------------------
-// Попапы привязаны к персонажам
-// -----------------------------------------------------------------------------
-var _SD_setup = Sprite_Damage.prototype.setup;
-Sprite_Damage.prototype.setup = function(target) {
-    _SD_setup.call(this, target);
-
-    this.x += BattleCamera.x;
-    this.y += BattleCamera.y;
-};
 })();
