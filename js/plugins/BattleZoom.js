@@ -1,8 +1,8 @@
 //=============================================================================
-// BattleCamera_Parallax_FINAL.js
+// BattleCamera_MidFar_FIXED.js
 //=============================================================================
 /*:
- * @plugindesc Octopath style camera + multi parallax backgrounds (FINAL)
+ * @plugindesc Battle camera with strict centering on active battler + subtle FAR parallax
  * @author ChatGPT
  */
 
@@ -11,101 +11,81 @@
 
 // -------------------------------------------------------------
 function snap(v){ return Math.round(v); }
-
-function bitmapReady(s){
-    return s && s.bitmap && s.bitmap.isReady && s.bitmap.isReady();
-}
+function ready(s){ return s && s.bitmap && s.bitmap.isReady(); }
 
 // -------------------------------------------------------------
 // CAMERA
 // -------------------------------------------------------------
 var BattleCamera = {
 
-    x:0,
-    y:0,
-    tx:0,
-    ty:0,
-    scale:1,
-    tScale:1,
+    x: 0,
+    y: 0,
 
-    follow:null,
-    forced:false,
-    speed:0.15,
+    farX: 0,
+    farY: 0,
 
-    update:function(){
+    update: function(){
 
-        if(!BattleManager._spriteset) return;
+        const spriteset = BattleManager._spriteset;
+        if(!spriteset) return;
 
-        if(this.forced){
-            this.tx = 0;
-            this.ty = 0;
-        }
-        else if(this.follow && bitmapReady(this.follow)){
+        let battler = BattleManager._subject;
 
-            let s = this.follow;
-            let h = s.bitmap.height;
-            let ay = s.anchor ? s.anchor.y : 1;
-
-            let cx = s.x;
-            let cy = s.y - (h * ay / 2);
-
-            this.tx = Graphics.width/2 - cx;
-            this.ty = Graphics.height/2 - cy;
+        // если сейчас выбор команды — берём текущего актёра
+        if(!battler && SceneManager._scene instanceof Scene_Battle){
+            const win = SceneManager._scene._actorCommandWindow;
+            if(win && win.active){
+                battler = win._actor;
+            }
         }
 
-        this.x += (this.tx-this.x)*this.speed;
-        this.y += (this.ty-this.y)*this.speed;
-        this.scale += (this.tScale-this.scale)*this.speed;
+        if(!battler) return;
 
-        this.x = snap(this.x);
-        this.y = snap(this.y);
-    },
+        const sprite = spriteset.battlerSprites()
+            .find(s => s._battler === battler);
 
-    focus:function(sprite,scale){
-        this.follow = sprite;
-        this.forced = false;
-        this.tScale = scale || 1.06;
-    },
+        if(!sprite || !ready(sprite)) return;
 
-    center:function(){
-        this.follow = null;
-        this.forced = true;
-        this.tScale = 1;
+        const h = sprite.bitmap.height;
+        const ay = sprite.anchor ? sprite.anchor.y : 1;
+
+        const cx = sprite.x;
+        const cy = sprite.y - h * ay * 0.5;
+
+        // 🔴 ЖЁСТКОЕ ЦЕНТРИРОВАНИЕ
+        this.x = snap(Graphics.width * 0.5 - cx);
+        this.y = snap(Graphics.height * 0.5 - cy);
+
+        // FAR — очень мягкое отставание
+        this.farX += (this.x - this.farX) * 0.02;
+        this.farY += (this.y - this.farY) * 0.02;
     }
 };
 
 // -------------------------------------------------------------
-// FIND SPRITE
+// CREATE BACKGROUNDS
 // -------------------------------------------------------------
-function findBattlerSprite(battler){
-    if(!BattleManager._spriteset) return null;
-    return BattleManager._spriteset.battlerSprites()
-        .find(s=>s._battler===battler);
-}
-
-// -------------------------------------------------------------
-// CREATE BACKGROUND LAYERS
-// -------------------------------------------------------------
-var _createBattleback = Spriteset_Battle.prototype.createBattleback;
+const _createBattleback = Spriteset_Battle.prototype.createBattleback;
 Spriteset_Battle.prototype.createBattleback = function(){
 
     _createBattleback.call(this);
 
-    // скрываем стандартные battlebacks
     if(this._back1Sprite) this._back1Sprite.visible = false;
     if(this._back2Sprite) this._back2Sprite.visible = false;
 
-    // создаём слои
+    this._cameraRoot = new Sprite();
+    this._baseSprite.addChild(this._cameraRoot);
+
+    // FAR
     this._farBack = new Sprite();
+    this._cameraRoot.addChild(this._farBack);
+
+    // MID + battlers
+    this._baseSprite.removeChild(this._battleField);
+    this._cameraRoot.addChild(this._battleField);
+
     this._midBack = new Sprite();
-    this._mainBack = new Sprite();
-
-    // вставляем ПЕРЕД battlefield
-    let index = this._baseSprite.getChildIndex(this._battleField);
-
-    this._baseSprite.addChildAt(this._farBack,index);
-    this._baseSprite.addChildAt(this._midBack,index+1);
-    this._baseSprite.addChildAt(this._mainBack,index+2);
+    this._battleField.addChildAt(this._midBack, 0);
 };
 
 // -------------------------------------------------------------
@@ -124,12 +104,6 @@ Spriteset_Battle.prototype.updateCameraBacks = function(){
             ImageManager.loadBattleback1($gameTemp.battleCameraMidBack);
         $gameTemp.battleCameraMidBack = null;
     }
-
-    if($gameTemp.battleCameraBattleback){
-        this._mainBack.bitmap =
-            ImageManager.loadBattleback1($gameTemp.battleCameraBattleback);
-        $gameTemp.battleCameraBattleback = null;
-    }
 };
 
 // -------------------------------------------------------------
@@ -137,84 +111,40 @@ Spriteset_Battle.prototype.updateCameraBacks = function(){
 // -------------------------------------------------------------
 Spriteset_Battle.prototype.updateParallax = function(){
 
-    if(bitmapReady(this._farBack)){
-        this._farBack.x = snap(BattleCamera.x * 0.2);
-        this._farBack.y = snap(BattleCamera.y * 0.2);
+    const sw = Graphics.width;
+    const sh = Graphics.height;
+
+    if(ready(this._farBack)){
+        const bw = this._farBack.bitmap.width;
+        const bh = this._farBack.bitmap.height;
+
+        this._farBack.x = snap((sw - bw) / 2 - BattleCamera.farX * 0.05);
+        this._farBack.y = snap((sh - bh) / 2 - BattleCamera.farY * 0.05);
     }
 
-    if(bitmapReady(this._midBack)){
-        this._midBack.x = snap(BattleCamera.x * 0.5);
-        this._midBack.y = snap(BattleCamera.y * 0.5);
-    }
+    if(ready(this._midBack)){
+        const bw = this._midBack.bitmap.width;
+        const bh = this._midBack.bitmap.height;
 
-    if(bitmapReady(this._mainBack)){
-        let sw = Graphics.width;
-        let sh = Graphics.height;
-        let bw = this._mainBack.bitmap.width;
-        let bh = this._mainBack.bitmap.height;
-
-        this._mainBack.x = snap((sw-bw)/2);
-        this._mainBack.y = snap((sh-bh)/2);
+        this._midBack.x = snap((sw - bw) / 2);
+        this._midBack.y = snap((sh - bh) / 2);
     }
 };
 
 // -------------------------------------------------------------
 // UPDATE
 // -------------------------------------------------------------
-var _updateSpriteset = Spriteset_Battle.prototype.update;
+const _update = Spriteset_Battle.prototype.update;
 Spriteset_Battle.prototype.update = function(){
 
-    _updateSpriteset.call(this);
-
-    if(!this._battleField) return;
+    _update.call(this);
 
     BattleCamera.update();
-
     this.updateCameraBacks();
     this.updateParallax();
 
-    this._battleField.x = BattleCamera.x;
-    this._battleField.y = BattleCamera.y;
-    this._battleField.scale.x = BattleCamera.scale;
-    this._battleField.scale.y = BattleCamera.scale;
-};
-
-// -------------------------------------------------------------
-// SCENE CAMERA CONTROL
-// -------------------------------------------------------------
-var _sceneUpdate = Scene_Battle.prototype.update;
-Scene_Battle.prototype.update = function(){
-
-    _sceneUpdate.call(this);
-
-    if(this._actorCommandWindow && this._actorCommandWindow.active){
-        let actor = this._actorCommandWindow._actor;
-        if(actor){
-            BattleCamera.focus(findBattlerSprite(actor),1.06);
-        }
-    }
-};
-
-// -------------------------------------------------------------
-var _startAction = BattleManager.startAction;
-BattleManager.startAction = function(){
-
-    _startAction.call(this);
-
-    let subject = this._subject;
-    if(!subject) return;
-
-    let sprite = findBattlerSprite(subject);
-    if(sprite){
-        BattleCamera.focus(sprite,1.1);
-    }
-};
-
-// -------------------------------------------------------------
-var _endAction = BattleManager.endAction;
-BattleManager.endAction = function(){
-    _endAction.call(this);
-    BattleCamera.center();
+    this._cameraRoot.x = BattleCamera.x;
+    this._cameraRoot.y = BattleCamera.y;
 };
 
 })();
