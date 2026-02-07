@@ -115,5 +115,6 @@ var $plugins =
 {"name":"Battle_Hud_Fix_Select","status":true,"description":"Fix MOG HUD target list for self-only skills","parameters":{}},
 {"name":"FilterController","status":true,"description":"FilterController","parameters":{"Use Decimal in Variables":"true","displacementImage":"DisplacementMap","enabledAll-Settings":"","enabledAll-ShowInOptionMenu":"true","enabledAll-Text":"Filter Effects","enabledAll-DefaultValue":"true"}},
 {"name":"MOG_Weather_EX","status":true,"description":"(v3.4 *) Adiciona novos efeitos de climas.","parameters":{"Battle Weather":"true"}},
-{"name":"TDDP_PixelPerfect","status":true,"description":"1.1.1 Enable pixel perfect scaling mode for your game","parameters":{"enableIngameOptions":"false","labels":"","en":"Pixel Perfect Mode","ja":"ピクセルパーフェクトモード","zh":"像素完美模式","ko":"픽셀 퍼펙트 모드","ru":"Режим Pixel Perfect"}}
+{"name":"TDDP_PixelPerfect","status":true,"description":"1.1.1 Enable pixel perfect scaling mode for your game","parameters":{"enableIngameOptions":"false","labels":"","en":"Pixel Perfect Mode","ja":"ピクセルパーフェクトモード","zh":"像素完美模式","ko":"픽셀 퍼펙트 모드","ru":"Режим Pixel Perfect"}},
+{"name":"BattleBackUpper","status":true,"description":"Forces Y offset for Battleback2 AFTER engine positioning (MV)","parameters":{"OffsetY":"-400"}}
 ];
