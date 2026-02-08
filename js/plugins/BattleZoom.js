@@ -358,4 +358,43 @@ Scene_Battle.prototype.update = function() {
     }
 };
 
+// ==============================
+// FORCE Olivia Weakness Windows INTO BATTLEFIELD
+// ==============================
+(function(){
+
+const _SB_update = Spriteset_Battle.prototype.update;
+Spriteset_Battle.prototype.update = function() {
+    _SB_update.call(this);
+
+    if (!this._enemySprites) return;
+
+    this._enemySprites.forEach(sprite => {
+
+        if (!sprite._weaknessWindow) return;
+
+        const win = sprite._weaknessWindow;
+
+        // --- ЕСЛИ окно не в battlefield → переносим ---
+        if (win.parent !== this._battleField) {
+
+            if (win.parent) {
+                win.parent.removeChild(win);
+            }
+
+            this._battleField.addChild(win);
+
+            console.log("Weakness window moved into battleField");
+        }
+
+        // --- Позиционируем прямо относительно врага ---
+        win.x = sprite.x + (win._factorX || 0);
+        win.y = sprite.y - sprite.height + (win._factorY || 0);
+    });
+
+};
+
+})();
+
+
 })();
