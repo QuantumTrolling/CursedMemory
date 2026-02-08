@@ -197,33 +197,49 @@ Spriteset_Battle.prototype.update = function() {
     }
 };
 
-// ---------- ACTOR / ENEMY TURN (CTB / COMMAND SELECTION) ----------
+// -----------------------------------------------------------------------------
+// ACTOR TURN (CTB / COMMAND SELECTION)
+// -----------------------------------------------------------------------------
 var _SceneBattle_update = Scene_Battle.prototype.update;
 Scene_Battle.prototype.update = function() {
     _SceneBattle_update.call(this);
 
-    // Определяем активного баттлера (актора или врага)
-    var activeBattler = null;
-
     if ((this._skillWindow && this._skillWindow.active) ||
         (this._actorCommandWindow && this._actorCommandWindow.active)) {
-        activeBattler = this._actorCommandWindow._actor;
-    } else if ((this._enemyWindow && this._enemyWindow.active) ||
-               (this._enemyWindow && this._enemyWindow.activeBattler)) { // для врагов
-        activeBattler = this._enemyWindow._enemy; // здесь берём активного врага, если используется YEP CTB
-    } else if (BattleManager._subject) {
-        activeBattler = BattleManager._subject; // fallback — текущий субъект действия
+
+        var actor = this._actorCommandWindow._actor;
+        if (actor) {
+            BattleCamera.focus(
+                findBattlerSprite(actor),
+                actor,
+                1.0625
+            );
+        }
     }
 
-    if (activeBattler) {
-        var sprite = findBattlerSprite(activeBattler);
-        if (sprite) {
-            BattleCamera.focusCenter(); // центрируем по экрану
-            BattleCamera.focus(sprite, activeBattler, 1.125); // увеличиваем активного баттлера
-        }
-    } else {
-        // Если активного баттлера нет — мягко возвращаем камеру к стандартной позиции
-        BattleCamera.soften();
+    if ((this._enemyWindow && this._enemyWindow.active) ||
+        (this._actorWindow && this._actorWindow.active)) {
+        BattleCamera.focusCenter();
+    }
+};
+
+// -----------------------------------------------------------------------------
+// ENEMY / ACTION START
+// -----------------------------------------------------------------------------
+var _BM_startAction = BattleManager.startAction;
+BattleManager.startAction = function() {
+    _BM_startAction.call(this);
+
+    var subject = this._subject;
+    if (!subject) return;
+
+    var sprite = findBattlerSprite(subject);
+    if (sprite) {
+        BattleCamera.focus(
+            sprite,
+            subject,
+            subject.isEnemy() ? 1.0625 : 1.125
+        );
     }
 };
 
