@@ -1,20 +1,56 @@
 /*:
- * @plugindesc v1.5 CTB Vertical Turn Order (Clean, Right Top)
+ * @plugindesc v1.6 CTB Vertical Turn Order (Configurable Position)
  * @author You
+ *
+ * @param HorizontalAlign
+ * @text Горизонтальное выравнивание
+ * @type select
+ * @option Left
+ * @option Center
+ * @option Right
+ * @default Right
+ *
+ * @param VerticalAlign
+ * @text Вертикальное выравнивание
+ * @type select
+ * @option Top
+ * @option Center
+ * @option Bottom
+ * @default Top
+ *
+ * @param OffsetX
+ * @text Смещение X
+ * @type number
+ * @min -9999
+ * @max 9999
+ * @default 0
+ *
+ * @param OffsetY
+ * @text Смещение Y
+ * @type number
+ * @min -9999
+ * @max 9999
+ * @default 0
  */
 
 (function() {
+
+const params = PluginManager.parameters(document.currentScript.src.match(/([^/]+)\.js$/)[1]);
+
+const H_ALIGN = params.HorizontalAlign;
+const V_ALIGN = params.VerticalAlign;
+const OFFSET_X = Number(params.OffsetX || 0);
+const OFFSET_Y = Number(params.OffsetY || 0);
 
 // ==================================================
 // НАСТРОЙКИ ВНЕШНЕГО ВИДА
 // ==================================================
 
-const VISIBLE_COUNT   = 6;
-const BASE_Y          = 8;   // верх экрана
+const VISIBLE_COUNT = 6;
 
-const ICON_GAP        = 6;   // базовый отступ между всеми
-const ACTIVE_GAP      = 10;  // доп. разрыв после первого
-const ACTIVE_LIFT     = 10;  // приподнятие первого
+const ICON_GAP    = 6;
+const ACTIVE_GAP  = 10;
+const ACTIVE_LIFT = 10;
 
 // ==================================================
 // УТИЛИТЫ
@@ -30,38 +66,68 @@ Window_CTBIcon.prototype.isFirstInQueue = function() {
 };
 
 // ==================================================
-// ФИКСИРОВАННЫЙ X (ПРАВЫЙ ВЕРХ)
+// ВЫЧИСЛЕНИЕ БАЗОВОЙ ПОЗИЦИИ
 // ==================================================
 
-Window_CTBIcon.prototype.updateDestinationX = function() {
+Window_CTBIcon.prototype.baseX = function() {
   const margin = 8;
-  this._destinationX = Graphics.boxWidth - this.width - margin;
+  let x = 0;
+
+  switch (H_ALIGN) {
+    case "Left":
+      x = margin;
+      break;
+    case "Center":
+      x = (Graphics.boxWidth - this.width) / 2;
+      break;
+    case "Right":
+      x = Graphics.boxWidth - this.width - margin;
+      break;
+  }
+
+  return x + OFFSET_X;
+};
+
+Window_CTBIcon.prototype.baseY = function() {
+  const margin = 8;
+  let y = 0;
+
+  switch (V_ALIGN) {
+    case "Top":
+      y = margin;
+      break;
+    case "Center":
+      y = Graphics.boxHeight / 2 - (this.ctbSpacing() * VISIBLE_COUNT) / 2;
+      break;
+    case "Bottom":
+      y = Graphics.boxHeight - (this.ctbSpacing() * VISIBLE_COUNT) - margin;
+      break;
+  }
+
+  return y + OFFSET_Y;
 };
 
 // ==================================================
-// Y: ВЕРТИКАЛЬ + ОТСТУПЫ
+// ПОЗИЦИЯ ПО ОЧЕРЕДИ
 // ==================================================
 
 Window_CTBIcon.prototype.destinationY = function() {
   const order = BattleManager.ctbTurnOrder();
-  if (!order) return BASE_Y;
+  if (!order) return this.baseY();
 
   const index = order.indexOf(this._battler);
-  if (index < 0) return BASE_Y;
+  if (index < 0) return this.baseY();
 
-  let y = BASE_Y + index * this.ctbSpacing();
+  let y = this.baseY() + index * this.ctbSpacing();
 
-  // приподнимаем первого
-  if (index === 0) {
-    y -= ACTIVE_LIFT;
-  }
-
-  // дополнительный разрыв после первого
-  if (index > 0) {
-    y += ACTIVE_GAP;
-  }
+  if (index === 0) y -= ACTIVE_LIFT;
+  if (index > 0) y += ACTIVE_GAP;
 
   return y;
+};
+
+Window_CTBIcon.prototype.updateDestinationX = function() {
+  this._destinationX = this.baseX();
 };
 
 // ==================================================
@@ -89,7 +155,7 @@ Window_CTBIcon.prototype.updateCTBVisibility = function() {
 };
 
 // ==================================================
-// МЕРЦАНИЕ ПЕРВОГО
+// ПОДСВЕТКА ПЕРВОГО
 // ==================================================
 
 Window_CTBIcon.prototype.updateCTBHighlight = function() {
