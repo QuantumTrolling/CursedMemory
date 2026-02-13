@@ -289,7 +289,7 @@ Spriteset_Battle.prototype.initialize = function() {
     this._customBattleback.bitmap = ImageManager.loadBattleback1(backFile);
     this._customBattlebackContainer = new Sprite(); // отдельный контейнер
     this._customBattlebackContainer.addChild(this._customBattleback);
-    this.addChild(this._customBattlebackContainer); // добавляем в сцену
+    this._baseSprite.addChild(this._customBattlebackContainer); // добавляем в сцену
 
     // ---------- Layer2 (статичный) ----------
     this._customBattlebackLayer2 = null;
@@ -298,12 +298,12 @@ Spriteset_Battle.prototype.initialize = function() {
         this._customBattlebackLayer2 = new Sprite(ImageManager.loadBattleback1(layer2File));
         this._customBattlebackLayer2Container.addChild(this._customBattlebackLayer2);
     }
-    this.addChild(this._customBattlebackLayer2Container); // всегда выше Layer1
+    this._baseSprite.addChild(this._customBattlebackLayer2Container); // всегда выше Layer1
 
     // ---------- _battleField (актёры/враги) ----------
     // стандартный _battleField уже добавлен в _SB_initialize
     // гарантируем, что он поверх обоих контейнеров
-    this.addChild(this._battleField);
+    this._baseSprite.addChild(this._battleField);
 
     // ---------- Лог для проверки порядка ----------
     console.log("BattleField children order after initialize:");
@@ -395,6 +395,7 @@ Spriteset_Battle.prototype.update = function() {
 };
 
 })();
+
 
 
 })();
