@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v1.6 CTB Vertical Turn Order (Configurable Position)
+ * @plugindesc v1.7 CTB Vertical Turn Order (Configurable Position + Frame Image)
  * @author You
  *
  * @param HorizontalAlign
@@ -31,6 +31,12 @@
  * @min -9999
  * @max 9999
  * @default 0
+ *
+ * @param FrameImage
+ * @text Изображение рамки
+ * @type file
+ * @dir img/pictures/
+ * @default
  */
 
 (function() {
@@ -41,6 +47,7 @@ const H_ALIGN = params.HorizontalAlign;
 const V_ALIGN = params.VerticalAlign;
 const OFFSET_X = Number(params.OffsetX || 0);
 const OFFSET_Y = Number(params.OffsetY || 0);
+const FRAME_IMAGE = params.FrameImage || "";
 
 // ==================================================
 // НАСТРОЙКИ ВНЕШНЕГО ВИДА
@@ -53,12 +60,59 @@ const ACTIVE_GAP  = 10;
 const ACTIVE_LIFT = 10;
 
 // ==================================================
+// РАМКА ПОД ИКОНКОЙ + ПРАВИЛЬНЫЙ РАЗМЕР
+// ==================================================
+
+// ==================================================
+// РАМКА ПОД ИКОНКОЙ (без ломания YEP)
+// ==================================================
+
+Window_CTBIcon.prototype.createFrameSprite = function() {
+  if (!FRAME_IMAGE) return;
+  if (this._frameSprite) return;
+
+  this._frameSprite = new Sprite();
+  this._frameSprite.bitmap = ImageManager.loadPicture(FRAME_IMAGE);
+
+  this._frameSprite.bitmap.addLoadListener(() => {
+
+    const fw = this._frameSprite.bitmap.width;
+    const fh = this._frameSprite.bitmap.height;
+
+    // Центрируем рамку относительно окна
+    this._frameSprite.x = (this.width - fw) / 2;
+    this._frameSprite.y = (this.height - fh) / 2;
+
+    // Рамка под иконкой
+    this.addChildToBack(this._frameSprite);
+
+    // Центрируем иконку
+    if (this._windowContentsSprite) {
+      this._windowContentsSprite.x =
+        (this.width - this.iconWidth()) / 2;
+
+      this._windowContentsSprite.y =
+        (this.height - this.iconHeight()) / 2;
+    }
+  });
+};
+
+
+
+
+
+// ==================================================
 // УТИЛИТЫ
 // ==================================================
 
 Window_CTBIcon.prototype.ctbSpacing = function() {
+  if (this._frameSprite && this._frameSprite.bitmap.isReady()) {
+    return this._frameSprite.bitmap.height + 6;
+  }
   return this.iconHeight() + ICON_GAP;
 };
+
+
 
 Window_CTBIcon.prototype.isFirstInQueue = function() {
   const order = BattleManager.ctbTurnOrder();
@@ -169,13 +223,13 @@ Window_CTBIcon.prototype.updateCTBHighlight = function() {
   this.contentsOpacity = 210 + Math.sin(this._pulse) * 45;
 };
 
-// ==================================================
-// UPDATE
-// ==================================================
-
 const _update = Window_CTBIcon.prototype.update;
 Window_CTBIcon.prototype.update = function() {
   _update.call(this);
+
+  if (!this._battler) return;
+
+  this.createFrameSprite();
   this.updateCTBHighlight();
   this.updateCTBVisibility();
 };

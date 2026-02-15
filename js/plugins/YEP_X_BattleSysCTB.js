@@ -2192,6 +2192,7 @@ Sprite_Battler.prototype.postSpriteInitialize = function() {
 Sprite_Battler.prototype.createCTBIcon = function() {
     if (!Yanfly.Param.CTBTurnOrder) return;
     this._ctbIcon = new Window_CTBIcon(this);
+
 };
 
 Yanfly.CTB.Sprite_Battler_update = Sprite_Battler.prototype.update;
@@ -2242,6 +2243,7 @@ Window_Selectable.prototype.select = function(index) {
 //=============================================================================
 // Window_CTBIcon
 //=============================================================================
+
 
 function Window_CTBIcon() {
     this.initialize.apply(this, arguments);
@@ -2369,30 +2371,32 @@ Window_CTBIcon.prototype.drawIcon = function(iconIndex, x, y) {
     this.contents.blt(bitmap, sx, sy, pw, ph, x, y, ww, wh);
 };
 
+// Новый метод для отображения полоски вместо рамки
 Window_CTBIcon.prototype.drawBorder = function() {
-    var width = this.contents.width;
-    var height = this.contents.height;
-    this.contents.fillRect(0, 0, width, height, this.gaugeBackColor());
-    width -= 2;
-    height -= 2;
-    this.contents.fillRect(1, 1, width, height, this.ctbBorderColor());
-    width -= 4;
-    height -= 4;
-    this.contents.fillRect(3, 3, width, height, this.gaugeBackColor());
-    width -= 2;
-    height -= 2;
-    this.contents.fillRect(4, 4, width, height, this.ctbBackgroundColor());
+    if (!this._battler) return;
+    var iconW = this.iconWidth();           // ширина иконки
+    var iconH = this.iconHeight();          // высота иконки
+    var barWidth = 20;                       // ширина полоски (можно менять)
+    var barHeight = iconH + 10;                  // высота полоски = высота иконки
+    var x = iconW + 2;                  // смещение справа от иконки (4 пикс + 2 пикс gap)
+    var y = 2;                              // смещение от верхнего края окна
+    this.contents.fillRect(x, y, barWidth, barHeight, this.ctbBorderColor());
 };
 
+// Цвет полоски
 Window_CTBIcon.prototype.ctbBorderColor = function() {
+    if (!this._battler) return this.textColor(0);
     var colorId = this._battler.ctbBorderColor() || 0;
     return this.textColor(colorId);
 };
 
+// Опционально, если нужен фон полоски (подложка)
 Window_CTBIcon.prototype.ctbBackgroundColor = function() {
+    if (!this._battler) return this.textColor(0);
     var colorId = this._battler.ctbBackgroundColor() || 0;
     return this.textColor(colorId);
 };
+
 
 Window_CTBIcon.prototype.redrawActorFace = function() {
     var width = Window_Base._faceWidth;
@@ -2599,6 +2603,8 @@ Window_CTBIcon.prototype.isLargeWindowShowing = function() {
 Window_CTBIcon.prototype.reduceOpacity = function() {
     this.contentsOpacity -= this.opacityFadeRate();
 };
+
+
 
 //=============================================================================
 // Scene_Battle

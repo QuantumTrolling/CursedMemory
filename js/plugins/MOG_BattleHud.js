@@ -834,6 +834,22 @@
  * @desc Definição da altura da janela.
  * @default 180
  * @parent -> W SKILL <<<<<<<<<<<<<<<<<<<<<<<
+ * 
+ * @param W Skill Column Spacing
+ * @text Column Spacing
+ * @desc Расстояние между колонками навыков.
+ * @type number
+ * @min 0
+ * @default 12
+ * @parent -> W SKILL <<<<<<<<<<<<<<<<<<<<<<<
+ * 
+ * @param W Skill Font Size
+ * @text Font Size
+ * @desc Размер шрифта в окне навыков.
+ * @type number
+ * @min 8
+ * @default 28
+ * @parent -> W SKILL <<<<<<<<<<<<<<<<<<<<<<<
  *
  * @param W Skill maxCols
  * @text Max Columns
@@ -1400,6 +1416,8 @@
 	Moghunter.bhud_skill_width =  Number(Moghunter.parameters['W Skill Width'] || 816);
     Moghunter.bhud_skill_height =  Number(Moghunter.parameters['W Skill Height'] || 180);
 	Moghunter.bhud_skill_maxcols = Number(Moghunter.parameters['W Skill maxCols'] || 2);
+	Moghunter.bhud_skill_spacing = Number(Moghunter.parameters['W Skill Column Spacing'] || 12);
+	Moghunter.bhud_skill_fontsize = Number(Moghunter.parameters['W Skill Font Size'] || 28);
 	Moghunter.bhud_skill_slide_x =  Number(Moghunter.parameters['W Skill Slide X'] || 0);
     Moghunter.bhud_skill_slide_y =  Number(Moghunter.parameters['W Skill Slide Y'] || 100);	
 	
@@ -3838,4 +3856,64 @@ Battle_Hud.prototype.update_states2 = function() {
 Battle_Hud.prototype.need_refresh_states2 = function() {
 	if (this._battler.need_refresh_bhud_states) {return true};
 	return false;
+};
+
+//==========================================
+// Center Window_Help Text Properly (MV)
+//==========================================
+Window_Help.prototype.refresh = function() {
+    this.contents.clear();
+    if (!this._text) return;
+
+    var lines = this._text.split('\n');
+    var y = 0;
+
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+
+        // Получаем реальную ширину строки
+        var textWidth = this.drawTextEx(line, 0, this.contents.height);
+
+        // Центрируем по ширине окна
+        var x = (this.contentsWidth() - textWidth) / 2;
+
+        // Рисуем строку
+        this.drawTextEx(line, x, y);
+
+        y += this.lineHeight();
+    }
+};
+
+
+//=============================================================================
+// ■ Window_BattleSkill - Column Spacing Control
+//=============================================================================
+
+var _mog_bhud_wbskill_spacing = Window_BattleSkill.prototype.spacing;
+Window_BattleSkill.prototype.spacing = function() {
+    if (Moghunter && Moghunter.bhud_skill_spacing !== undefined) {
+        return Math.max(0, Moghunter.bhud_skill_spacing);
+    }
+    return _mog_bhud_wbskill_spacing.call(this);
+};
+
+//=============================================================================
+// ■ Window_BattleSkill - Column Spacing + Font Size Control
+//=============================================================================
+
+// Колонки (если ещё не добавлено)
+var _mog_bhud_wbskill_spacing = Window_BattleSkill.prototype.spacing;
+Window_BattleSkill.prototype.spacing = function() {
+    if (Moghunter && Moghunter.bhud_skill_spacing !== undefined) {
+        return Math.max(0, Moghunter.bhud_skill_spacing);
+    }
+    return _mog_bhud_wbskill_spacing.call(this);
+};
+
+// Размер шрифта
+Window_BattleSkill.prototype.standardFontSize = function() {
+    if (Moghunter && Moghunter.bhud_skill_fontsize) {
+        return Moghunter.bhud_skill_fontsize;
+    }
+    return Window_Selectable.prototype.standardFontSize.call(this);
 };
