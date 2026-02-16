@@ -73,18 +73,32 @@ function findBattlerSprite(battler) {
 
 // Возвращает координаты центра спрайта (по середине тела, а не ног)
 // Используется для правильного фокусирования камеры на персонаже
+// Возвращает координаты центра спрайта (по середине тела, учитывая текущее y)
 function getSpriteCenter(sprite) {
-    if (!sprite || !sprite.bitmap || !sprite.bitmap.isReady()) {
-        return { x: sprite.x, y: sprite.y };
-    }
+    if (!sprite) return { x: 0, y: 0 };
 
-    var height = sprite.bitmap.height;
+    var screenX = sprite.x;
+    var screenY = sprite.y;
+
+    // Учёт всех визуальных смещений от ActSeqPack2
+    var floatOffset = sprite._float || 0;
+    var jumpOffset  = sprite._jumpHeight || 0;  // вместо _jump используем _jumpHeight
+
     var anchorY = sprite.anchor ? sprite.anchor.y : 1;
+    var bitmapHeight = sprite.bitmap && sprite.bitmap.isReady() ? sprite.bitmap.height : 0;
 
-    return {
-        x: sprite.x,
-        y: sprite.y - (height * anchorY / 2)
-    };
+    var centerY = screenY - bitmapHeight * anchorY / 2 + floatOffset + jumpOffset;
+
+    console.log(
+        "[BattleCamera Debug]",
+        "Sprite:", sprite._battler ? sprite._battler.name : "Enemy",
+        "sprite.y:", screenY,
+        "floatOffset:", floatOffset,
+        "jumpOffset:", jumpOffset,
+        "centerY(final):", centerY
+    );
+
+    return { x: screenX, y: centerY };
 }
 
 // -----------------------------------------------------------------------------
@@ -109,28 +123,38 @@ var BattleCamera = {
     speed: 0.15,              // скорость движения камеры (чем выше, тем быстрее)
 
     // Обновление позиции камеры
-    update: function() {
-        if (this.forcedCenter) {
-            // Если требуется центр по экрану, цель всегда (0,0)
-            this.tx = 0;
-            this.ty = 0;
-        } else if (this.followSprite) {
-            // Если есть спрайт для слежения, центрируем камеру на него
-            var center = getSpriteCenter(this.followSprite);
-            this.tx = Graphics.width / 2 - center.x;
-            this.ty = Graphics.height / 2 - center.y;
-        }
+	update: function() {
+		if (this.forcedCenter) {
+			this.tx = 0;
+			this.ty = 0;
+		} else if (this.followSprite) {
+			var center = getSpriteCenter(this.followSprite);
+			if (this.followSprite._jumpHeight) center.y -= this.followSprite._jumpHeight;
+			this.tx = Graphics.width / 2 - center.x;
+			this.ty = Graphics.height / 2 - center.y;
 
-        // Плавное движение камеры к целевой позиции
-        this.x += (this.tx - this.x) * this.speed;
-        this.y += (this.ty - this.y) * this.speed;
-        this.scale += (this.tScale - this.scale) * this.speed;
+			const MAX_OFFSET_X = 50; // макс смещение вправо/влево
+			const MAX_OFFSET_Y = 50; // макс смещение вниз
 
-        // Привязка к пикселям для "pixel-perfect"
-        this.x = snap(this.x);
-        this.y = snap(this.y);
-        this.scale = snapScale(this.scale);
-    },
+			// Ограничение по X
+			if (this.tx > MAX_OFFSET_X) this.tx = MAX_OFFSET_X;
+			if (this.tx < -MAX_OFFSET_X) this.tx = -MAX_OFFSET_X;
+
+			// Ограничение только по нижней границе Y
+			if (this.ty < -MAX_OFFSET_Y) this.ty = -MAX_OFFSET_Y;
+			// Верхняя граница убрана → камера может уходить вверх на любое значение
+		}
+
+		// Плавное движение камеры к целевой позиции
+		this.x += (this.tx - this.x) * this.speed;
+		this.y += (this.ty - this.y) * this.speed;
+		this.scale += (this.tScale - this.scale) * this.speed;
+
+		// Привязка к пикселям для "pixel-perfect"
+		this.x = snap(this.x);
+		this.y = snap(this.y);
+		this.scale = snapScale(this.scale);
+	},
 
     // Фокус на конкретный спрайт/баттлер
     focus: function(sprite, battler, scale) {

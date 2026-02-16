@@ -658,7 +658,8 @@ Sprite_Battler.prototype.setupDamagePopup = function() {
 			    }
 			}
 
-			BattleManager._spriteset.addChild(sprite);
+			BattleManager._spriteset._battleField.addChild(sprite);
+
 			this._battler.clearResult();
 		}
     } else {
