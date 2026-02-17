@@ -707,7 +707,7 @@ BattleManager.resetCamera = function(duration) {
     this._cameraFocusGroup = [];
     this._cameraFocusPosX = 'BASE';
     this._cameraFocusPosY = 'BASE';
-    this._cameraClamp = true;
+    this._cameraClamp = false;
     $gameScreen.setCameraDuration(duration);
 };
 
