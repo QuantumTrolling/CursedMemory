@@ -828,6 +828,18 @@ Spriteset_Battle.prototype.updatePosition = function() {
       this.x = Math.round(screenX);
       this.y = Math.round(screenY);
     }
+	this.x += Math.round($gameScreen.shake());
+	this.y += Math.round($gameScreen.shake());
+	
+	const MAX_OFFSET_X = 100; // макс смещение вправо/влево
+	const MAX_OFFSET_Y = 10; // макс смещение вниз
+
+	// Ограничение по X
+	if (this.x > MAX_OFFSET_X) this.x = MAX_OFFSET_X;
+	if (this.x < -MAX_OFFSET_X) this.x = -MAX_OFFSET_X;
+
+	// Ограничение только по нижней границе Y
+	if (this.y < -MAX_OFFSET_Y) this.y = -MAX_OFFSET_Y;
 };
 
 //=============================================================================

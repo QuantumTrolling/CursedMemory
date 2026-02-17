@@ -129,12 +129,18 @@ var BattleCamera = {
 			this.ty = 0;
 		} else if (this.followSprite) {
 			var center = getSpriteCenter(this.followSprite);
-			if (this.followSprite._jumpHeight) center.y -= this.followSprite._jumpHeight;
+
+			var jump = this.followSprite._jumpHeight || 0;
+			var moveX = this.followSprite._moveX || 0;   // ASP3
+			var moveY = this.followSprite._moveY || 0;   // ASP3
+			center.x += moveX;
+			center.y += moveY - jump;
+
 			this.tx = Graphics.width / 2 - center.x;
 			this.ty = Graphics.height / 2 - center.y;
 
-			const MAX_OFFSET_X = 50; // макс смещение вправо/влево
-			const MAX_OFFSET_Y = 50; // макс смещение вниз
+			const MAX_OFFSET_X = 100; // макс смещение вправо/влево
+			const MAX_OFFSET_Y = 10; // макс смещение вниз
 
 			// Ограничение по X
 			if (this.tx > MAX_OFFSET_X) this.tx = MAX_OFFSET_X;
