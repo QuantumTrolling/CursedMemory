@@ -10,6 +10,7 @@ var Yanfly = Yanfly || {};
 Yanfly.CTB = Yanfly.CTB || {};
 Yanfly.CTB.version = 1.17;
 
+
 //=============================================================================
  /*:
  * @plugindesc v1.17 (Requires YEP_BattleEngineCore.js) Add CTB (Charge
@@ -586,6 +587,10 @@ Yanfly.Param.CTBColorBackground = Number(Yanfly.Parameters['Background Color']);
 Yanfly.Param.CTBEnemyIcon = Number(Yanfly.Parameters['Enemy Icon']);
 Yanfly.Param.CTBEnemySVBattler = String(Yanfly.Parameters['Enemy SV Battlers']);
 Yanfly.Param.CTBEnemySVBattler = eval(Yanfly.Param.CTBEnemySVBattler);
+
+CTBFreePosX = 600
+CTBFreePosY = 50
+
 
 //=============================================================================
 // DataManager
@@ -2349,7 +2354,6 @@ Window_CTBIcon.prototype.updateRedraw = function() {
     if (this._image.width <= 0) return;
     this._redraw = false;
     this.contents.clear();
-    this.drawBorder();
     if (this._iconIndex > 0) {
         this.drawIcon(this._iconIndex, 4, 4);
     } else if (this._battler.isActor()) {
@@ -2371,17 +2375,7 @@ Window_CTBIcon.prototype.drawIcon = function(iconIndex, x, y) {
     this.contents.blt(bitmap, sx, sy, pw, ph, x, y, ww, wh);
 };
 
-// Новый метод для отображения полоски вместо рамки
-Window_CTBIcon.prototype.drawBorder = function() {
-    if (!this._battler) return;
-    var iconW = this.iconWidth();           // ширина иконки
-    var iconH = this.iconHeight();          // высота иконки
-    var barWidth = 20;                       // ширина полоски (можно менять)
-    var barHeight = iconH + 10;                  // высота полоски = высота иконки
-    var x = iconW + 2;                  // смещение справа от иконки (4 пикс + 2 пикс gap)
-    var y = 2;                              // смещение от верхнего края окна
-    this.contents.fillRect(x, y, barWidth, barHeight, this.ctbBorderColor());
-};
+
 
 // Цвет полоски
 Window_CTBIcon.prototype.ctbBorderColor = function() {

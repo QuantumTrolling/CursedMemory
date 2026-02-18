@@ -1,9 +1,8 @@
 /*:
- * @plugindesc v1.7 CTB Vertical Turn Order (Configurable Position + Frame Image)
+ * @plugindesc v1.8 CTB Vertical Turn Order (With Ally/Enemy Side Color Bar)
  * @author You
  *
  * @param HorizontalAlign
- * @text Горизонтальное выравнивание
  * @type select
  * @option Left
  * @option Center
@@ -11,7 +10,6 @@
  * @default Right
  *
  * @param VerticalAlign
- * @text Вертикальное выравнивание
  * @type select
  * @option Top
  * @option Center
@@ -19,52 +17,55 @@
  * @default Top
  *
  * @param OffsetX
- * @text Смещение X
  * @type number
- * @min -9999
- * @max 9999
  * @default 0
  *
  * @param OffsetY
- * @text Смещение Y
  * @type number
- * @min -9999
- * @max 9999
  * @default 0
  *
  * @param FrameImage
- * @text Изображение рамки
  * @type file
  * @dir img/pictures/
  * @default
+ *
+ * @param AllyBarColor
+ * @text Цвет полосы союзников
+ * @desc CSS цвет (например #00ff00)
+ * @default #00ff00
+ *
+ * @param EnemyBarColor
+ * @text Цвет полосы врагов
+ * @desc CSS цвет (например #ff0000)
+ * @default #ff0000
+ *
+ * @param BarWidth
+ * @text Ширина полосы
+ * @type number
+ * @default 4
  */
 
 (function() {
 
 const params = PluginManager.parameters(document.currentScript.src.match(/([^/]+)\.js$/)[1]);
 
-const H_ALIGN = params.HorizontalAlign;
-const V_ALIGN = params.VerticalAlign;
-const OFFSET_X = Number(params.OffsetX || 0);
-const OFFSET_Y = Number(params.OffsetY || 0);
+const H_ALIGN   = params.HorizontalAlign;
+const V_ALIGN   = params.VerticalAlign;
+const OFFSET_X  = Number(params.OffsetX || 0);
+const OFFSET_Y  = Number(params.OffsetY || 0);
 const FRAME_IMAGE = params.FrameImage || "";
 
-// ==================================================
-// НАСТРОЙКИ ВНЕШНЕГО ВИДА
-// ==================================================
+const ALLY_COLOR  = String(params.AllyBarColor || "#00ff00");
+const ENEMY_COLOR = String(params.EnemyBarColor || "#ff0000");
+const BAR_WIDTH   = Number(params.BarWidth || 4);
 
 const VISIBLE_COUNT = 6;
-
 const ICON_GAP    = 6;
 const ACTIVE_GAP  = 10;
 const ACTIVE_LIFT = 10;
 
 // ==================================================
-// РАМКА ПОД ИКОНКОЙ + ПРАВИЛЬНЫЙ РАЗМЕР
-// ==================================================
-
-// ==================================================
-// РАМКА ПОД ИКОНКОЙ (без ломания YEP)
+// РАМКА + ЦВЕТНАЯ ПОЛОСА
 // ==================================================
 
 Window_CTBIcon.prototype.createFrameSprite = function() {
@@ -79,14 +80,11 @@ Window_CTBIcon.prototype.createFrameSprite = function() {
     const fw = this._frameSprite.bitmap.width;
     const fh = this._frameSprite.bitmap.height;
 
-    // Центрируем рамку относительно окна
     this._frameSprite.x = (this.width - fw) / 2;
     this._frameSprite.y = (this.height - fh) / 2;
 
-    // Рамка под иконкой
     this.addChildToBack(this._frameSprite);
 
-    // Центрируем иконку
     if (this._windowContentsSprite) {
       this._windowContentsSprite.x =
         (this.width - this.iconWidth()) / 2;
@@ -94,12 +92,36 @@ Window_CTBIcon.prototype.createFrameSprite = function() {
       this._windowContentsSprite.y =
         (this.height - this.iconHeight()) / 2;
     }
+
+    this.createSideBar(fw, fh);
   });
 };
 
+// ==================================================
+// СОЗДАНИЕ ПОЛОСЫ
+// ==================================================
 
+Window_CTBIcon.prototype.createSideBar = function(fw, fh) {
+  if (this._sideBar) return;
 
+  this._sideBar = new Sprite(new Bitmap(BAR_WIDTH, fh));
 
+  this._sideBar.x = this._frameSprite.x + fw - BAR_WIDTH;
+  this._sideBar.y = this._frameSprite.y;
+
+  this.addChild(this._sideBar);
+
+  this.refreshSideBar();
+};
+
+Window_CTBIcon.prototype.refreshSideBar = function() {
+  if (!this._sideBar || !this._battler) return;
+
+  const color = this._battler.isActor() ? ALLY_COLOR : ENEMY_COLOR;
+
+  this._sideBar.bitmap.clear();
+  this._sideBar.bitmap.fillAll(color);
+};
 
 // ==================================================
 // УТИЛИТЫ
@@ -112,15 +134,13 @@ Window_CTBIcon.prototype.ctbSpacing = function() {
   return this.iconHeight() + ICON_GAP;
 };
 
-
-
 Window_CTBIcon.prototype.isFirstInQueue = function() {
   const order = BattleManager.ctbTurnOrder();
   return order && order[0] === this._battler;
 };
 
 // ==================================================
-// ВЫЧИСЛЕНИЕ БАЗОВОЙ ПОЗИЦИИ
+// БАЗОВАЯ ПОЗИЦИЯ
 // ==================================================
 
 Window_CTBIcon.prototype.baseX = function() {
@@ -162,7 +182,7 @@ Window_CTBIcon.prototype.baseY = function() {
 };
 
 // ==================================================
-// ПОЗИЦИЯ ПО ОЧЕРЕДИ
+// ПОЗИЦИЯ В ОЧЕРЕДИ
 // ==================================================
 
 Window_CTBIcon.prototype.destinationY = function() {
@@ -223,6 +243,10 @@ Window_CTBIcon.prototype.updateCTBHighlight = function() {
   this.contentsOpacity = 210 + Math.sin(this._pulse) * 45;
 };
 
+// ==================================================
+// UPDATE
+// ==================================================
+
 const _update = Window_CTBIcon.prototype.update;
 Window_CTBIcon.prototype.update = function() {
   _update.call(this);
@@ -230,6 +254,7 @@ Window_CTBIcon.prototype.update = function() {
   if (!this._battler) return;
 
   this.createFrameSprite();
+  this.refreshSideBar();
   this.updateCTBHighlight();
   this.updateCTBVisibility();
 };
