@@ -830,7 +830,7 @@ Spriteset_Battle.prototype.updatePosition = function() {
     }
 	
 	const MAX_OFFSET_X = 350; // макс смещение вправо/влево
-	const MAX_OFFSET_Y = 150; // макс смещение вниз
+	const MAX_OFFSET_Y = 350; // макс смещение вниз
 
 	// Ограничение по X
 	if (this.x > MAX_OFFSET_X) this.x = MAX_OFFSET_X;
