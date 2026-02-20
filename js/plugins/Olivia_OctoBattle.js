@@ -2169,244 +2169,60 @@
  */
 //=============================================================================
 
-var _0x11a5 = ["Weapon Swap Text Hit", "Battle Effects Break Popup Cell X", "OTB Sprite Opacity Speed", 'WeaknessDisplay', "Element Icons", "Side Battle Gauge Width", "Battle Effects Weak Popup Move X Rate", "HP Gauge Minimum Width", "Battle Effects Weak Popup Cell X Factor", "Boost Point Analyze Multipliers", "Boost Point Death Regen", "Stun Icon", "Boost Point Icon Filled", "Base Shield Value", 'description', "Victory Screen Rewards Results Font Color", "Icon Font Size", "Boost Point Unboost Command", "Side Battle Status Scale", "Boost Point Turn Addition", "Boost Point Show Icons", "Victory Screen Status Level Up Color", "Victory Screen Rewards Category Font Color", "Victory Screen Background Text Items Font Size", "Victory Screen Zoom Y", "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]", "Boost Point System", "Boost Point Small Text", "Battle Effects Weak Popup Move X Base", "Victory Screen Status Update Duration", "Protect Weakness Icon", 'BattleEffects', "Victory Screen Background Text Victory", "Victory Screen Rewards Category Font Size", 'OctoBattle', "Show Actor Shields", "Victory Screen BGM Volume", "Boost Point Regen", "Boost Point Damage Multipliers", "Weapon Swap Battle Icons", "Side Battle Enemy Y", "Boost Point Repeat Multipliers", "Boost Point Turn Multipliers", "Boost Point Icon Empty", "Weakness Show Name", "Battle Effects Weak Popup Cell X", "Victory Screen Zoom X", "Side Battle Status States Max", "Name Font Size", "Boost Point BP Addition", 'filter', "OTB Mechanics Escape Actor Window", "Victory Screen Status Exp Gauge Height", "Battle Effects Weak Popup Cell Y Factor", "Victory Screen Level Sound Pitch", "Boost Point Repeat Addition", "Victory Screen Zoom", "Victory Screen Status Next EXP Font Size", "HP Gauge Padding", "Victory Screen BGM", 'contains', "Weakness Always Show", "OTB Display Current Text", "OTB Mechanics Enable Party Window", "Weapon Swap Battle Action", "OTB Display Current Size", "Battle Effects Pack", "Battle Effects Break Popup Cell Width", "Boost Point Boost Command", "Battle Effects Break Popup Cell Y Factor", "Weakness Display", "Weakness Show Break Shield", "Victory Screen Level Sound Volume", "Weakness Show HP Gauge", "Victory Screen Transition Power", "Side Battle List Window Max", "Element Weakness Rate", "Victory Screen Hide Window Delay", 'CRI', "Battle Effects Weak Popups", "Boost Point Unboost Command Show", "[\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\"]", 'SideBattleUI', "Victory Screen UI", "Victory Screen Status Next EXP Font Color", "OTB Mechanics Remove Restrict Next", "Victory Screen Status Exp Gauge Color 1", "OTB Display Help Window Move Speed", "Victory Screen Status Level Up Text", 'Olivia_OctoBattle', "Victory Screen Rewards Results Font Size", 'VictoryUI', "OTB Force Battle System", "Break Reduction", "Side Battle UI", "Side Battle Position Actors", "Boost Icon Size", "Side Battle List Window Width", "Victory Screen Status Level Font Size", "Battle Effects Max Buff Turns", "OTB Display X", "Reduce Animation", "OTB Log Window Y", "Weapon Swap Text Critical", "OTB Background Actor Color", "Battle Effects Stack Buff Turns", "Victory Screen Display Delay", "Victory Screen Status Actor Font Size", "Boost Point Death Removal", "Weapon Swap Battle Test", "Victory Screen Background Side Thickness", "Show Enemy Shields", "Boost Point Small Text Align", "Unknown Weakness Icon", "Side Battle Gauge Height", "Side Battle Actor X", "Battle Effects Break Popup Move Y Base", "Weapon Swap Command", "Battle Effects Weak Popup Move Y Rate", 'parameters', "Victory Screen Status Current EXP Font Size", "OTB Display Next Text", "Boost Point Maximum Use", "OTB Mechanics Action Time Order Randomize", "OTB Mechanics Action Speed Convert", "Battle Effects Weak Popup Cell Width", "OTB Sprite Move Duration", "Weapon Swap Show Command", "Side Battle Status Move Active", "Victory Screen Status EXP Font Size", "Side Battle Command Window Width", "Break Shield System", "Victory Screen Level Sound", "Shown Elements", "OTB Mechanics Remove Restrict Current", "Enemy Shields", "Draw Menu Shields", "Victory Screen Status Level Format", "Side Battle Command Window Scale", "Side Battle Ceiling Distance", "Battle Effects Break Popup Move X Base", "Victory Screen BGM Pan", "Weakness Show States", '<OctoBattle>', "OTB Display Help Window Move Y", "OTB Mechanics Static AGI Calculation", "OTB Mechanics Stun Wakeup First", "Victory Screen Background Dimmer Height", "OTB Display Y", "Boost Point Boost Command Show", "Boost Point LR Buttons", "OTB Help Window Y", "Boost Point Start Battle", "Weapon Swap Text Evasion", "Victory Screen Zoom Scale", "Boost Point Animations", "Victory Screen Background Text Items", "Victory Screen Status Exp Gauge Color 2", "Side Battle Status Width", "Small Boost Icons", "Side Battle Position Enemies", 'true', "OTB Mechanics Added Action Times", 'parse', "Victory Screen Status JP Font Size", "Side Battle Window Masking", 'false', "Max Break Shields", "Small Weakness Icons", "Victory Screen Background Text Victory Font Size", "Victory Screen BGM Pitch", "Weapon Swap Arrow Buttons", "OTB Mechanics Buff Debuff AGI Convert", "Battle Effects Break Popup Move Y Rate", 'BreakShield', "Boost Point Damage Addition", "Battle Effects Break Popup Move X Rate", "Boost Point Analyze Addition", "50% HP Color", "Boost Point Maximum Stored", "Stun State ID", 'EVA'];
-(function (_0x4b8d18, _0x11a5b5) {
-  var _0x511020 = function (_0x4791dd) {
-    while (--_0x4791dd) {
-      _0x4b8d18.push(_0x4b8d18.shift());
-    }
-  };
-  _0x511020(++_0x11a5b5);
-})(_0x11a5, 0x1a1);
-var _0x5110 = function (_0x4b8d18, _0x11a5b5) {
-  _0x4b8d18 = _0x4b8d18 - 0x0;
-  var _0x511020 = _0x11a5[_0x4b8d18];
-  return _0x511020;
-};
 var Imported = Imported || {};
-Imported[_0x5110('0x24')] = true;
+Imported["OctoBattle"] = true;
+
 var Olivia = Olivia || {};
-Olivia[_0x5110('0xa3')] = Olivia[_0x5110('0xa3')] || {};
-var parameters = $plugins[_0x5110('0xb3')](function (_0x23965f) {
-  return _0x23965f[_0x5110('0x8f')][_0x5110('0x7')](_0x5110('0x5a'));
-})[0x0][_0x5110('0x42')];
-Olivia[_0x5110('0xa3')][_0x5110('0x84')] = {
-  'Enabled': eval(parameters[_0x5110('0x11')]),
-  'ShownElements': JSON[_0x5110('0x6e')](parameters[_0x5110('0x50')]),
-  'ElementIcons': JSON[_0x5110('0x6e')](parameters[_0x5110('0x85')]),
-  'UnknownIcon': Number(parameters[_0x5110('0x3c')]),
-  'AlwaysShow': eval(parameters[_0x5110('0x8')]),
-  'HideDuration': Number(parameters["Weakness Hide Duration"] || 0x5a),
-  'ShowBreakShield': eval(parameters[_0x5110('0x12')]),
-  'ShowStunTurns': eval(parameters["Weakness Stun Duration"]),
-  'ShowHpGauge': eval(parameters[_0x5110('0x14')]),
-  'HpGaugeMinWidth': Number(parameters[_0x5110('0x88')] || 0x64),
-  'HpGaugePadding': Number(parameters[_0x5110('0x5')] || 0x64),
-  'ShowName': eval(parameters[_0x5110('0xad')]),
-  'NameFontSize': Number(parameters[_0x5110('0xb1')] || 0x16),
-  'HpColor50': Number(parameters[_0x5110('0x7d')] || 0x11),
-  'HpColor25': Number(parameters["25% HP Color"] || 0x12),
-  'ShowStates': eval(parameters[_0x5110('0x59')] || _0x5110('0x6c')),
-  'SmallWeakIcons': eval(parameters[_0x5110('0x73')]),
-  'WeakIconSize': Number(parameters["Weak Icon Size"] || 0.6)
+Olivia["OctoBattle"] = Olivia["OctoBattle"] || {};
+
+// поиск параметров плагина
+var parameters = $plugins.filter(function (plugin) {
+  return plugin.description.contains("<OctoBattle>");
+})[0].parameters;
+
+// WeaknessDisplay
+Olivia["OctoBattle"]["WeaknessDisplay"] = {
+  Enabled: eval(parameters["Weakness Display"]),
+  ShownElements: JSON.parse(parameters["Shown Elements"]),
+  ElementIcons: JSON.parse(parameters["Element Icons"]),
+  UnknownIcon: Number(parameters["Unknown Weakness Icon"]),
+  AlwaysShow: eval(parameters["Weakness Always Show"]),
+  HideDuration: Number(parameters["Weakness Hide Duration"] || 90),
+  ShowBreakShield: eval(parameters["Weakness Show Break Shield"]),
+  ShowStunTurns: eval(parameters["Weakness Stun Duration"]),
+  ShowHpGauge: eval(parameters["Weakness Show HP Gauge"]),
+  HpGaugeMinWidth: Number(parameters["HP Gauge Minimum Width"] || 100),
+  HpGaugePadding: Number(parameters["HP Gauge Padding"] || 100),
+  ShowName: eval(parameters["Weakness Show Name"]),
+  NameFontSize: Number(parameters["Name Font Size"] || 22),
+  HpColor50: Number(parameters["50% HP Color"] || 17),
+  HpColor25: Number(parameters["25% HP Color"] || 18),
+  ShowStates: eval(parameters["Weakness Show States"] || true),
+  SmallWeakIcons: eval(parameters["Small Weakness Icons"]),
+  WeakIconSize: Number(parameters["Weak Icon Size"] || 0.6)
 };
-Olivia[_0x5110('0xa3')][_0x5110('0x79')] = {
-  'Enabled': eval(parameters[_0x5110('0x4e')]),
-  'Actors': eval(parameters["Actor Shields"]),
-  'DrawMenu': eval(parameters[_0x5110('0x53')]),
-  'Enemies': eval(parameters[_0x5110('0x52')]),
-  'BaseShields': Number(parameters[_0x5110('0x8e')] || 0x0),
-  'BreakReduce': Number(parameters[_0x5110('0x28')] || 0x1),
-  'MaxShields': Number(parameters[_0x5110('0x72')] || 0x63),
-  'StunState': Number(parameters[_0x5110('0x7f')] || 0x1),
-  'WeakRate': Number(parameters[_0x5110('0x17')] || 1.1),
-  'ShieldIcon': Number(parameters["Shield Icon"] || 0x51),
-  'StunIcon': Number(parameters[_0x5110('0x8c')] || 0x6),
-  'ProtectIcon': Number(parameters[_0x5110('0x9f')] || 0x51),
-  'IconFontSize': Number(parameters[_0x5110('0x91')] || 0x16),
-  'ReduceAnimation': Number(parameters[_0x5110('0x30')] || 0x0),
-  'BreakAnimation': Number(parameters["Break Animation"] || 0x0),
-  'ShowActorShield': eval(parameters[_0x5110('0xa4')]),
-  'ShowEnemyShield': eval(parameters[_0x5110('0x3a')])
+
+// BreakShield
+Olivia["OctoBattle"]["BreakShield"] = {
+  Enabled: eval(parameters["Break Shield System"]),
+  Actors: eval(parameters["Actor Shields"]),
+  DrawMenu: eval(parameters["Draw Menu Shields"]),
+  Enemies: eval(parameters["Enemy Shields"]),
+  BaseShields: Number(parameters["Base Shield Value"] || 0),
+  BreakReduce: Number(parameters["Break Reduction"] || 1),
+  MaxShields: Number(parameters["Max Break Shields"] || 99),
+  StunState: Number(parameters["Stun State ID"] || 1),
+  WeakRate: Number(parameters["Element Weakness Rate"] || 1.1),
+  ShieldIcon: Number(parameters["Shield Icon"] || 81),
+  StunIcon: Number(parameters["Stun Icon"] || 6),
+  ProtectIcon: Number(parameters["Protect Weakness Icon"] || 81),
+  IconFontSize: Number(parameters["Icon Font Size"] || 22),
+  ReduceAnimation: Number(parameters["Reduce Animation"] || 0),
+  BreakAnimation: Number(parameters["Break Animation"] || 0),
+  ShowActorShield: eval(parameters["Show Actor Shields"]),
+  ShowEnemyShield: eval(parameters["Show Enemy Shields"])
 };
-Olivia[_0x5110('0xa3')].BoostPoint = {
-  'Enabled': eval(parameters[_0x5110('0x9b')]),
-  'BP_StartBattle': Number(parameters[_0x5110('0x63')] || 0x1),
-  'BP_TurnRegen': Number(parameters[_0x5110('0xa6')] || 0x1),
-  'BP_AlwaysRegen': eval(parameters["Boost Point Always Regen"]),
-  'BP_MaxStored': Number(parameters[_0x5110('0x7e')] || 0x5),
-  'BP_MaxUse': Number(parameters[_0x5110('0x45')] || 0x3),
-  'DeathRemoval': eval(parameters[_0x5110('0x37')] || _0x5110('0x6c')),
-  'DeathRegen': eval(parameters[_0x5110('0x8b')] || _0x5110('0x71')),
-  'BP_DmgMultiply': JSON[_0x5110('0x6e')](parameters[_0x5110('0xa7')] || _0x5110('0x1c')),
-  'BP_DmgAddition': JSON[_0x5110('0x6e')](parameters[_0x5110('0x7a')] || _0x5110('0x9a')),
-  'BP_RepMultiply': JSON[_0x5110('0x6e')](parameters[_0x5110('0xaa')] || "[\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\"]"),
-  'BP_RepAddition': JSON[_0x5110('0x6e')](parameters[_0x5110('0x2')] || _0x5110('0x9a')),
-  'BP_TurnMultiply': JSON[_0x5110('0x6e')](parameters[_0x5110('0xab')] || _0x5110('0x1c')),
-  'BP_TurnAddition': JSON[_0x5110('0x6e')](parameters[_0x5110('0x94')] || _0x5110('0x9a')),
-  'BP_AnalyzeMultiply': JSON[_0x5110('0x6e')](parameters[_0x5110('0x8a')] || _0x5110('0x1c')),
-  'BP_AnalyzeAddition': JSON.parse(parameters[_0x5110('0x7c')] || _0x5110('0x9a')),
-  'BP_BPEffectMultiply': JSON.parse(parameters["Boost Point BP Effect Multipliers"] || _0x5110('0x1c')),
-  'BP_BPEffectAddition': JSON.parse(parameters[_0x5110('0xb2')] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
-  'Animations': JSON[_0x5110('0x6e')](parameters[_0x5110('0x66')]),
-  'ShowIcons': eval(parameters[_0x5110('0x95')]),
-  'BoostIcon': Number(parameters[_0x5110('0x8d')] || 0xa0),
-  'EmptyIcon': Number(parameters[_0x5110('0xac')] || 0xa1),
-  'SmallIcon': eval(parameters[_0x5110('0x6a')]),
-  'IconSize': Number(parameters[_0x5110('0x2b')] || 0.5),
-  'SmallText': String(parameters[_0x5110('0x9c')]),
-  'TextAlign': String(parameters[_0x5110('0x3b')]),
-  'BoostCmd': String(parameters[_0x5110('0xf')]),
-  'BoostShow': eval(parameters[_0x5110('0x60')]),
-  'UnboostCmd': String(parameters[_0x5110('0x92')]),
-  'UnboostShow': eval(parameters[_0x5110('0x1b')]),
-  'LRButtons': eval(parameters[_0x5110('0x61')])
-};
-Olivia[_0x5110('0xa3')].WeaponSwap = {
-  'Enabled': eval(parameters["Weapon Swap System"]),
-  'WpnSwapCmd': String(parameters[_0x5110('0x40')]),
-  'WpnSwapShow': eval(parameters[_0x5110('0x4a')]),
-  'WpnSwapArrows': eval(parameters[_0x5110('0x76')]),
-  'ShowArrows': eval(parameters["Weapon Swap Show Arrows"] || _0x5110('0x6c')),
-  'WpnBattleTest': eval(parameters[_0x5110('0x38')] || _0x5110('0x6c')),
-  'ShowIcons': eval(parameters[_0x5110('0xa8')]),
-  'BattleAction': eval(parameters[_0x5110('0xb')]),
-  'ExtraLines': eval(parameters["Weapon Swap Equip Core Window"] || 'true'),
-  'TextHit': String(parameters[_0x5110('0x81')] || 'ACC'),
-  'TextEva': String(parameters[_0x5110('0x64')] || _0x5110('0x80')),
-  'TextCri': String(parameters[_0x5110('0x32')] || _0x5110('0x19'))
-};
-Olivia[_0x5110('0xa3')][_0x5110('0x1d')] = {
-  'Enabled': eval(parameters[_0x5110('0x29')]),
-  'DimHelpWindow': eval(parameters["Side Battle Dim Help Window"]),
-  'WindowMasking': eval(parameters[_0x5110('0x70')]),
-  'WindowScale': Number(parameters[_0x5110('0x55')] || 0.8),
-  'WindowCmdWidth': Number(parameters[_0x5110('0x4d')] || 0xa0),
-  'WindowMaxList': Number(parameters[_0x5110('0x16')] || 0x8),
-  'WindowListWidth': Number(parameters[_0x5110('0x2c')] || 0x140),
-  'CeilingBuffer': Number(parameters[_0x5110('0x56')] || 0x0),
-  'StatusScale': Number(parameters[_0x5110('0x93')] || 0.6),
-  'StatusWidth': Number(parameters[_0x5110('0x69')] || 0xc8),
-  'GaugeWidth': Number(parameters[_0x5110('0x86')] || 0xa0),
-  'GaugeHeight': Number(parameters[_0x5110('0x3d')] || 0x6),
-  'StatesMax': Number(parameters[_0x5110('0xb0')] || 0x4),
-  'ActiveBattlerMove': Number(parameters[_0x5110('0x4b')] || 0x30),
-  'SelectBattlerMove': Number(parameters["Side Battle Status Move Selected"] || 0x18),
-  'WindowMoveSpeed': Number(parameters["Side Battle Status Move Speed"] || 0x4),
-  'PositionActors': eval(parameters[_0x5110('0x2a')]),
-  'ActorPositionFormulaX': String(parameters[_0x5110('0x3e')]),
-  'ActorPositionFormulaY': String(parameters["Side Battle Actor Y"]),
-  'PositionEnemies': eval(parameters[_0x5110('0x6b')]),
-  'EnemyPositionFormulaX': String(parameters["Side Battle Enemy X"]),
-  'EnemyPositionFormulaY': String(parameters[_0x5110('0xa9')])
-};
-Olivia[_0x5110('0xa3')][_0x5110('0x26')] = {
-  'Enabled': eval(parameters[_0x5110('0x1e')]),
-  'LevelUpSound': {
-    'name': String(parameters[_0x5110('0x4f')]),
-    'volume': Number(parameters[_0x5110('0x13')]),
-    'pitch': Number(parameters[_0x5110('0x1')]),
-    'pan': Number(parameters["Victory Screen Level Sound Pan"])
-  },
-  'VictoryBgm': {
-    'name': String(parameters[_0x5110('0x6')]),
-    'volume': Number(parameters[_0x5110('0xa5')]),
-    'pitch': Number(parameters[_0x5110('0x75')]),
-    'pan': Number(parameters[_0x5110('0x58')])
-  },
-  'TransitionPower': Number(parameters[_0x5110('0x15')]),
-  'WaitHideWindows': Number(parameters[_0x5110('0x18')]),
-  'WaitDisplayVictory': Number(parameters[_0x5110('0x35')]),
-  'ZoomInTransition': eval(parameters[_0x5110('0x3')]),
-  'ZoomX': Number(parameters[_0x5110('0xaf')]),
-  'ZoomY': Number(parameters[_0x5110('0x99')]),
-  'ZoomScale': Number(parameters[_0x5110('0x65')]),
-  'ZoomDuration': Number(parameters["Victory Screen Zoom Duration"]),
-  'BackgroundDimHeight': Number(parameters[_0x5110('0x5e')]),
-  'SideThickness': Number(parameters[_0x5110('0x39')]),
-  'MiddleThickness': Number(parameters["Victory Screen Background Middle Thickness"]),
-  'TextItems': String(parameters[_0x5110('0x67')]),
-  'TextItemsFontSize': Number(parameters[_0x5110('0x98')]),
-  'TextVictory': String(parameters[_0x5110('0xa1')]),
-  'TextVictoryFontSize': Number(parameters[_0x5110('0x74')]),
-  'RewardCategoryFontSize': Number(parameters[_0x5110('0xa2')]),
-  'RewardCategoryFontColor': Number(parameters[_0x5110('0x97')]),
-  'RewardResultsFontSize': Number(parameters[_0x5110('0x25')]),
-  'RewardResultsFontColor': Number(parameters[_0x5110('0x90')]),
-  'ActorNameFontSize': Number(parameters[_0x5110('0x36')]),
-  'ActorLevelFontSize': Number(parameters[_0x5110('0x2d')]),
-  'ActorLevelFormat': String(parameters[_0x5110('0x54')]),
-  'ActorJPFontSize': Number(parameters[_0x5110('0x6f')]),
-  'ActorEXPFontSize': Number(parameters[_0x5110('0x4c')]),
-  'ActorUpdateDuration': Number(parameters[_0x5110('0x9e')]),
-  'ExpCurrentFontSize': Number(parameters[_0x5110('0x43')]),
-  'ExpCurrentFontColor': Number(parameters["Victory Screen Status Current EXP Font Color"]),
-  'ExpNextFontSize': Number(parameters[_0x5110('0x4')]),
-  'ExpNextFontColor': Number(parameters[_0x5110('0x1f')]),
-  'ExpGaugeHeight': Number(parameters[_0x5110('0xb5')]),
-  'ExpGaugeColor1': Number(parameters[_0x5110('0x21')]),
-  'ExpGaugeColor2': Number(parameters[_0x5110('0x68')]),
-  'LevelUpText': String(parameters[_0x5110('0x23')]),
-  'LevelUpTextFontSize': Number(parameters["Victory Screen Status Level Up Font Size"]),
-  'LevelUpTextColor': Number(parameters[_0x5110('0x96')]),
-  'ContinueDuration': Number(parameters["Victory Screen Continue Duration"]),
-  'ContinueText': String(parameters["Victory Screen Continue Text"])
-};
-Olivia[_0x5110('0xa3')][_0x5110('0xa0')] = {
-  'Enabled': eval(parameters[_0x5110('0xd')]),
-  'WeakPopupEnabled': eval(parameters[_0x5110('0x1a')]),
-  'WeakPopupReqRate': Number(parameters["Battle Effects Weak Popup Require Rate"] || 1.1),
-  'WeakCellX': Number(parameters[_0x5110('0xae')] || 0x4),
-  'WeakCellWidth': Number(parameters[_0x5110('0x48')] || 0x3),
-  'WeakCellXFactor': Number(parameters[_0x5110('0x89')] || 0.25),
-  'WeakCellYFactor': Number(parameters[_0x5110('0x0')] || 0.6),
-  'WeakMoveXBase': Number(parameters[_0x5110('0x9d')] || -0.04),
-  'WeakMoveXRate': Number(parameters[_0x5110('0x87')] || 1.1),
-  'WeakMoveYBase': Number(parameters["Battle Effects Weak Popup Move Y Base"] || 0x0),
-  'WeakMoveYRate': Number(parameters[_0x5110('0x41')] || 0x0),
-  'BreakPopupEnabled': eval(parameters["Battle Effects Break Popups"]),
-  'BreakCellX': Number(parameters[_0x5110('0x82')] || 0x7),
-  'BreakCellWidth': Number(parameters[_0x5110('0xe')] || 0x3),
-  'BreakCellXFactor': Number(parameters["Battle Effects Break Popup Cell X Factor"] || 0.25),
-  'BreakCellYFactor': Number(parameters[_0x5110('0x10')] || 0.6),
-  'BreakMoveXBase': Number(parameters[_0x5110('0x57')] || -0.04),
-  'BreakMoveXRate': Number(parameters[_0x5110('0x7b')] || 1.1),
-  'BreakMoveYBase': Number(parameters[_0x5110('0x3f')] || 0x0),
-  'BreakMoveYRate': Number(parameters[_0x5110('0x78')] || 0x0),
-  'StackBuffTurns': eval(parameters[_0x5110('0x34')]),
-  'MaxBuffTurns': Number(parameters[_0x5110('0x2e')] || 0x9),
-  'StackDebuffTurns': eval(parameters["Battle Effects Stack Debuff Turns"]),
-  'MaxDebuffTurns': Number(parameters[_0x5110('0x2e')] || 0x9)
-};
-Olivia[_0x5110('0xa3')].OTB = {
-  'Enabled': eval(parameters["Order Turn Battle"]),
-  'ForceBattleSystem': eval(parameters[_0x5110('0x27')]),
-  'ActionSpeedConvert': eval(parameters[_0x5110('0x47')]),
-  'BuffDebuffAgiConvert': eval(parameters[_0x5110('0x77')]),
-  'AddedActionTimes': eval(parameters[_0x5110('0x6d')]),
-  'ActionTimeOrderRandomize': eval(parameters[_0x5110('0x46')]),
-  'EnablePartyWindow': eval(parameters[_0x5110('0xa')]),
-  'EscapeActorWindow': eval(parameters[_0x5110('0xb4')]),
-  'RemoveRestrictCurrent': eval(parameters[_0x5110('0x51')]),
-  'RemoveRestrictNext': eval(parameters[_0x5110('0x20')]),
-  'StaticAgiCalculation': eval(parameters[_0x5110('0x5c')]),
-  'StunWakeUpFirst': eval(parameters[_0x5110('0x5d')]),
-  'StunWakeUpClamp': eval(parameters["OTB Mechanics Stun Wakeup Clamp"]),
-  'BackgroundActorColor': String(parameters[_0x5110('0x33')]),
-  'BackgroundEnemyColor': String(parameters["OTB Background Enemy Color"]),
-  'DisplayX': Number(parameters[_0x5110('0x2f')]),
-  'DisplayY': Number(parameters[_0x5110('0x5f')]),
-  'HelpWindowMoveY': Number(parameters[_0x5110('0x5b')]),
-  'HelpWindowMoveSpeed': Number(parameters[_0x5110('0x22')]),
-  'CurrentTurnText': String(parameters[_0x5110('0x9')]),
-  'CurrentTurnFontSize': Number(parameters[_0x5110('0xc')]),
-  'NextTurnText': String(parameters[_0x5110('0x44')]),
-  'NextTurnFontSize': Number(parameters["OTB Display Next Size"]),
-  'MoveDuration': Number(parameters[_0x5110('0x49')]),
-  'OpacitySpeed': Number(parameters[_0x5110('0x83')]),
-  'HelpWindowNewY': Number(parameters[_0x5110('0x62')]),
-  'LogWindowNewY': Number(parameters[_0x5110('0x31')])
-};
+
 //=============================================================================
 // Weakness Display
 //
