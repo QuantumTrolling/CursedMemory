@@ -89,15 +89,6 @@ function getSpriteCenter(sprite) {
 
     var centerY = screenY - bitmapHeight * anchorY / 2 + floatOffset + jumpOffset;
 
-    console.log(
-        "[BattleCamera Debug]",
-        "Sprite:", sprite._battler ? sprite._battler.name : "Enemy",
-        "sprite.y:", screenY,
-        "floatOffset:", floatOffset,
-        "jumpOffset:", jumpOffset,
-        "centerY(final):", centerY
-    );
-
     return { x: screenX, y: centerY };
 }
 
@@ -335,14 +326,6 @@ Spriteset_Battle.prototype.initialize = function() {
     // гарантируем, что он поверх обоих контейнеров
     this._baseSprite.addChild(this._battleField);
 
-    // ---------- Лог для проверки порядка ----------
-    console.log("BattleField children order after initialize:");
-    this.children.forEach((c, i) => {
-        if (c === this._customBattlebackContainer) console.log(i, "Layer1 Container");
-        else if (c === this._customBattlebackLayer2Container) console.log(i, "Layer2 Container");
-        else if (c === this._battleField) console.log(i, "_battleField (Actors)");
-        else console.log(i, c);
-    });
 };
 
 // ---------- BATTLE BACKS UPDATE ----------
@@ -413,8 +396,6 @@ Spriteset_Battle.prototype.update = function() {
             }
 
             this._battleField.addChild(win);
-
-            console.log("Weakness window moved into battleField");
         }
 
         // --- Позиционируем прямо относительно врага ---
