@@ -2879,6 +2879,22 @@ if (Olivia.OctoBattle.WeaknessDisplay.Enabled) {
 if (Olivia.OctoBattle.BreakShield.Enabled) {
   Olivia.OctoBattle.Shields = Olivia.OctoBattle.Shields || {};
 
+  // Helper to evaluate an expression from a notetag
+  Olivia.OctoBattle.BreakShield.evalExpr = function(expr, target, action) {
+    try {
+      // Provide useful variables for the expression:
+      // a = user of the skill, b = target, target = target, action = this action
+      var a = action ? action.subject() : null;
+      var b = target;
+      // Create a safe function with only these variables in scope
+      var func = new Function('a', 'b', 'target', 'action', 'return ' + expr + ';');
+      return func(a, b, target, action);
+    } catch (e) {
+      console.error('Break Shield evaluation error: ' + expr, e);
+      return 0; // fallback value on error
+    }
+  };
+
   Olivia.OctoBattle.Shields.___BattleManager_setup___ = BattleManager.setup;
   BattleManager.setup = function(troopId, turnCount, battleEvents) {
     Olivia.OctoBattle.Shields.___BattleManager_setup___.call(this, troopId, turnCount, battleEvents);
@@ -2898,16 +2914,19 @@ if (Olivia.OctoBattle.BreakShield.Enabled) {
     if (!target.isBreakStunned()) {
       var rate = this.calcElementRate(target);
       if (rate >= Olivia.OctoBattle.BreakShield.WeakRate) {
-        var reduction = -1 * this.itemBreakShieldReduction();
+        var reduction = -1 * this.itemBreakShieldReduction(target); // <-- modified: pass target
         target.startBreakShieldReduceAnimation();
         target.alterBreakShield(reduction);
       }
     }
   };
 
-  Game_Action.prototype.itemBreakShieldReduction = function() {
-    if (this.item().note.match(/<Break (?:Reduce|Reduction): (\d+)>/i)) {
-      return parseInt(RegExp.$1);
+  // Modified to support expressions
+  Game_Action.prototype.itemBreakShieldReduction = function(target) {
+    var match = this.item().note.match(/<Break (?:Reduce|Reduction):\s*(.+?)>/i);
+    if (match) {
+      var expr = match[1];
+      return Olivia.OctoBattle.BreakShield.evalExpr(expr, target, this);
     } else {
       return Olivia.OctoBattle.BreakShield.BreakReduce;
     }
@@ -2921,14 +2940,23 @@ if (Olivia.OctoBattle.BreakShield.Enabled) {
     }
   };
 
+  // Modified to support expressions in all Break Shield notetags
   Game_Action.prototype.applyChangeBreakShield = function(target) {
     if (!target.isBreakStunned()) {
-      if (this.item().note.match(/<(?:Set|Change) Break (?:Shield|Shields): (\d+)>/i)) {
-        target.setBreakShield(parseInt(RegExp.$1));
+      // <Set Break Shield: expr>
+      var matchSet = this.item().note.match(/<(?:Set|Change) Break (?:Shield|Shields):\s*(.+?)>/i);
+      if (matchSet) {
+        var exprSet = matchSet[1];
+        var valueSet = Olivia.OctoBattle.BreakShield.evalExpr(exprSet, target, this);
+        target.setBreakShield(valueSet);
         $gameTemp._needRefreshAllEnemyWeaknessWindows = true;
       }
-      if (this.item().note.match(/<(?:Increase|Decrease|Change) Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
-        target.alterBreakShield(parseInt(RegExp.$1));
+      // <Increase/Decrease Break Shield: expr>
+      var matchInc = this.item().note.match(/<(?:Increase|Decrease|Change) Break (?:Shield|Shields):\s*(.+?)>/i);
+      if (matchInc) {
+        var exprInc = matchInc[1];
+        var delta = Olivia.OctoBattle.BreakShield.evalExpr(exprInc, target, this);
+        target.alterBreakShield(delta);
         $gameTemp._needRefreshAllEnemyWeaknessWindows = true;
       }
     }
