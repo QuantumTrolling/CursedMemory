@@ -2170,57 +2170,236 @@
 //=============================================================================
 
 var Imported = Imported || {};
-Imported["OctoBattle"] = true;
-
+Imported.Olivia_OctoBattle = true;
 var Olivia = Olivia || {};
-Olivia["OctoBattle"] = Olivia["OctoBattle"] || {};
-
-// поиск параметров плагина
-var parameters = $plugins.filter(function (plugin) {
-  return plugin.description.contains("<OctoBattle>");
+Olivia.OctoBattle = Olivia.OctoBattle || {};
+var parameters = $plugins.filter(function(plugin) {
+    return plugin.description.contains('<OctoBattle>');
 })[0].parameters;
 
-// WeaknessDisplay
-Olivia["OctoBattle"]["WeaknessDisplay"] = {
-  Enabled: eval(parameters["Weakness Display"]),
-  ShownElements: JSON.parse(parameters["Shown Elements"]),
-  ElementIcons: JSON.parse(parameters["Element Icons"]),
-  UnknownIcon: Number(parameters["Unknown Weakness Icon"]),
-  AlwaysShow: eval(parameters["Weakness Always Show"]),
-  HideDuration: Number(parameters["Weakness Hide Duration"] || 90),
-  ShowBreakShield: eval(parameters["Weakness Show Break Shield"]),
-  ShowStunTurns: eval(parameters["Weakness Stun Duration"]),
-  ShowHpGauge: eval(parameters["Weakness Show HP Gauge"]),
-  HpGaugeMinWidth: Number(parameters["HP Gauge Minimum Width"] || 100),
-  HpGaugePadding: Number(parameters["HP Gauge Padding"] || 100),
-  ShowName: eval(parameters["Weakness Show Name"]),
-  NameFontSize: Number(parameters["Name Font Size"] || 22),
-  HpColor50: Number(parameters["50% HP Color"] || 17),
-  HpColor25: Number(parameters["25% HP Color"] || 18),
-  ShowStates: eval(parameters["Weakness Show States"] || true),
-  SmallWeakIcons: eval(parameters["Small Weakness Icons"]),
-  WeakIconSize: Number(parameters["Weak Icon Size"] || 0.6)
+Olivia.OctoBattle.WeaknessDisplay = {
+    'Enabled': eval(parameters["Weakness Display"]),
+    'ShownElements': JSON.parse(parameters["Shown Elements"]),
+    'ElementIcons': JSON.parse(parameters["Element Icons"]),
+    'UnknownIcon': Number(parameters["Unknown Weakness Icon"]),
+    'AlwaysShow': eval(parameters["Weakness Always Show"]),
+    'HideDuration': Number(parameters["Weakness Hide Duration"] || 90),
+    'ShowBreakShield': eval(parameters["Weakness Show Break Shield"]),
+    'ShowStunTurns': eval(parameters["Weakness Stun Duration"]),
+    'ShowHpGauge': eval(parameters["Weakness Show HP Gauge"]),
+    'HpGaugeMinWidth': Number(parameters["HP Gauge Minimum Width"] || 100),
+    'HpGaugePadding': Number(parameters["HP Gauge Padding"] || 100),
+    'ShowName': eval(parameters["Weakness Show Name"]),
+    'NameFontSize': Number(parameters["Name Font Size"] || 22),
+    'HpColor50': Number(parameters["50% HP Color"] || 17),
+    'HpColor25': Number(parameters["25% HP Color"] || 18),
+    'ShowStates': eval(parameters["Weakness Show States"] || "true"),
+    'SmallWeakIcons': eval(parameters["Small Weakness Icons"]),
+    'WeakIconSize': Number(parameters["Weak Icon Size"] || 0.6)
 };
 
-// BreakShield
-Olivia["OctoBattle"]["BreakShield"] = {
-  Enabled: eval(parameters["Break Shield System"]),
-  Actors: eval(parameters["Actor Shields"]),
-  DrawMenu: eval(parameters["Draw Menu Shields"]),
-  Enemies: eval(parameters["Enemy Shields"]),
-  BaseShields: Number(parameters["Base Shield Value"] || 0),
-  BreakReduce: Number(parameters["Break Reduction"] || 1),
-  MaxShields: Number(parameters["Max Break Shields"] || 99),
-  StunState: Number(parameters["Stun State ID"] || 1),
-  WeakRate: Number(parameters["Element Weakness Rate"] || 1.1),
-  ShieldIcon: Number(parameters["Shield Icon"] || 81),
-  StunIcon: Number(parameters["Stun Icon"] || 6),
-  ProtectIcon: Number(parameters["Protect Weakness Icon"] || 81),
-  IconFontSize: Number(parameters["Icon Font Size"] || 22),
-  ReduceAnimation: Number(parameters["Reduce Animation"] || 0),
-  BreakAnimation: Number(parameters["Break Animation"] || 0),
-  ShowActorShield: eval(parameters["Show Actor Shields"]),
-  ShowEnemyShield: eval(parameters["Show Enemy Shields"])
+Olivia.OctoBattle.BreakShield = {
+    'Enabled': eval(parameters["Break Shield System"]),
+    'Actors': eval(parameters["Actor Shields"]),
+    'DrawMenu': eval(parameters["Draw Menu Shields"]),
+    'Enemies': eval(parameters["Enemy Shields"]),
+    'BaseShields': Number(parameters["Base Shield Value"] || 0),
+    'BreakReduce': Number(parameters["Break Reduction"] || 1),
+    'MaxShields': Number(parameters["Max Break Shields"] || 99),
+    'StunState': Number(parameters["Stun State ID"] || 1),
+    'WeakRate': Number(parameters["Element Weakness Rate"] || 1.1),
+    'ShieldIcon': Number(parameters["Shield Icon"] || 81),
+    'StunIcon': Number(parameters["Stun Icon"] || 6),
+    'ProtectIcon': Number(parameters["Protect Weakness Icon"] || 81),
+    'IconFontSize': Number(parameters["Icon Font Size"] || 22),
+    'ReduceAnimation': Number(parameters["Reduce Animation"] || 0),
+    'BreakAnimation': Number(parameters["Break Animation"] || 0),
+    'ShowActorShield': eval(parameters["Show Actor Shields"]),
+    'ShowEnemyShield': eval(parameters["Show Enemy Shields"])
+};
+
+Olivia.OctoBattle.BoostPoint = {
+    'Enabled': eval(parameters["Boost Point System"]),
+    'BP_StartBattle': Number(parameters["Boost Point Start Battle"] || 1),
+    'BP_TurnRegen': Number(parameters["Boost Point Regen"] || 1),
+    'BP_AlwaysRegen': eval(parameters["Boost Point Always Regen"]),
+    'BP_MaxStored': Number(parameters["Boost Point Maximum Stored"] || 5),
+    'BP_MaxUse': Number(parameters["Boost Point Maximum Use"] || 3),
+    'DeathRemoval': eval(parameters["Boost Point Death Removal"] || "false"),
+    'DeathRegen': eval(parameters["Boost Point Death Regen"] || "false"),
+    'BP_DmgMultiply': JSON.parse(parameters["Boost Point Damage Multipliers"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'BP_DmgAddition': JSON.parse(parameters["Boost Point Damage Addition"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'BP_RepMultiply': JSON.parse(parameters["Boost Point Repeat Multipliers"] || "[\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\",\"1\"]"),
+    'BP_RepAddition': JSON.parse(parameters["Boost Point Repeat Addition"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'BP_TurnMultiply': JSON.parse(parameters["Boost Point Turn Multipliers"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'BP_TurnAddition': JSON.parse(parameters["Boost Point Turn Addition"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'BP_AnalyzeMultiply': JSON.parse(parameters["Boost Point Analyze Multipliers"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'BP_AnalyzeAddition': JSON.parse(parameters["Boost Point Analyze Addition"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'BP_BPEffectMultiply': JSON.parse(parameters["Boost Point BP Effect Multipliers"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'BP_BPEffectAddition': JSON.parse(parameters["Boost Point BP Addition"] || "[\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\"]"),
+    'Animations': JSON.parse(parameters["Boost Point Animations"]),
+    'ShowIcons': eval(parameters["Boost Point Show Icons"]),
+    'BoostIcon': Number(parameters["Boost Point Icon Filled"] || 160),
+    'EmptyIcon': Number(parameters["Boost Point Icon Empty"] || 161),
+    'SmallIcon': eval(parameters["Small Boost Icons"]),
+    'IconSize': Number(parameters["Boost Icon Size"] || 0.5),
+    'SmallText': String(parameters["Boost Point Small Text"]),
+    'TextAlign': String(parameters["Boost Point Small Text Align"]),
+    'BoostCmd': String(parameters["Boost Point Boost Command"]),
+    'BoostShow': eval(parameters["Boost Point Boost Command Show"]),
+    'UnboostCmd': String(parameters["Boost Point Unboost Command"]),
+    'UnboostShow': eval(parameters["Boost Point Unboost Command Show"]),
+    'LRButtons': eval(parameters["Boost Point LR Buttons"])
+};
+
+Olivia.OctoBattle.WeaponSwap = {
+    'Enabled': eval(parameters["Weapon Swap System"]),
+    'WpnSwapCmd': String(parameters["Weapon Swap Command"]),
+    'WpnSwapShow': eval(parameters["Weapon Swap Show Command"]),
+    'WpnSwapArrows': eval(parameters["Weapon Swap Arrow Buttons"]),
+    'ShowArrows': eval(parameters["Weapon Swap Show Arrows"] || "false"),
+    'WpnBattleTest': eval(parameters["Weapon Swap Battle Test"] || "false"),
+    'ShowIcons': eval(parameters["Weapon Swap Battle Icons"]),
+    'BattleAction': eval(parameters["Weapon Swap Battle Action"]),
+    'ExtraLines': eval(parameters["Weapon Swap Equip Core Window"] || 'true'),
+    'TextHit': String(parameters["Weapon Swap Text Hit"] || 'ACC'),
+    'TextEva': String(parameters["Weapon Swap Text Evasion"] || 'EVA'),
+    'TextCri': String(parameters["Weapon Swap Text Critical"] || 'CRI')
+};
+
+Olivia.OctoBattle.SideBattleUI = {
+    'Enabled': eval(parameters["Side Battle UI"]),
+    'DimHelpWindow': eval(parameters["Side Battle Dim Help Window"]),
+    'WindowMasking': eval(parameters["Side Battle Window Masking"]),
+    'WindowScale': Number(parameters["Side Battle Command Window Scale"] || 0.8),
+    'WindowCmdWidth': Number(parameters["Side Battle Command Window Width"] || 160),
+    'WindowMaxList': Number(parameters["Side Battle List Window Max"] || 8),
+    'WindowListWidth': Number(parameters["Side Battle List Window Width"] || 320),
+    'CeilingBuffer': Number(parameters["Side Battle Ceiling Distance"] || 0),
+    'StatusScale': Number(parameters["Side Battle Status Scale"] || 0.6),
+    'StatusWidth': Number(parameters["Side Battle Status Width"] || 200),
+    'GaugeWidth': Number(parameters["Side Battle Gauge Width"] || 160),
+    'GaugeHeight': Number(parameters["Side Battle Gauge Height"] || 6),
+    'StatesMax': Number(parameters["Side Battle Status States Max"] || 4),
+    'ActiveBattlerMove': Number(parameters["Side Battle Status Move Active"] || 48),
+    'SelectBattlerMove': Number(parameters["Side Battle Status Move Selected"] || 24),
+    'WindowMoveSpeed': Number(parameters["Side Battle Status Move Speed"] || 4),
+    'PositionActors': eval(parameters["Side Battle Position Actors"]),
+    'ActorPositionFormulaX': String(parameters["Side Battle Actor X"]),
+    'ActorPositionFormulaY': String(parameters["Side Battle Actor Y"]),
+    'PositionEnemies': eval(parameters["Side Battle Position Enemies"]),
+    'EnemyPositionFormulaX': String(parameters["Side Battle Enemy X"]),
+    'EnemyPositionFormulaY': String(parameters["Side Battle Enemy Y"])
+};
+
+Olivia.OctoBattle.VictoryUI = {
+    'Enabled': eval(parameters["Victory Screen UI"]),
+    'LevelUpSound': {
+        'name': String(parameters["Victory Screen Level Sound"]),
+        'volume': Number(parameters["Victory Screen Level Sound Volume"]),
+        'pitch': Number(parameters["Victory Screen Level Sound Pitch"]),
+        'pan': Number(parameters["Victory Screen Level Sound Pan"])
+    },
+    'VictoryBgm': {
+        'name': String(parameters["Victory Screen BGM"]),
+        'volume': Number(parameters["Victory Screen BGM Volume"]),
+        'pitch': Number(parameters["Victory Screen BGM Pitch"]),
+        'pan': Number(parameters["Victory Screen BGM Pan"])
+    },
+    'TransitionPower': Number(parameters["Victory Screen Transition Power"]),
+    'WaitHideWindows': Number(parameters["Victory Screen Hide Window Delay"]),
+    'WaitDisplayVictory': Number(parameters["Victory Screen Display Delay"]),
+    'ZoomInTransition': eval(parameters["Victory Screen Zoom"]),
+    'ZoomX': Number(parameters["Victory Screen Zoom X"]),
+    'ZoomY': Number(parameters["Victory Screen Zoom Y"]),
+    'ZoomScale': Number(parameters["Victory Screen Zoom Scale"]),
+    'ZoomDuration': Number(parameters["Victory Screen Zoom Duration"]),
+    'BackgroundDimHeight': Number(parameters["Victory Screen Background Dimmer Height"]),
+    'SideThickness': Number(parameters["Victory Screen Background Side Thickness"]),
+    'MiddleThickness': Number(parameters["Victory Screen Background Middle Thickness"]),
+    'TextItems': String(parameters["Victory Screen Background Text Items"]),
+    'TextItemsFontSize': Number(parameters["Victory Screen Background Text Items Font Size"]),
+    'TextVictory': String(parameters["Victory Screen Background Text Victory"]),
+    'TextVictoryFontSize': Number(parameters["Victory Screen Background Text Victory Font Size"]),
+    'RewardCategoryFontSize': Number(parameters["Victory Screen Rewards Category Font Size"]),
+    'RewardCategoryFontColor': Number(parameters["Victory Screen Rewards Category Font Color"]),
+    'RewardResultsFontSize': Number(parameters["Victory Screen Rewards Results Font Size"]),
+    'RewardResultsFontColor': Number(parameters["Victory Screen Rewards Results Font Color"]),
+    'ActorNameFontSize': Number(parameters["Victory Screen Status Actor Font Size"]),
+    'ActorLevelFontSize': Number(parameters["Victory Screen Status Level Font Size"]),
+    'ActorLevelFormat': String(parameters["Victory Screen Status Level Format"]),
+    'ActorJPFontSize': Number(parameters["Victory Screen Status JP Font Size"]),
+    'ActorEXPFontSize': Number(parameters["Victory Screen Status EXP Font Size"]),
+    'ActorUpdateDuration': Number(parameters["Victory Screen Status Update Duration"]),
+    'ExpCurrentFontSize': Number(parameters["Victory Screen Status Current EXP Font Size"]),
+    'ExpCurrentFontColor': Number(parameters["Victory Screen Status Current EXP Font Color"]),
+    'ExpNextFontSize': Number(parameters["Victory Screen Status Next EXP Font Size"]),
+    'ExpNextFontColor': Number(parameters["Victory Screen Status Next EXP Font Color"]),
+    'ExpGaugeHeight': Number(parameters["Victory Screen Status Exp Gauge Height"]),
+    'ExpGaugeColor1': Number(parameters["Victory Screen Status Exp Gauge Color 1"]),
+    'ExpGaugeColor2': Number(parameters["Victory Screen Status Exp Gauge Color 2"]),
+    'LevelUpText': String(parameters["Victory Screen Status Level Up Text"]),
+    'LevelUpTextFontSize': Number(parameters["Victory Screen Status Level Up Font Size"]),
+    'LevelUpTextColor': Number(parameters["Victory Screen Status Level Up Color"]),
+    'ContinueDuration': Number(parameters["Victory Screen Continue Duration"]),
+    'ContinueText': String(parameters["Victory Screen Continue Text"])
+};
+
+Olivia.OctoBattle.BattleEffects = {
+    'Enabled': eval(parameters["Battle Effects Pack"]),
+    'WeakPopupEnabled': eval(parameters["Battle Effects Weak Popups"]),
+    'WeakPopupReqRate': Number(parameters["Battle Effects Weak Popup Require Rate"] || 1.1),
+    'WeakCellX': Number(parameters["Battle Effects Weak Popup Cell X"] || 4),
+    'WeakCellWidth': Number(parameters["Battle Effects Weak Popup Cell Width"] || 3),
+    'WeakCellXFactor': Number(parameters["Battle Effects Weak Popup Cell X Factor"] || 0.25),
+    'WeakCellYFactor': Number(parameters["Battle Effects Weak Popup Cell Y Factor"] || 0.6),
+    'WeakMoveXBase': Number(parameters["Battle Effects Weak Popup Move X Base"] || -0.04),
+    'WeakMoveXRate': Number(parameters["Battle Effects Weak Popup Move X Rate"] || 1.1),
+    'WeakMoveYBase': Number(parameters["Battle Effects Weak Popup Move Y Base"] || 0),
+    'WeakMoveYRate': Number(parameters["Battle Effects Weak Popup Move Y Rate"] || 0),
+    'BreakPopupEnabled': eval(parameters["Battle Effects Break Popups"]),
+    'BreakCellX': Number(parameters["Battle Effects Break Popup Cell X"] || 7),
+    'BreakCellWidth': Number(parameters["Battle Effects Break Popup Cell Width"] || 3),
+    'BreakCellXFactor': Number(parameters["Battle Effects Break Popup Cell X Factor"] || 0.25),
+    'BreakCellYFactor': Number(parameters["Battle Effects Break Popup Cell Y Factor"] || 0.6),
+    'BreakMoveXBase': Number(parameters["Battle Effects Break Popup Move X Base"] || -0.04),
+    'BreakMoveXRate': Number(parameters["Battle Effects Break Popup Move X Rate"] || 1.1),
+    'BreakMoveYBase': Number(parameters["Battle Effects Break Popup Move Y Base"] || 0),
+    'BreakMoveYRate': Number(parameters["Battle Effects Break Popup Move Y Rate"] || 0),
+    'StackBuffTurns': eval(parameters["Battle Effects Stack Buff Turns"]),
+    'MaxBuffTurns': Number(parameters["Battle Effects Max Buff Turns"] || 9),
+    'StackDebuffTurns': eval(parameters["Battle Effects Stack Debuff Turns"]),
+    'MaxDebuffTurns': Number(parameters["Battle Effects Max Buff Turns"] || 9)
+};
+
+Olivia.OctoBattle.OTB = {
+    'Enabled': eval(parameters["Order Turn Battle"]),
+    'ForceBattleSystem': eval(parameters["OTB Force Battle System"]),
+    'ActionSpeedConvert': eval(parameters["OTB Mechanics Action Speed Convert"]),
+    'BuffDebuffAgiConvert': eval(parameters["OTB Mechanics Buff Debuff AGI Convert"]),
+    'AddedActionTimes': eval(parameters["OTB Mechanics Added Action Times"]),
+    'ActionTimeOrderRandomize': eval(parameters["OTB Mechanics Action Time Order Randomize"]),
+    'EnablePartyWindow': eval(parameters["OTB Mechanics Enable Party Window"]),
+    'EscapeActorWindow': eval(parameters["OTB Mechanics Escape Actor Window"]),
+    'RemoveRestrictCurrent': eval(parameters["OTB Mechanics Remove Restrict Current"]),
+    'RemoveRestrictNext': eval(parameters["OTB Mechanics Remove Restrict Next"]),
+    'StaticAgiCalculation': eval(parameters["OTB Mechanics Static AGI Calculation"]),
+    'StunWakeUpFirst': eval(parameters["OTB Mechanics Stun Wakeup First"]),
+    'StunWakeUpClamp': eval(parameters["OTB Mechanics Stun Wakeup Clamp"]),
+    'BackgroundActorColor': String(parameters["OTB Background Actor Color"]),
+    'BackgroundEnemyColor': String(parameters["OTB Background Enemy Color"]),
+    'DisplayX': Number(parameters["OTB Display X"]),
+    'DisplayY': Number(parameters["OTB Display Y"]),
+    'HelpWindowMoveY': Number(parameters["OTB Display Help Window Move Y"]),
+    'HelpWindowMoveSpeed': Number(parameters["OTB Display Help Window Move Speed"]),
+    'CurrentTurnText': String(parameters["OTB Display Current Text"]),
+    'CurrentTurnFontSize': Number(parameters["OTB Display Current Size"]),
+    'NextTurnText': String(parameters["OTB Display Next Text"]),
+    'NextTurnFontSize': Number(parameters["OTB Display Next Size"]),
+    'MoveDuration': Number(parameters["OTB Sprite Move Duration"]),
+    'OpacitySpeed': Number(parameters["OTB Sprite Opacity Speed"]),
+    'HelpWindowNewY': Number(parameters["OTB Help Window Y"]),
+    'LogWindowNewY': Number(parameters["OTB Log Window Y"])
 };
 
 //=============================================================================
@@ -2230,437 +2409,464 @@ Olivia["OctoBattle"]["BreakShield"] = {
 // 2. Display data according to the elements revealed about that enemy.
 // 3. Analyze effects to reveal more weaknesses.
 
-var _0x9115 = ['_subject', 'drawWeaknessIcons', 'setSubject', '_weaknessWindow', 'push', 'additionForBP', 'drawSmallIcon', 'elementId', 'random', '_hpGaugeWidth', 'YEP_ElementCore', 'normalColor', 'length', 'applyItemUserEffect', 'startAnimation', 'setCalculationConstants', '___Game_Action_apply___', 'WeaknessDisplay', 'enemy', 'ProtectIcon', 'YEP_BattleEngineCore', 'subject', 'ShowHpGauge', 'initializeRevealedEnemyWeaknesses', 'Analyze', 'constructor', 'changeTextColor', 'fittingHeight', 'HpGaugeMinWidth', 'WeakIconSize', 'applyWeaknessAnalyze', 'call', 'drawHpGauge', 'create', 'refresh', 'HpColor25', 'drawBreakShield', 'revealWeaknessByVariable', 'drawSubjectName', 'elementRate', 'isShowWeaknessHpGauge', 'drawBreakShieldIcon', 'contains', 'revealWeakness', 'contentsOpacity', 'contents', 'resetFontSettings', 'ShowName', 'prototype', 'moveStateSprite', 'drawIcon', '_iconHeight', 'max', 'getRevealedEnemyWeaknesses', '___Game_Action_applyItemUserEffect___', 'floor', 'drawGauge', 'HideDuration', '___Spriteset_Battle_update___', 'textColor', 'match', 'initialize', '___Game_Action_executeDamage___', 'battler', 'center', 'update', 'ShowStates', 'width', 'Weakness', 'WeakRate', 'initMembers', 'addEnemyWeaknessElement', 'AlwaysShow', 'updateEnemyWeaknessWindows', 'revealNewWeaknesses', 'contentsWidth', 'lineHeight', 'members', 'boxWidth', 'getProtectedWeaknessElements', '_added', '_sprite', 'drawText', 'clear', 'isSelected', 'getWeaknessElements', 'hpGaugeColor1', 'UnknownIcon', 'ceil', 'NameFontSize', 'standardPadding', '___Sprite_Enemy_initMembers___', 'createWeaknessDisplayWindow', '___Game_BattlerBase_refresh___', '_iconWidth', 'showBreakStunDuration', 'blt', 'ElementIcons', 'HpGaugePadding', 'updatePosition', 'revealWeaknessDisplay', '_factorY', 'OctoBattle', '_enemySprites', 'Enabled', 'executeDamage', 'round', 'textWidth', 'allIcons', 'attackElements', 'ShownElements', 'apply', 'note', 'setup', '_needRefreshAllEnemyWeaknessWindows', 'opacity', 'originalElementRate', 'ShowBreakShield', 'enemyId', 'isHidden', '_revealedEnemyWeaknesses', '_stateIconSprite', 'name', 'setBattler', 'SmallWeakIcons', '_enemy', 'BoostPoint', 'fontSize', 'value', 'Enemies', 'isEnemy', '_showWeaknessDisplay', 'indexOf', '___Game_Battler_startAnimation___', 'hpRate', 'item', '_factorX', 'BreakShield', 'sort', 'updateOpacity', 'splice', 'loadSystem'];
-(function (_0x17d538, _0x9115f0) {
-  var _0x35656e = function (_0x2f9b63) {
-    while (--_0x2f9b63) {
-      _0x17d538.push(_0x17d538.shift());
-    }
+if (Olivia.OctoBattle.WeaknessDisplay.Enabled) {
+  Olivia.OctoBattle.Weakness = Olivia.OctoBattle.Weakness || {};
+
+  BattleManager.revealWeaknessByVariable = function(variableId) {
+    var value = $gameVariables.value(variableId);
+    this.revealWeakness(value);
   };
-  _0x35656e(++_0x9115f0);
-})(_0x9115, 0xc8);
-var _0x3565 = function (_0x17d538, _0x9115f0) {
-  _0x17d538 = _0x17d538 - 0x0;
-  var _0x35656e = _0x9115[_0x17d538];
-  return _0x35656e;
-};
-if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x2e')]) {
-  Olivia[_0x3565('0x2c')][_0x3565('0xa')] = Olivia[_0x3565('0x2c')][_0x3565('0xa')] || {};
-  BattleManager[_0x3565('0x79')] = function (_0x3ac8c4) {
-    var _0xa23b9 = $gameVariables[_0x3565('0x46')](_0x3ac8c4);
-    this.revealWeakness(_0xa23b9);
-  };
-  BattleManager[_0x3565('0x7f')] = function (_0x400d7e) {
-    var _0x9281a4 = $gameTroop[_0x3565('0x13')]();
-    var _0xf3783e = [];
-    for (var _0x105d2f = 0x0; _0x105d2f < _0x9281a4[_0x3565('0x60')]; _0x105d2f++) {
-      var _0x30d30e = _0x9281a4[_0x105d2f];
-      if (!!_0x30d30e && !_0xf3783e[_0x3565('0x7e')](_0x30d30e.enemyId())) {
-        _0x30d30e[_0x3565('0x10')](_0x400d7e);
-        _0xf3783e[_0x3565('0x58')](_0x30d30e[_0x3565('0x3c')]());
+
+  BattleManager.revealWeakness = function(elements) {
+    var members = $gameTroop.members();
+    var processed = [];
+    for (var i = 0; i < members.length; i++) {
+      var enemy = members[i];
+      if (!!enemy && !processed.contains(enemy.enemyId())) {
+        enemy.revealNewWeaknesses(elements);
+        processed.push(enemy.enemyId());
       }
     }
   };
-  Olivia[_0x3565('0x2c')][_0x3565('0xa')].___Game_System_initialize___ = Game_System[_0x3565('0x84')][_0x3565('0x3')];
-  Game_System[_0x3565('0x84')][_0x3565('0x3')] = function () {
-    Olivia[_0x3565('0x2c')][_0x3565('0xa')].___Game_System_initialize___[_0x3565('0x73')](this);
-    this[_0x3565('0x6b')]();
+
+  Olivia.OctoBattle.Weakness.___Game_System_initialize___ = Game_System.prototype.initialize;
+  Game_System.prototype.initialize = function() {
+    Olivia.OctoBattle.Weakness.___Game_System_initialize___.call(this);
+    this.initializeRevealedEnemyWeaknesses();
   };
-  Game_System[_0x3565('0x84')][_0x3565('0x6b')] = function () {
-    this[_0x3565('0x3e')] = this[_0x3565('0x3e')] || {};
+
+  Game_System.prototype.initializeRevealedEnemyWeaknesses = function() {
+    this._revealedEnemyWeaknesses = this._revealedEnemyWeaknesses || {};
   };
-  Game_System[_0x3565('0x84')].addEnemyWeaknessElement = function (_0x9f973b, _0x4b21c1) {
-    if (this[_0x3565('0x3e')] === undefined) {
-      this[_0x3565('0x6b')]();
-    }
-    this[_0x3565('0x3e')][_0x9f973b] = this._revealedEnemyWeaknesses[_0x9f973b] || [];
-    if (!this[_0x3565('0x3e')][_0x9f973b][_0x3565('0x7e')](_0x4b21c1)) {
-      this[_0x3565('0x3e')][_0x9f973b].push(_0x4b21c1);
-    }
-    this[_0x3565('0x3e')][_0x9f973b][_0x3565('0x50')](function (_0x2513bb, _0x325fe6) {
-      return _0x2513bb - _0x325fe6;
-    });
-  };
-  Game_System.prototype[_0x3565('0x89')] = function (_0x236093) {
-    if (this[_0x3565('0x3e')] === undefined) {
+
+  Game_System.prototype.addEnemyWeaknessElement = function(enemyId, elementId) {
+    if (this._revealedEnemyWeaknesses === undefined) {
       this.initializeRevealedEnemyWeaknesses();
     }
-    this[_0x3565('0x3e')][_0x236093] = this._revealedEnemyWeaknesses[_0x236093] || [];
-    return this[_0x3565('0x3e')][_0x236093];
+    this._revealedEnemyWeaknesses[enemyId] = this._revealedEnemyWeaknesses[enemyId] || [];
+    if (!this._revealedEnemyWeaknesses[enemyId].contains(elementId)) {
+      this._revealedEnemyWeaknesses[enemyId].push(elementId);
+    }
+    this._revealedEnemyWeaknesses[enemyId].sort(function(a, b) {
+      return a - b;
+    });
   };
-  Olivia[_0x3565('0x2c')][_0x3565('0xa')][_0x3565('0x64')] = Game_Action[_0x3565('0x84')][_0x3565('0x35')];
-  Game_Action.prototype[_0x3565('0x35')] = function (_0x3856df) {
-    Olivia.OctoBattle[_0x3565('0xa')].___Game_Action_apply___.call(this, _0x3856df);
-    _0x3856df[_0x3565('0x2a')]();
+
+  Game_System.prototype.getRevealedEnemyWeaknesses = function(enemyId) {
+    if (this._revealedEnemyWeaknesses === undefined) {
+      this.initializeRevealedEnemyWeaknesses();
+    }
+    this._revealedEnemyWeaknesses[enemyId] = this._revealedEnemyWeaknesses[enemyId] || [];
+    return this._revealedEnemyWeaknesses[enemyId];
   };
-  Olivia[_0x3565('0x2c')][_0x3565('0xa')][_0x3565('0x4')] = Game_Action[_0x3565('0x84')].executeDamage;
-  Game_Action[_0x3565('0x84')][_0x3565('0x2f')] = function (_0x3e53d0, _0x32d104) {
-    Olivia[_0x3565('0x2c')][_0x3565('0xa')].___Game_Action_executeDamage___[_0x3565('0x73')](this, _0x3e53d0, _0x32d104);
-    if (!!_0x3e53d0 && _0x3e53d0.isEnemy() && _0x32d104 !== 0x0) {
-      this.addEnemyWeaknessElement(_0x3e53d0);
+
+  Olivia.OctoBattle.Weakness.___Game_Action_apply___ = Game_Action.prototype.apply;
+  Game_Action.prototype.apply = function(target) {
+    Olivia.OctoBattle.Weakness.___Game_Action_apply___.call(this, target);
+    target.revealWeaknessDisplay();
+  };
+
+  Olivia.OctoBattle.Weakness.___Game_Action_executeDamage___ = Game_Action.prototype.executeDamage;
+  Game_Action.prototype.executeDamage = function(target, value) {
+    Olivia.OctoBattle.Weakness.___Game_Action_executeDamage___.call(this, target, value);
+    if (!!target && target.isEnemy() && value !== 0) {
+      this.addEnemyWeaknessElement(target);
     }
   };
-  Game_Action.prototype[_0x3565('0xd')] = function (_0x2f5668) {
-    if (Imported[_0x3565('0x5e')]) {
-      var _0x322b33 = this.getItemElements();
+
+  Game_Action.prototype.addEnemyWeaknessElement = function(target) {
+    if (Imported.YEP_ElementCore) {
+      var elements = this.getItemElements();
     } else {
-      var _0x1c8509 = this.item().damage[_0x3565('0x5b')];
-      if (_0x1c8509 < 0x0) {
-        var _0x322b33 = this[_0x3565('0x69')]()[_0x3565('0x33')]();
+      var elementId = this.item().damage.elementId;
+      if (elementId < 0) {
+        var elements = this.subject().attackElements();
       } else {
-        var _0x322b33 = [_0x1c8509];
+        var elements = [elementId];
       }
     }
-    for (var _0x217494 = 0x0; _0x217494 < _0x322b33[_0x3565('0x60')]; _0x217494++) {
-      var _0x1c8509 = _0x322b33[_0x217494];
-      if (_0x1c8509 > 0x0) {
-        $gameSystem[_0x3565('0xd')](_0x2f5668[_0x3565('0x3c')](), _0x1c8509);
+    for (var i = 0; i < elements.length; i++) {
+      var elementId = elements[i];
+      if (elementId > 0) {
+        $gameSystem.addEnemyWeaknessElement(target.enemyId(), elementId);
       }
     }
   };
-  Olivia[_0x3565('0x2c')][_0x3565('0xa')].___Game_Action_applyItemUserEffect___ = Game_Action[_0x3565('0x84')][_0x3565('0x61')];
-  Game_Action.prototype[_0x3565('0x61')] = function (_0x1522e8) {
-    Olivia[_0x3565('0x2c')][_0x3565('0xa')][_0x3565('0x8a')][_0x3565('0x73')](this, _0x1522e8);
-    if (_0x1522e8[_0x3565('0x48')]()) {
-      this[_0x3565('0x72')](_0x1522e8);
+
+  Olivia.OctoBattle.Weakness.___Game_Action_applyItemUserEffect___ = Game_Action.prototype.applyItemUserEffect;
+  Game_Action.prototype.applyItemUserEffect = function(target) {
+    Olivia.OctoBattle.Weakness.___Game_Action_applyItemUserEffect___.call(this, target);
+    if (target.isEnemy()) {
+      this.applyWeaknessAnalyze(target);
     }
   };
-  Game_Action[_0x3565('0x84')][_0x3565('0x72')] = function (_0x38a9cc) {
-    if (this[_0x3565('0x4d')]().note[_0x3565('0x2')](/<Analyze (?:Weakness|Weaknesses): (\d+)>/i)) {
-      var _0x34c729 = parseInt(RegExp.$1);
-      if (Olivia[_0x3565('0x2c')][_0x3565('0x44')] && this[_0x3565('0x4d')]().note[_0x3565('0x2')](/<(?:BP|Boost) Analyze>/i)) {
-        var _0x4a5165 = this.subject().multiplierForBP(_0x3565('0x6c'));
-        _0x34c729 = Math[_0x3565('0x30')](_0x4a5165 * _0x34c729);
-        _0x34c729 += this[_0x3565('0x69')]()[_0x3565('0x59')]('Analyze');
+
+  Game_Action.prototype.applyWeaknessAnalyze = function(target) {
+    if (this.item().note.match(/<Analyze (?:Weakness|Weaknesses): (\d+)>/i)) {
+      var count = parseInt(RegExp.$1);
+      if (Olivia.OctoBattle.BoostPoint && this.item().note.match(/<(?:BP|Boost) Analyze>/i)) {
+        var multiplier = this.subject().multiplierForBP('Analyze');
+        count = Math.round(multiplier * count);
+        count += this.subject().additionForBP('Analyze');
       }
-      _0x38a9cc.revealNewWeaknesses(_0x34c729);
+      target.revealNewWeaknesses(count);
     }
   };
-  Olivia[_0x3565('0x2c')][_0x3565('0xa')][_0x3565('0x23')] = Game_BattlerBase[_0x3565('0x84')].refresh;
-  Game_BattlerBase[_0x3565('0x84')][_0x3565('0x76')] = function () {
-    Olivia[_0x3565('0x2c')][_0x3565('0xa')][_0x3565('0x23')][_0x3565('0x73')](this);
-    $gameTemp[_0x3565('0x38')] = true;
+
+  Olivia.OctoBattle.Weakness.___Game_BattlerBase_refresh___ = Game_BattlerBase.prototype.refresh;
+  Game_BattlerBase.prototype.refresh = function() {
+    Olivia.OctoBattle.Weakness.___Game_BattlerBase_refresh___.call(this);
+    $gameTemp._needRefreshAllEnemyWeaknessWindows = true;
   };
-  Olivia.OctoBattle[_0x3565('0xa')].___Game_Battler_startAnimation___ = Game_Battler.prototype[_0x3565('0x62')];
-  Game_Battler[_0x3565('0x84')][_0x3565('0x62')] = function (_0x3fb4e0, _0x574eef, _0x3bfad4) {
-    Olivia.OctoBattle[_0x3565('0xa')][_0x3565('0x4b')][_0x3565('0x73')](this, _0x3fb4e0, _0x574eef, _0x3bfad4);
-    this[_0x3565('0x2a')]();
+
+  Olivia.OctoBattle.Weakness.___Game_Battler_startAnimation___ = Game_Battler.prototype.startAnimation;
+  Game_Battler.prototype.startAnimation = function(animationId, mirror, delay) {
+    Olivia.OctoBattle.Weakness.___Game_Battler_startAnimation___.call(this, animationId, mirror, delay);
+    this.revealWeaknessDisplay();
   };
-  Game_Battler[_0x3565('0x84')][_0x3565('0x2a')] = function () {
-    if (this[_0x3565('0x48')]()) {
-      this._showWeaknessDisplay = Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x8d')];
+
+  Game_Battler.prototype.revealWeaknessDisplay = function() {
+    if (this.isEnemy()) {
+      this._showWeaknessDisplay = Olivia.OctoBattle.WeaknessDisplay.HideDuration;
     }
   };
-  Game_Enemy[_0x3565('0x84')][_0x3565('0x1b')] = function () {
-    var _0x4ecf73 = [];
-    for (var _0x40e0bc = 0x0; _0x40e0bc < Olivia[_0x3565('0x2c')][_0x3565('0x65')].ShownElements[_0x3565('0x60')]; _0x40e0bc++) {
-      var _0x18e0a0 = Number(Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x34')][_0x40e0bc]);
-      if (Olivia.OctoBattle.BreakShield && Olivia.OctoBattle.BreakShield[_0x3565('0x2e')]) {
-        if (this[_0x3565('0x3a')](_0x18e0a0) >= Olivia[_0x3565('0x2c')].BreakShield[_0x3565('0xb')]) {
-          _0x4ecf73.push(_0x18e0a0);
+
+  Game_Enemy.prototype.getWeaknessElements = function() {
+    var elements = [];
+    for (var i = 0; i < Olivia.OctoBattle.WeaknessDisplay.ShownElements.length; i++) {
+      var element = Number(Olivia.OctoBattle.WeaknessDisplay.ShownElements[i]);
+      if (Olivia.OctoBattle.BreakShield && Olivia.OctoBattle.BreakShield.Enabled) {
+        if (this.originalElementRate(element) >= Olivia.OctoBattle.BreakShield.WeakRate) {
+          elements.push(element);
         }
       } else {
-        if (this[_0x3565('0x7b')](_0x18e0a0) >= 1.1) {
-          _0x4ecf73[_0x3565('0x58')](_0x18e0a0);
+        if (this.elementRate(element) >= 1.1) {
+          elements.push(element);
         }
       }
     }
-    return _0x4ecf73;
+    return elements;
   };
-  Game_Enemy[_0x3565('0x84')][_0x3565('0x7c')] = function () {
-    if (this[_0x3565('0x66')]()[_0x3565('0x36')][_0x3565('0x2')](/<No HP Gauge>/i)) {
+
+  Game_Enemy.prototype.isShowWeaknessHpGauge = function() {
+    if (this.enemy().note.match(/<No HP Gauge>/i)) {
       return false;
-    } else if (this[_0x3565('0x66')]()[_0x3565('0x36')][_0x3565('0x2')](/<Show HP Gauge>/i)) {
+    } else if (this.enemy().note.match(/<Show HP Gauge>/i)) {
       return true;
-    } else if (this.enemy()[_0x3565('0x36')][_0x3565('0x2')](/<Hide HP Gauge>/i)) {
+    } else if (this.enemy().note.match(/<Hide HP Gauge>/i)) {
       return false;
     }
-    return Olivia.OctoBattle[_0x3565('0x65')][_0x3565('0x6a')];
+    return Olivia.OctoBattle.WeaknessDisplay.ShowHpGauge;
   };
-  Game_Enemy[_0x3565('0x84')][_0x3565('0x10')] = function (_0x421107) {
-    var _0x2805fb = this[_0x3565('0x1b')]();
-    var _0x42e998 = $gameSystem.getRevealedEnemyWeaknesses(this[_0x3565('0x3c')]());
-    var _0x35daf0 = [];
-    for (var _0x55c955 = 0x0; _0x55c955 < _0x2805fb[_0x3565('0x60')]; _0x55c955++) {
-      var _0x5ecee6 = _0x2805fb[_0x55c955];
-      if (!_0x42e998[_0x3565('0x7e')](_0x5ecee6)) {
-        _0x35daf0[_0x3565('0x58')](_0x5ecee6);
+
+  Game_Enemy.prototype.revealNewWeaknesses = function(count) {
+    var allWeak = this.getWeaknessElements();
+    var revealed = $gameSystem.getRevealedEnemyWeaknesses(this.enemyId());
+    var unrevealed = [];
+    for (var i = 0; i < allWeak.length; i++) {
+      var element = allWeak[i];
+      if (!revealed.contains(element)) {
+        unrevealed.push(element);
       }
     }
-    while (_0x421107 > 0x0) {
-      if (_0x35daf0[_0x3565('0x60')] <= 0x0) {
+    while (count > 0) {
+      if (unrevealed.length <= 0) {
         break;
       }
-      _0x421107 -= 0x1;
-      var _0x2830d0 = Math[_0x3565('0x8b')](Math[_0x3565('0x5c')]() * _0x35daf0[_0x3565('0x60')]);
-      var _0x182a46 = _0x35daf0[_0x2830d0];
-      $gameSystem.addEnemyWeaknessElement(this[_0x3565('0x3c')](), _0x182a46);
-      _0x35daf0[_0x3565('0x52')](_0x2830d0, 0x1);
-      this[_0x3565('0x2a')]();
+      count -= 1;
+      var index = Math.floor(Math.random() * unrevealed.length);
+      var element = unrevealed[index];
+      $gameSystem.addEnemyWeaknessElement(this.enemyId(), element);
+      unrevealed.splice(index, 1);
+      this.revealWeaknessDisplay();
     }
-    $gameTemp[_0x3565('0x38')] = true;
+    $gameTemp._needRefreshAllEnemyWeaknessWindows = true;
   };
-  Olivia[_0x3565('0x2c')][_0x3565('0xa')][_0x3565('0x0')] = Spriteset_Battle[_0x3565('0x84')][_0x3565('0x7')];
-  Spriteset_Battle.prototype[_0x3565('0x7')] = function () {
-    Olivia[_0x3565('0x2c')][_0x3565('0xa')][_0x3565('0x0')][_0x3565('0x73')](this);
-    this[_0x3565('0xf')]();
+
+  Olivia.OctoBattle.Weakness.___Spriteset_Battle_update___ = Spriteset_Battle.prototype.update;
+  Spriteset_Battle.prototype.update = function() {
+    Olivia.OctoBattle.Weakness.___Spriteset_Battle_update___.call(this);
+    this.updateEnemyWeaknessWindows();
   };
-  Spriteset_Battle[_0x3565('0x84')][_0x3565('0xf')] = function () {
+
+  Spriteset_Battle.prototype.updateEnemyWeaknessWindows = function() {
     if ($gameTemp._needRefreshAllEnemyWeaknessWindows === true) {
-      for (var _0x89cfbb = 0x0; _0x89cfbb < this[_0x3565('0x2d')].length; _0x89cfbb++) {
-        var _0x1ca57d = this[_0x3565('0x2d')][_0x89cfbb];
-        if (!!_0x1ca57d && !!_0x1ca57d[_0x3565('0x57')]) {
-          _0x1ca57d[_0x3565('0x57')][_0x3565('0x76')]();
-          if (_0x1ca57d[_0x3565('0x57')]._added === false) {
-            this._baseSprite.addChild(_0x1ca57d[_0x3565('0x57')]);
+      for (var i = 0; i < this._enemySprites.length; i++) {
+        var sprite = this._enemySprites[i];
+        if (!!sprite && !!sprite._weaknessWindow) {
+          sprite._weaknessWindow.refresh();
+          if (sprite._weaknessWindow._added === false) {
+            this._baseSprite.addChild(sprite._weaknessWindow);
           }
         }
       }
       $gameTemp._needRefreshAllEnemyWeaknessWindows = false;
     }
   };
-  Olivia[_0x3565('0x2c')][_0x3565('0xa')][_0x3565('0x21')] = Sprite_Enemy[_0x3565('0x84')][_0x3565('0xc')];
-  Sprite_Enemy[_0x3565('0x84')].initMembers = function () {
-    Olivia[_0x3565('0x2c')][_0x3565('0xa')].___Sprite_Enemy_initMembers___[_0x3565('0x73')](this);
-    this[_0x3565('0x22')]();
+
+  Olivia.OctoBattle.Weakness.___Sprite_Enemy_initMembers___ = Sprite_Enemy.prototype.initMembers;
+  Sprite_Enemy.prototype.initMembers = function() {
+    Olivia.OctoBattle.Weakness.___Sprite_Enemy_initMembers___.call(this);
+    this.createWeaknessDisplayWindow();
   };
-  Sprite_Enemy[_0x3565('0x84')][_0x3565('0x22')] = function () {
-    this[_0x3565('0x57')] = new Window_WeaknessDisplay(this[_0x3565('0x43')], this);
-    this._weaknessWindow[_0x3565('0x76')]();
-    this[_0x3565('0x57')][_0x3565('0x16')] = false;
-    if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x8')]) {
-      this._stateIconSprite[_0x3565('0x39')] = 0x0;
+
+  Sprite_Enemy.prototype.createWeaknessDisplayWindow = function() {
+    this._weaknessWindow = new Window_WeaknessDisplay(this._enemy, this);
+    this._weaknessWindow.refresh();
+    this._weaknessWindow._added = false;
+    if (Olivia.OctoBattle.WeaknessDisplay.ShowStates) {
+      this._stateIconSprite.opacity = 0;
     }
   };
-  Olivia[_0x3565('0x2c')].Weakness.___Sprite_Enemy_setBattler___ = Sprite_Enemy.prototype[_0x3565('0x41')];
-  Sprite_Enemy[_0x3565('0x84')][_0x3565('0x41')] = function (_0x36ba2b) {
-    Olivia[_0x3565('0x2c')][_0x3565('0xa')].___Sprite_Enemy_setBattler___.call(this, _0x36ba2b);
-    if (!!this[_0x3565('0x57')]) {
-      this[_0x3565('0x57')][_0x3565('0x56')](_0x36ba2b);
+
+  Olivia.OctoBattle.Weakness.___Sprite_Enemy_setBattler___ = Sprite_Enemy.prototype.setBattler;
+  Sprite_Enemy.prototype.setBattler = function(battler) {
+    Olivia.OctoBattle.Weakness.___Sprite_Enemy_setBattler___.call(this, battler);
+    if (!!this._weaknessWindow) {
+      this._weaknessWindow.setSubject(battler);
     }
   };
+
   function Window_WeaknessDisplay() {
-    this[_0x3565('0x3')][_0x3565('0x35')](this, arguments);
+    this.initialize.apply(this, arguments);
   }
-  Window_WeaknessDisplay[_0x3565('0x84')] = Object[_0x3565('0x75')](Window_Base.prototype);
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x6d')] = Window_WeaknessDisplay;
-  Window_WeaknessDisplay[_0x3565('0x84')].initialize = function (_0x4d84dc, _0x2ad5b0) {
-    this._subject = _0x4d84dc;
-    this[_0x3565('0x17')] = _0x2ad5b0;
-    var _0x2ea141 = Math[_0x3565('0x1e')](Graphics.boxWidth / 0x2);
-    var _0x10442c = this[_0x3565('0x6f')](0x2);
-    this[_0x3565('0x63')]();
-    Window_Base[_0x3565('0x84')][_0x3565('0x3')][_0x3565('0x73')](this, 0x0, 0x0, _0x2ea141, _0x10442c);
+
+  Window_WeaknessDisplay.prototype = Object.create(Window_Base.prototype);
+  Window_WeaknessDisplay.prototype.constructor = Window_WeaknessDisplay;
+
+  Window_WeaknessDisplay.prototype.initialize = function(subject, sprite) {
+    this._subject = subject;
+    this._sprite = sprite;
+    var width = Math.ceil(Graphics.boxWidth / 2);
+    var height = this.fittingHeight(2);
+    this.setCalculationConstants();
+    Window_Base.prototype.initialize.call(this, 0, 0, width, height);
     this.createStateIconSprite();
-    this[_0x3565('0x39')] = 0x0;
-    this[_0x3565('0x76')]();
+    this.opacity = 0;
+    this.refresh();
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x20')] = function () {
-    return 0x0;
+
+  Window_WeaknessDisplay.prototype.standardPadding = function() {
+    return 0;
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x63')] = function () {
-    this[_0x3565('0x4e')] = -0x1 * Math[_0x3565('0x1e')](Graphics[_0x3565('0x14')] * 0.25);
-    this[_0x3565('0x2b')] = -0x1 * Math[_0x3565('0x30')](this[_0x3565('0x12')]() * 0.75);
+
+  Window_WeaknessDisplay.prototype.setCalculationConstants = function() {
+    this._factorX = -1 * Math.ceil(Graphics.boxWidth * 0.25);
+    this._factorY = -1 * Math.round(this.lineHeight() * 0.75);
   };
-  Window_WeaknessDisplay[_0x3565('0x84')].createStateIconSprite = function () {
-    if (Olivia[_0x3565('0x2c')][_0x3565('0x65')]) {
-      this[_0x3565('0x3f')] = new Sprite_StateIcon();
-      this.addChild(this[_0x3565('0x3f')]);
-      this[_0x3565('0x3f')].x = this[_0x3565('0x9')] / 0x2;
-      this[_0x3565('0x3f')].y = 0x0;
+
+  Window_WeaknessDisplay.prototype.createStateIconSprite = function() {
+    if (Olivia.OctoBattle.WeaknessDisplay) {
+      this._stateIconSprite = new Sprite_StateIcon();
+      this.addChild(this._stateIconSprite);
+      this._stateIconSprite.x = this.width / 2;
+      this._stateIconSprite.y = 0;
     }
   };
-  Window_WeaknessDisplay.prototype[_0x3565('0x7')] = function () {
-    Window_Base[_0x3565('0x84')][_0x3565('0x7')].call(this);
-    if (!!this[_0x3565('0x54')]) {
-      this[_0x3565('0x29')]();
+
+  Window_WeaknessDisplay.prototype.update = function() {
+    Window_Base.prototype.update.call(this);
+    if (!!this._subject) {
+      this.updatePosition();
       this.updateOpacity();
     }
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x29')] = function () {
-    this.x = this[_0x3565('0x17')].x + this[_0x3565('0x4e')];
-    this.y = this[_0x3565('0x17')].y + this._factorY;
+
+  Window_WeaknessDisplay.prototype.updatePosition = function() {
+    this.x = this._sprite.x + this._factorX;
+    this.y = this._sprite.y + this._factorY;
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x51')] = function () {
-    if (this[_0x3565('0x54')][_0x3565('0x3d')]() || this[_0x3565('0x54')].isDead()) {
-      this[_0x3565('0x80')] -= 0x10;
-    } else if (this[_0x3565('0x54')][_0x3565('0x5')]() && this[_0x3565('0x54')][_0x3565('0x5')]()[_0x3565('0x39')] <= 0x0) {
-      this[_0x3565('0x80')] -= 0xa;
-    } else if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0xe')]) {
-      this[_0x3565('0x80')] = 0xff;
-    } else if (this[_0x3565('0x54')][_0x3565('0x1a')]()) {
-      this[_0x3565('0x80')] = 0xff;
-    } else if (this._subject[_0x3565('0x49')] > 0x0) {
-      this[_0x3565('0x80')] = 0xff;
-      this[_0x3565('0x54')][_0x3565('0x49')] -= 0x1;
+
+  Window_WeaknessDisplay.prototype.updateOpacity = function() {
+    if (this._subject.isHidden() || this._subject.isDead()) {
+      this.contentsOpacity -= 16;
+    } else if (this._subject.battler() && this._subject.battler().opacity <= 0) {
+      this.contentsOpacity -= 10;
+    } else if (Olivia.OctoBattle.WeaknessDisplay.AlwaysShow) {
+      this.contentsOpacity = 255;
+    } else if (this._subject.isSelected()) {
+      this.contentsOpacity = 255;
+    } else if (this._subject._showWeaknessDisplay > 0) {
+      this.contentsOpacity = 255;
+      this._subject._showWeaknessDisplay -= 1;
     } else {
-      this[_0x3565('0x80')] -= 0x10;
+      this.contentsOpacity -= 16;
     }
-    if (!!this[_0x3565('0x3f')]) {
-      this[_0x3565('0x3f')][_0x3565('0x39')] = this.contentsOpacity;
+    if (!!this._stateIconSprite) {
+      this._stateIconSprite.opacity = this.contentsOpacity;
     }
   };
-  Window_WeaknessDisplay.prototype[_0x3565('0x56')] = function (_0x561b76) {
-    this._subject = _0x561b76;
-    this[_0x3565('0x54')][_0x3565('0x49')] = this[_0x3565('0x54')][_0x3565('0x49')] || Olivia.OctoBattle.WeaknessDisplay[_0x3565('0x8d')];
-    if (!!this[_0x3565('0x3f')]) {
-      this[_0x3565('0x3f')][_0x3565('0x37')](this._subject);
+
+  Window_WeaknessDisplay.prototype.setSubject = function(subject) {
+    this._subject = subject;
+    this._subject._showWeaknessDisplay = this._subject._showWeaknessDisplay || Olivia.OctoBattle.WeaknessDisplay.HideDuration;
+    if (!!this._stateIconSprite) {
+      this._stateIconSprite.setup(this._subject);
     }
-    if (this[_0x3565('0x54')][_0x3565('0x3d')]()) {
-      this.contentsOpacity = 0x0;
+    if (this._subject.isHidden()) {
+      this.contentsOpacity = 0;
     }
-    this[_0x3565('0x76')]();
+    this.refresh();
   };
-  Window_WeaknessDisplay.prototype[_0x3565('0x76')] = function () {
-    this[_0x3565('0x81')][_0x3565('0x19')]();
-    if (!!this[_0x3565('0x54')]) {
-      this[_0x3565('0x74')]();
-      this[_0x3565('0x7a')]();
-      this[_0x3565('0x78')]();
-      this[_0x3565('0x55')]();
-      if (!!this[_0x3565('0x3f')]) {
-        this[_0x3565('0x85')]();
+
+  Window_WeaknessDisplay.prototype.refresh = function() {
+    this.contents.clear();
+    if (!!this._subject) {
+      this.drawHpGauge();
+      this.drawSubjectName();
+      this.drawBreakShield();
+      this.drawWeaknessIcons();
+      if (!!this._stateIconSprite) {
+        this.moveStateSprite();
       }
     }
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x74')] = function () {
-    if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x6a')]) {
-      if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x83')]) {
-        this[_0x3565('0x82')]();
-        this[_0x3565('0x81')][_0x3565('0x45')] = Olivia.OctoBattle[_0x3565('0x65')][_0x3565('0x1f')];
-        var _0x1f4000 = this.textWidth(this[_0x3565('0x54')][_0x3565('0x40')]());
-        this[_0x3565('0x82')]();
-        _0x1f4000 = Math.max(Olivia.OctoBattle[_0x3565('0x65')][_0x3565('0x70')], _0x1f4000);
+
+  Window_WeaknessDisplay.prototype.drawHpGauge = function() {
+    if (Olivia.OctoBattle.WeaknessDisplay.ShowHpGauge) {
+      if (Olivia.OctoBattle.WeaknessDisplay.ShowName) {
+        this.resetFontSettings();
+        this.contents.fontSize = Olivia.OctoBattle.WeaknessDisplay.NameFontSize;
+        var gaugeWidth = this.textWidth(this._subject.name());
+        this.resetFontSettings();
+        gaugeWidth = Math.max(Olivia.OctoBattle.WeaknessDisplay.HpGaugeMinWidth, gaugeWidth);
       } else {
-        var _0x1f4000 = Olivia[_0x3565('0x2c')][_0x3565('0x65')].HpGaugeMinWidth;
+        var gaugeWidth = Olivia.OctoBattle.WeaknessDisplay.HpGaugeMinWidth;
       }
-      _0x1f4000 += 0x2 * Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x28')];
-      this[_0x3565('0x5d')] = _0x1f4000;
-      var _0x4ff8c2 = Math[_0x3565('0x30')]((this[_0x3565('0x11')]() - _0x1f4000) / 0x2);
-      var _0x3f533a = this[_0x3565('0x54')][_0x3565('0x4c')]();
-      var _0x20d2d6 = this[_0x3565('0x1c')]();
-      var _0x30c21b = this.hpGaugeColor2();
-      this[_0x3565('0x8c')](_0x4ff8c2, 0x0, _0x1f4000, _0x3f533a, _0x20d2d6, _0x30c21b);
+      gaugeWidth += 2 * Olivia.OctoBattle.WeaknessDisplay.HpGaugePadding;
+      this._hpGaugeWidth = gaugeWidth;
+      var x = Math.round((this.contentsWidth() - gaugeWidth) / 2);
+      var rate = this._subject.hpRate();
+      var color1 = this.hpGaugeColor1();
+      var color2 = this.hpGaugeColor2();
+      this.drawGauge(x, 0, gaugeWidth, rate, color1, color2);
     } else {
-      this[_0x3565('0x5d')] = 0x0;
+      this._hpGaugeWidth = 0;
     }
   };
-  Window_WeaknessDisplay[_0x3565('0x84')].drawSubjectName = function () {
-    if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x83')]) {
-      this[_0x3565('0x82')]();
-      this[_0x3565('0x81')][_0x3565('0x45')] = Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x1f')];
-      if (this._subject[_0x3565('0x4c')]() > 0.5) {
-        this[_0x3565('0x6e')](this[_0x3565('0x5f')]());
-      } else if (this[_0x3565('0x54')][_0x3565('0x4c')]() > 0.25) {
-        this[_0x3565('0x6e')](this[_0x3565('0x1')](Olivia[_0x3565('0x2c')][_0x3565('0x65')].HpColor50));
+
+  Window_WeaknessDisplay.prototype.drawSubjectName = function() {
+    if (Olivia.OctoBattle.WeaknessDisplay.ShowName) {
+      this.resetFontSettings();
+      this.contents.fontSize = Olivia.OctoBattle.WeaknessDisplay.NameFontSize;
+      if (this._subject.hpRate() > 0.5) {
+        this.changeTextColor(this.normalColor());
+      } else if (this._subject.hpRate() > 0.25) {
+        this.changeTextColor(this.textColor(Olivia.OctoBattle.WeaknessDisplay.HpColor50));
       } else {
-        this[_0x3565('0x6e')](this.textColor(Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x77')]));
+        this.changeTextColor(this.textColor(Olivia.OctoBattle.WeaknessDisplay.HpColor25));
       }
-      this[_0x3565('0x18')](this[_0x3565('0x54')].name(), 0x0, 0x0, this[_0x3565('0x11')](), _0x3565('0x6'));
+      this.drawText(this._subject.name(), 0, 0, this.contentsWidth(), 'center');
       this.resetFontSettings();
     }
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x78')] = function () {
-    if (Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x3b')] && Olivia[_0x3565('0x2c')][_0x3565('0x4f')] && Olivia[_0x3565('0x2c')][_0x3565('0x4f')].Enabled && Olivia[_0x3565('0x2c')][_0x3565('0x4f')][_0x3565('0x47')]) {
-      if (Olivia.OctoBattle[_0x3565('0x65')][_0x3565('0x83')]) {
-        this[_0x3565('0x82')]();
-        this.contents[_0x3565('0x45')] = Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x1f')];
-        var _0x257f89 = this[_0x3565('0x31')](this[_0x3565('0x54')][_0x3565('0x40')]());
-        this[_0x3565('0x82')]();
-        _0x257f89 = Math[_0x3565('0x88')](this[_0x3565('0x5d')], _0x257f89);
-        var _0x58c8cb = Math[_0x3565('0x30')]((this[_0x3565('0x11')]() - _0x257f89) / 0x2) - Window_Base[_0x3565('0x24')] - 0x2;
-      } else if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x8')] && this[_0x3565('0x54')][_0x3565('0x32')]()[_0x3565('0x60')] > 0x0) {
-        var _0x58c8cb = Math[_0x3565('0x30')](this[_0x3565('0x11')]() / 0x2) - Window_Base[_0x3565('0x24')];
+
+  Window_WeaknessDisplay.prototype.drawBreakShield = function() {
+    if (Olivia.OctoBattle.WeaknessDisplay.ShowBreakShield && Olivia.OctoBattle.BreakShield && Olivia.OctoBattle.BreakShield.Enabled && Olivia.OctoBattle.BreakShield.Enemies) {
+      if (Olivia.OctoBattle.WeaknessDisplay.ShowName) {
+        this.resetFontSettings();
+        this.contents.fontSize = Olivia.OctoBattle.WeaknessDisplay.NameFontSize;
+        var nameWidth = this.textWidth(this._subject.name());
+        this.resetFontSettings();
+        nameWidth = Math.max(this._hpGaugeWidth, nameWidth);
+        var x = Math.round((this.contentsWidth() - nameWidth) / 2) - Window_Base._iconWidth - 2;
+      } else if (Olivia.OctoBattle.WeaknessDisplay.ShowStates && this._subject.allIcons().length > 0) {
+        var x = Math.round(this.contentsWidth() / 2) - Window_Base._iconWidth;
       } else {
-        var _0x58c8cb = Math[_0x3565('0x30')]((this[_0x3565('0x11')]() - Window_Base[_0x3565('0x24')]) / 0x2);
+        var x = Math.round((this.contentsWidth() - Window_Base._iconWidth) / 2);
       }
-      this[_0x3565('0x7d')](this[_0x3565('0x54')], _0x58c8cb, 0x0);
+      this.drawBreakShieldIcon(this._subject, x, 0);
     }
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x85')] = function () {
-    var _0x22e264 = Math[_0x3565('0x30')](this.contentsWidth() / 0x2);
-    var _0x2d1dc5 = Math[_0x3565('0x30')](this[_0x3565('0x12')]() / 0x2) - 0x2;
-    if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x6a')]) {
-      if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x83')]) {
-        this[_0x3565('0x82')]();
-        this[_0x3565('0x81')][_0x3565('0x45')] = Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x1f')];
-        var _0x122a9d = this[_0x3565('0x31')](this._subject[_0x3565('0x40')]());
-        this[_0x3565('0x82')]();
-        _0x122a9d = Math[_0x3565('0x88')](Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x70')], _0x122a9d);
+
+  Window_WeaknessDisplay.prototype.moveStateSprite = function() {
+    var x = Math.round(this.contentsWidth() / 2);
+    var y = Math.round(this.lineHeight() / 2) - 2;
+    if (Olivia.OctoBattle.WeaknessDisplay.ShowHpGauge) {
+      if (Olivia.OctoBattle.WeaknessDisplay.ShowName) {
+        this.resetFontSettings();
+        this.contents.fontSize = Olivia.OctoBattle.WeaknessDisplay.NameFontSize;
+        var gaugeWidth = this.textWidth(this._subject.name());
+        this.resetFontSettings();
+        gaugeWidth = Math.max(Olivia.OctoBattle.WeaknessDisplay.HpGaugeMinWidth, gaugeWidth);
       } else {
-        var _0x122a9d = Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x70')];
+        var gaugeWidth = Olivia.OctoBattle.WeaknessDisplay.HpGaugeMinWidth;
       }
-      _0x122a9d += 0x2 * Olivia[_0x3565('0x2c')][_0x3565('0x65')].HpGaugePadding + 0x2;
-      _0x22e264 += Math[_0x3565('0x30')](_0x122a9d / 0x2) + Math.round(Window_Base[_0x3565('0x24')] / 0x2);
-    } else if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x83')]) {
-      this[_0x3565('0x82')]();
-      this[_0x3565('0x81')].fontSize = Olivia.OctoBattle[_0x3565('0x65')][_0x3565('0x1f')];
-      var _0x122a9d = this[_0x3565('0x31')](this[_0x3565('0x54')].name()) + Window_Base[_0x3565('0x24')] + 0x4;
-      this[_0x3565('0x82')]();
-      _0x22e264 += Math[_0x3565('0x30')](_0x122a9d / 0x2);
-    } else if (Olivia.OctoBattle.WeaknessDisplay[_0x3565('0x3b')]) {
-      _0x22e264 += Math[_0x3565('0x30')](Window_Base[_0x3565('0x24')] / 0x2);
+      gaugeWidth += 2 * Olivia.OctoBattle.WeaknessDisplay.HpGaugePadding + 2;
+      x += Math.round(gaugeWidth / 2) + Math.round(Window_Base._iconWidth / 2);
+    } else if (Olivia.OctoBattle.WeaknessDisplay.ShowName) {
+      this.resetFontSettings();
+      this.contents.fontSize = Olivia.OctoBattle.WeaknessDisplay.NameFontSize;
+      var gaugeWidth = this.textWidth(this._subject.name()) + Window_Base._iconWidth + 4;
+      this.resetFontSettings();
+      x += Math.round(gaugeWidth / 2);
+    } else if (Olivia.OctoBattle.WeaknessDisplay.ShowBreakShield) {
+      x += Math.round(Window_Base._iconWidth / 2);
     } else {
-      _0x2d1dc5 -= this.lineHeight();
+      y -= this.lineHeight();
     }
-    this[_0x3565('0x3f')].x = _0x22e264;
-    this[_0x3565('0x3f')].y = _0x2d1dc5;
+    this._stateIconSprite.x = x;
+    this._stateIconSprite.y = y;
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x25')] = function () {
-    return Olivia.OctoBattle[_0x3565('0x65')].ShowStunTurns;
+
+  Window_WeaknessDisplay.prototype.showBreakStunDuration = function() {
+    return Olivia.OctoBattle.WeaknessDisplay.ShowStunTurns;
   };
-  Window_WeaknessDisplay[_0x3565('0x84')][_0x3565('0x55')] = function () {
-    var _0x121e14 = this[_0x3565('0x54')][_0x3565('0x1b')]();
-    var _0x1e60ba = Window_Base[_0x3565('0x24')];
-    if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x42')]) {
-      _0x1e60ba = Math[_0x3565('0x30')](_0x1e60ba * Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x71')]);
+
+  Window_WeaknessDisplay.prototype.drawWeaknessIcons = function() {
+    var elements = this._subject.getWeaknessElements();
+    var iconWidth = Window_Base._iconWidth;
+    if (Olivia.OctoBattle.WeaknessDisplay.SmallWeakIcons) {
+      iconWidth = Math.round(iconWidth * Olivia.OctoBattle.WeaknessDisplay.WeakIconSize);
     }
-    var _0x1f15eb = _0x121e14[_0x3565('0x60')] * _0x1e60ba;
-    var _0x164445 = Math[_0x3565('0x30')]((this[_0x3565('0x11')]() - _0x1f15eb) / 0x2);
-    if (!Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x83')] && !Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x3b')] && !Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x6a')]) {
-      var _0x1b9ec6 = 0x0;
+    var totalWidth = elements.length * iconWidth;
+    var startX = Math.round((this.contentsWidth() - totalWidth) / 2);
+    if (!Olivia.OctoBattle.WeaknessDisplay.ShowName && !Olivia.OctoBattle.WeaknessDisplay.ShowBreakShield && !Olivia.OctoBattle.WeaknessDisplay.ShowHpGauge) {
+      var y = 0;
     } else {
-      var _0x1b9ec6 = this.lineHeight();
+      var y = this.lineHeight();
     }
-    var _0x597b19 = $gameSystem[_0x3565('0x89')](this[_0x3565('0x54')][_0x3565('0x3c')]());
-    if (Olivia[_0x3565('0x2c')][_0x3565('0x4f')] && Olivia.OctoBattle.BreakShield.Enabled) {
-      var _0x34c958 = this[_0x3565('0x54')][_0x3565('0x15')]();
+    var revealed = $gameSystem.getRevealedEnemyWeaknesses(this._subject.enemyId());
+    if (Olivia.OctoBattle.BreakShield && Olivia.OctoBattle.BreakShield.Enabled) {
+      var protectedElements = this._subject.getProtectedWeaknessElements();
     }
-    for (var _0x3e6646 = 0x0; _0x3e6646 < _0x121e14[_0x3565('0x60')]; _0x3e6646++) {
-      var _0x29e9e5 = _0x121e14[_0x3e6646];
-      if (_0x597b19[_0x3565('0x7e')](_0x29e9e5)) {
-        var _0xcd6c72 = Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x34')][_0x3565('0x4a')](String(_0x29e9e5));
-        var _0x28278f = Number(Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x27')][_0xcd6c72]);
+    for (var i = 0; i < elements.length; i++) {
+      var element = elements[i];
+      if (revealed.contains(element)) {
+        var index = Olivia.OctoBattle.WeaknessDisplay.ShownElements.indexOf(String(element));
+        var iconIndex = Number(Olivia.OctoBattle.WeaknessDisplay.ElementIcons[index]);
       } else {
-        var _0x28278f = Olivia.OctoBattle[_0x3565('0x65')][_0x3565('0x1d')];
+        var iconIndex = Olivia.OctoBattle.WeaknessDisplay.UnknownIcon;
       }
-      if (Olivia[_0x3565('0x2c')][_0x3565('0x65')].SmallWeakIcons) {
-        this[_0x3565('0x5a')](_0x28278f, _0x164445, _0x1b9ec6);
+      if (Olivia.OctoBattle.WeaknessDisplay.SmallWeakIcons) {
+        this.drawSmallIcon(iconIndex, startX, y);
       } else {
-        this[_0x3565('0x86')](_0x28278f, _0x164445, _0x1b9ec6);
+        this.drawIcon(iconIndex, startX, y);
       }
-      if (Olivia[_0x3565('0x2c')][_0x3565('0x4f')] && Olivia[_0x3565('0x2c')][_0x3565('0x4f')][_0x3565('0x2e')] && _0x34c958[_0x3565('0x7e')](_0x29e9e5)) {
-        var _0x28278f = Olivia[_0x3565('0x2c')][_0x3565('0x4f')][_0x3565('0x67')];
-        if (Olivia[_0x3565('0x2c')].WeaknessDisplay[_0x3565('0x42')]) {
-          this[_0x3565('0x5a')](_0x28278f, _0x164445, _0x1b9ec6);
+      if (Olivia.OctoBattle.BreakShield && Olivia.OctoBattle.BreakShield.Enabled && protectedElements.contains(element)) {
+        var iconIndex = Olivia.OctoBattle.BreakShield.ProtectIcon;
+        if (Olivia.OctoBattle.WeaknessDisplay.SmallWeakIcons) {
+          this.drawSmallIcon(iconIndex, startX, y);
         } else {
-          this[_0x3565('0x86')](_0x28278f, _0x164445, _0x1b9ec6);
+          this.drawIcon(iconIndex, startX, y);
         }
       }
-      _0x164445 += _0x1e60ba;
+      startX += iconWidth;
     }
   };
-  Window_WeaknessDisplay.prototype[_0x3565('0x5a')] = function (_0x40d2ef, _0x18b5da, _0x5cec44) {
-    var _0x3c02a3 = ImageManager[_0x3565('0x53')]('IconSet');
-    var _0xd0e5f8 = Window_Base[_0x3565('0x24')];
-    var _0x3b767b = Window_Base[_0x3565('0x87')];
-    var _0x3eaffd = _0x40d2ef % 0x10 * _0xd0e5f8;
-    var _0x1cc468 = Math[_0x3565('0x8b')](_0x40d2ef / 0x10) * _0x3b767b;
-    var _0x37def1 = Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x71')];
-    this[_0x3565('0x81')][_0x3565('0x26')](_0x3c02a3, _0x3eaffd, _0x1cc468, _0xd0e5f8, _0x3b767b, _0x18b5da, _0x5cec44, Math.round(_0xd0e5f8 * _0x37def1), Math[_0x3565('0x30')](_0x3b767b * _0x37def1));
+
+  Window_WeaknessDisplay.prototype.drawSmallIcon = function(iconIndex, x, y) {
+    var bitmap = ImageManager.loadSystem('IconSet');
+    var iconWidth = Window_Base._iconWidth;
+    var iconHeight = Window_Base._iconHeight;
+    var sx = iconIndex % 16 * iconWidth;
+    var sy = Math.floor(iconIndex / 16) * iconHeight;
+    var scale = Olivia.OctoBattle.WeaknessDisplay.WeakIconSize;
+    this.contents.blt(bitmap, sx, sy, iconWidth, iconHeight, x, y, Math.round(iconWidth * scale), Math.round(iconHeight * scale));
   };
-  if (Imported[_0x3565('0x68')]) {
-    Window_EnemyVisualSelect[_0x3565('0x84')][_0x3565('0x76')] = function () {};
+
+  if (Imported.YEP_BattleEngineCore) {
+    Window_EnemyVisualSelect.prototype.refresh = function() {};
   }
 }
 //=============================================================================
@@ -2670,311 +2876,326 @@ if (Olivia[_0x3565('0x2c')][_0x3565('0x65')][_0x3565('0x2e')]) {
 // 2. Shield value goes down whenever a weakness is struck
 // 3. When shield value reaches 0, the target becomes stunned
 
-var _0x596f = ['itemBreakShieldReduction', 'elementRate', 'applyBreakStun', 'ShowActorShield', 'call', 'enemy', 'states', 'addedBreakShields', 'topBreakShield', '___Game_Action_applyItemUserEffect___', 'max', 'startBreakShieldBrokenAnimation', '_stateTurns', 'resetFontSettings', 'contains', 'BreakShield', 'StunIcon', '_iconBreakShield', 'isStateAffected', '_needRefreshAllEnemyWeaknessWindows', '_inBattle', '___BattleManager_setup___', 'drawActorIcons', 'Actors', '_enemies', '_iconBreakStun', 'alterBreakShield', 'iconIndex', 'currentClass', '_scene', 'item', '___Game_Battler_removeBattleStates___', 'width', 'startAnimation', 'executeBreakShieldReduction', 'contents', 'getProtectedWeaknessElements', 'actor', 'Window_BattleStatus_drawBasicArea', 'fontSize', 'deathStateId', 'drawBreakShieldIcon', 'MaxShields', 'note', 'min', 'sort', 'drawItem', 'drawIcon', '___Game_Action_executeDamage___', 'executeDamage', 'showBreakStunDuration', 'currentBreakShield', 'length', 'bareHandsElementId', 'resetBreakShield', '___Game_BattlerBase_elementRate___', 'members', 'isBreakStunned', 'applyItemUserEffect', 'isDead', 'equips', 'drawBasicArea', 'OctoBattle', 'removeBattleStates', 'ceil', 'baseBreakShield', 'setBreakShield', 'center', 'prototype', 'BaseShields', 'Shields', 'outlineColor', 'BreakAnimation', 'ReduceAnimation', '_iconWidth', 'addState', 'setup', 'ShieldIcon', 'Enemies', 'name', 'isAffectedByBreakShield', 'WeakRate', 'refresh', 'concat', 'inBattle', '_currentBreakShield', 'resetBreakShields', 'IconFontSize', 'drawText', 'StunState', '___Window_Base_drawActorIcons___', 'parse', 'match', 'isHpEffect'];
-(function (_0x7ece7f, _0x596f3d) {
-  var _0x234aac = function (_0x5990dc) {
-    while (--_0x5990dc) {
-      _0x7ece7f.push(_0x7ece7f.shift());
+if (Olivia.OctoBattle.BreakShield.Enabled) {
+  Olivia.OctoBattle.Shields = Olivia.OctoBattle.Shields || {};
+
+  Olivia.OctoBattle.Shields.___BattleManager_setup___ = BattleManager.setup;
+  BattleManager.setup = function(troopId, turnCount, battleEvents) {
+    Olivia.OctoBattle.Shields.___BattleManager_setup___.call(this, troopId, turnCount, battleEvents);
+    $gameParty.resetBreakShields();
+    $gameTroop.resetBreakShields();
+  };
+
+  Olivia.OctoBattle.Shields.___Game_Action_executeDamage___ = Game_Action.prototype.executeDamage;
+  Game_Action.prototype.executeDamage = function(target, value) {
+    Olivia.OctoBattle.Shields.___Game_Action_executeDamage___.call(this, target, value);
+    if (!!target && value > 0 && target.isAffectedByBreakShield() && this.isHpEffect()) {
+      this.executeBreakShieldReduction(target, value);
     }
   };
-  _0x234aac(++_0x596f3d);
-})(_0x596f, 0x85);
-var _0x234a = function (_0x7ece7f, _0x596f3d) {
-  _0x7ece7f = _0x7ece7f - 0x0;
-  var _0x234aac = _0x596f[_0x7ece7f];
-  return _0x234aac;
-};
-if (Olivia.OctoBattle[_0x234a('0x46')].Enabled) {
-  Olivia[_0x234a('0x17')][_0x234a('0x1f')] = Olivia[_0x234a('0x17')][_0x234a('0x1f')] || {};
-  Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x4c')] = BattleManager[_0x234a('0x25')];
-  BattleManager.setup = function (_0x4d2162, _0x584d07, _0x84734) {
-    Olivia.OctoBattle[_0x234a('0x1f')][_0x234a('0x4c')][_0x234a('0x3b')](this, _0x4d2162, _0x584d07, _0x84734);
-    $gameParty[_0x234a('0x2f')]();
-    $gameTroop[_0x234a('0x2f')]();
-  };
-  Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x9')] = Game_Action[_0x234a('0x1d')][_0x234a('0xa')];
-  Game_Action[_0x234a('0x1d')][_0x234a('0xa')] = function (_0x7aaa45, _0x54002a) {
-    Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x9')].call(this, _0x7aaa45, _0x54002a);
-    if (!!_0x7aaa45 && _0x54002a > 0x0 && _0x7aaa45[_0x234a('0x29')]() && this[_0x234a('0x36')]()) {
-      this[_0x234a('0x59')](_0x7aaa45, _0x54002a);
-    }
-  };
-  Game_Action[_0x234a('0x1d')][_0x234a('0x59')] = function (_0x2c82f8, _0x1ae242) {
-    if (!_0x2c82f8[_0x234a('0x12')]()) {
-      var _0x26790c = this.calcElementRate(_0x2c82f8);
-      if (_0x26790c >= Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x2a')]) {
-        var _0x1ae242 = -0x1 * this[_0x234a('0x37')]();
-        _0x2c82f8.startBreakShieldReduceAnimation();
-        _0x2c82f8.alterBreakShield(_0x1ae242);
+
+  Game_Action.prototype.executeBreakShieldReduction = function(target, value) {
+    if (!target.isBreakStunned()) {
+      var rate = this.calcElementRate(target);
+      if (rate >= Olivia.OctoBattle.BreakShield.WeakRate) {
+        var reduction = -1 * this.itemBreakShieldReduction();
+        target.startBreakShieldReduceAnimation();
+        target.alterBreakShield(reduction);
       }
     }
   };
-  Game_Action[_0x234a('0x1d')][_0x234a('0x37')] = function () {
-    if (this.item()[_0x234a('0x4')][_0x234a('0x35')](/<Break (?:Reduce|Reduction): (\d+)>/i)) {
+
+  Game_Action.prototype.itemBreakShieldReduction = function() {
+    if (this.item().note.match(/<Break (?:Reduce|Reduction): (\d+)>/i)) {
       return parseInt(RegExp.$1);
     } else {
-      return Olivia[_0x234a('0x17')][_0x234a('0x46')].BreakReduce;
+      return Olivia.OctoBattle.BreakShield.BreakReduce;
     }
   };
-  Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x40')] = Game_Action[_0x234a('0x1d')][_0x234a('0x13')];
-  Game_Action[_0x234a('0x1d')][_0x234a('0x13')] = function (_0x4ce7b8) {
-    Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x40')][_0x234a('0x3b')](this, _0x4ce7b8);
-    if (!!_0x4ce7b8 && _0x4ce7b8[_0x234a('0x29')]()) {
-      this.applyChangeBreakShield(_0x4ce7b8);
+
+  Olivia.OctoBattle.Shields.___Game_Action_applyItemUserEffect___ = Game_Action.prototype.applyItemUserEffect;
+  Game_Action.prototype.applyItemUserEffect = function(target) {
+    Olivia.OctoBattle.Shields.___Game_Action_applyItemUserEffect___.call(this, target);
+    if (!!target && target.isAffectedByBreakShield()) {
+      this.applyChangeBreakShield(target);
     }
   };
-  Game_Action.prototype.applyChangeBreakShield = function (_0x525601) {
-    if (!_0x525601.isBreakStunned()) {
-      if (this[_0x234a('0x55')]()[_0x234a('0x4')][_0x234a('0x35')](/<(?:Set|Change) Break (?:Shield|Shields): (\d+)>/i)) {
-        _0x525601[_0x234a('0x1b')](parseInt(RegExp.$1));
-        $gameTemp[_0x234a('0x4a')] = true;
+
+  Game_Action.prototype.applyChangeBreakShield = function(target) {
+    if (!target.isBreakStunned()) {
+      if (this.item().note.match(/<(?:Set|Change) Break (?:Shield|Shields): (\d+)>/i)) {
+        target.setBreakShield(parseInt(RegExp.$1));
+        $gameTemp._needRefreshAllEnemyWeaknessWindows = true;
       }
-      if (this[_0x234a('0x55')]().note[_0x234a('0x35')](/<(?:Increase|Decrease|Change) Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
-        _0x525601[_0x234a('0x51')](parseInt(RegExp.$1));
-        $gameTemp[_0x234a('0x4a')] = true;
+      if (this.item().note.match(/<(?:Increase|Decrease|Change) Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
+        target.alterBreakShield(parseInt(RegExp.$1));
+        $gameTemp._needRefreshAllEnemyWeaknessWindows = true;
       }
     }
   };
-  Olivia[_0x234a('0x17')].Shields.___Game_BattlerBase_elementRate___ = Game_BattlerBase.prototype[_0x234a('0x38')];
-  Game_BattlerBase[_0x234a('0x1d')][_0x234a('0x38')] = function (_0x201ae8) {
-    var _0x341226 = Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x10')][_0x234a('0x3b')](this, _0x201ae8);
-    if (this[_0x234a('0x5b')]()[_0x234a('0x45')](_0x201ae8)) {
-      return Math[_0x234a('0x5')](0x1, _0x341226);
+
+  Olivia.OctoBattle.Shields.___Game_BattlerBase_elementRate___ = Game_BattlerBase.prototype.elementRate;
+  Game_BattlerBase.prototype.elementRate = function(elementId) {
+    var rate = Olivia.OctoBattle.Shields.___Game_BattlerBase_elementRate___.call(this, elementId);
+    if (this.getProtectedWeaknessElements().contains(elementId)) {
+      return Math.min(1, rate);
     } else {
-      return _0x341226;
+      return rate;
     }
   };
-  Game_BattlerBase[_0x234a('0x1d')].originalElementRate = function (_0x10af41) {
-    return Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x10')][_0x234a('0x3b')](this, _0x10af41);
+
+  Game_BattlerBase.prototype.originalElementRate = function(elementId) {
+    return Olivia.OctoBattle.Shields.___Game_BattlerBase_elementRate___.call(this, elementId);
   };
-  Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x56')] = Game_Battler[_0x234a('0x1d')][_0x234a('0x18')];
-  Game_Battler[_0x234a('0x1d')].removeBattleStates = function () {
-    Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x56')][_0x234a('0x3b')](this);
-    this[_0x234a('0xf')]();
+
+  Olivia.OctoBattle.Shields.___Game_Battler_removeBattleStates___ = Game_Battler.prototype.removeBattleStates;
+  Game_Battler.prototype.removeBattleStates = function() {
+    Olivia.OctoBattle.Shields.___Game_Battler_removeBattleStates___.call(this);
+    this.resetBreakShield();
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0xf')] = function () {
-    if (this[_0x234a('0x29')]()) {
-      this.setBreakShield(this[_0x234a('0x3f')]());
-      this[_0x234a('0x2b')]();
+
+  Game_Battler.prototype.resetBreakShield = function() {
+    if (this.isAffectedByBreakShield()) {
+      this.setBreakShield(this.topBreakShield());
+      this.refresh();
     }
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0x1a')] = function () {
-    return Olivia.OctoBattle[_0x234a('0x46')][_0x234a('0x1e')];
+
+  Game_Battler.prototype.baseBreakShield = function() {
+    return Olivia.OctoBattle.BreakShield.BaseShields;
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0x3f')] = function () {
-    var _0x27eccf = this[_0x234a('0x1a')]();
-    _0x27eccf = this[_0x234a('0x3e')](_0x27eccf);
-    return Math[_0x234a('0x41')](0x1, _0x27eccf);
+
+  Game_Battler.prototype.topBreakShield = function() {
+    var value = this.baseBreakShield();
+    value = this.addedBreakShields(value);
+    return Math.max(1, value);
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0x3e')] = function (_0x518938) {
-    var _0xf1bc2b = this.states();
-    for (var _0x27f8dc = 0x0; _0x27f8dc < _0xf1bc2b.length; _0x27f8dc++) {
-      var _0x2e9613 = _0xf1bc2b[_0x27f8dc];
-      if (!!_0x2e9613 && _0x2e9613[_0x234a('0x4')][_0x234a('0x35')](/<Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
-        _0x518938 += parseInt(RegExp.$1);
+
+  Game_Battler.prototype.addedBreakShields = function(value) {
+    var states = this.states();
+    for (var i = 0; i < states.length; i++) {
+      var state = states[i];
+      if (!!state && state.note.match(/<Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
+        value += parseInt(RegExp.$1);
       }
     }
-    return _0x518938;
+    return value;
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0xc')] = function () {
-    if (this[_0x234a('0x2e')] === undefined) {
-      this[_0x234a('0x1b')](this[_0x234a('0x3f')]());
+
+  Game_Battler.prototype.currentBreakShield = function() {
+    if (this._currentBreakShield === undefined) {
+      this.setBreakShield(this.topBreakShield());
     }
     return this._currentBreakShield;
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0x1b')] = function (_0x131d29) {
+
+  Game_Battler.prototype.setBreakShield = function(value) {
     if (this.isAffectedByBreakShield()) {
-      this._currentBreakShield = Math[_0x234a('0x19')](_0x131d29);
-      this[_0x234a('0x2e')] = this[_0x234a('0x2e')].clamp(0x0, Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x3')]);
-      if (this._currentBreakShield <= 0x0) {
-        this[_0x234a('0x39')]();
+      this._currentBreakShield = Math.ceil(value);
+      this._currentBreakShield = this._currentBreakShield.clamp(0, Olivia.OctoBattle.BreakShield.MaxShields);
+      if (this._currentBreakShield <= 0) {
+        this.applyBreakStun();
       }
-      this[_0x234a('0x2b')]();
+      this.refresh();
     }
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0x51')] = function (_0x3d307c) {
-    this[_0x234a('0x1b')](this[_0x234a('0xc')]() + _0x3d307c);
+
+  Game_Battler.prototype.alterBreakShield = function(delta) {
+    this.setBreakShield(this.currentBreakShield() + delta);
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0x39')] = function () {
-    this[_0x234a('0x1b')](this[_0x234a('0x3f')]());
-    var _0x1d8f1c = Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x32')];
-    this[_0x234a('0x24')](_0x1d8f1c);
-    this[_0x234a('0x42')]();
+
+  Game_Battler.prototype.applyBreakStun = function() {
+    this.setBreakShield(this.topBreakShield());
+    var stunState = Olivia.OctoBattle.BreakShield.StunState;
+    this.addState(stunState);
+    this.startBreakShieldBrokenAnimation();
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0x12')] = function () {
-    return this[_0x234a('0x49')](Olivia[_0x234a('0x17')][_0x234a('0x46')].StunState);
+
+  Game_Battler.prototype.isBreakStunned = function() {
+    return this.isStateAffected(Olivia.OctoBattle.BreakShield.StunState);
   };
-  Game_Battler[_0x234a('0x1d')].startBreakShieldReduceAnimation = function () {
-    if (Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x22')]) {
-      var _0x3f1c97 = Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x22')];
-      this[_0x234a('0x58')](_0x3f1c97);
+
+  Game_Battler.prototype.startBreakShieldReduceAnimation = function() {
+    if (Olivia.OctoBattle.BreakShield.ReduceAnimation) {
+      var anim = Olivia.OctoBattle.BreakShield.ReduceAnimation;
+      this.startAnimation(anim);
     }
   };
-  Game_Battler[_0x234a('0x1d')][_0x234a('0x42')] = function () {
-    if (Olivia[_0x234a('0x17')][_0x234a('0x46')].BreakAnimation) {
-      var _0x31f38f = Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x21')];
-      this[_0x234a('0x58')](_0x31f38f);
+
+  Game_Battler.prototype.startBreakShieldBrokenAnimation = function() {
+    if (Olivia.OctoBattle.BreakShield.BreakAnimation) {
+      var anim = Olivia.OctoBattle.BreakShield.BreakAnimation;
+      this.startAnimation(anim);
     }
   };
-  Game_Battler[_0x234a('0x1d')].getProtectedWeaknessElements = function () {
-    var _0x554ef4 = [];
-    var _0x554b34 = this[_0x234a('0x3d')]();
-    for (var _0x3eea09 = 0x0; _0x3eea09 < _0x554b34[_0x234a('0xd')]; _0x3eea09++) {
-      var _0x49d303 = _0x554b34[_0x3eea09];
-      if (!!_0x49d303 && _0x49d303[_0x234a('0x4')].match(/<Protect (?:Element|Elements):[ ]*(\d+(?:\s*,\s*\d+)*)>/i)) {
-        var _0x329d1d = JSON[_0x234a('0x34')]('[' + RegExp.$1[_0x234a('0x35')](/\d+/g) + ']');
-        _0x554ef4 = _0x554ef4[_0x234a('0x2c')](_0x329d1d);
-      }
-    }
-    _0x554ef4[_0x234a('0x6')](function (_0x1ab5ea, _0x45ee24) {
-      return _0x1ab5ea - _0x45ee24;
-    });
-    return _0x554ef4;
-  };
-  Game_Actor[_0x234a('0x1d')][_0x234a('0x29')] = function () {
-    return Olivia.OctoBattle[_0x234a('0x46')][_0x234a('0x4e')];
-  };
-  Game_Actor[_0x234a('0x1d')][_0x234a('0xe')] = function () {
-    return 0x0;
-  };
-  Game_Actor[_0x234a('0x1d')].baseBreakShield = function () {
-    var _0xf51e1a = Olivia[_0x234a('0x17')].BreakShield[_0x234a('0x1e')];
-    if (!!this[_0x234a('0x53')]() && this[_0x234a('0x53')]()[_0x234a('0x4')].match(/<Break (?:Shield|Shields): (\d+)>/i)) {
-      _0xf51e1a = parseInt(RegExp.$1);
-    } else if (this[_0x234a('0x5c')]() && this[_0x234a('0x5c')]()[_0x234a('0x4')].match(/<Break (?:Shield|Shields): (\d+)>/i)) {
-      _0xf51e1a = parseInt(RegExp.$1);
-    }
-    return _0xf51e1a;
-  };
-  Game_Actor[_0x234a('0x1d')][_0x234a('0x3e')] = function (_0x106600) {
-    _0x106600 = Game_Battler[_0x234a('0x1d')][_0x234a('0x3e')][_0x234a('0x3b')](this, _0x106600);
-    var _0x31172e = this[_0x234a('0x15')]();
-    for (var _0x15721f = 0x0; _0x15721f < _0x31172e[_0x234a('0xd')]; _0x15721f++) {
-      var _0x4645a1 = _0x31172e[_0x15721f];
-      if (!!_0x4645a1 && _0x4645a1[_0x234a('0x4')].match(/<Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
-        _0x106600 += parseInt(RegExp.$1);
+
+  Game_Battler.prototype.getProtectedWeaknessElements = function() {
+    var elements = [];
+    var states = this.states();
+    for (var i = 0; i < states.length; i++) {
+      var state = states[i];
+      if (!!state && state.note.match(/<Protect (?:Element|Elements):[ ]*(\d+(?:\s*,\s*\d+)*)>/i)) {
+        var list = JSON.parse('[' + RegExp.$1.match(/\d+/g) + ']');
+        elements = elements.concat(list);
       }
     }
-    if (!!this[_0x234a('0x53')]() && this[_0x234a('0x53')]().note[_0x234a('0x35')](/<Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
-      _0x106600 += parseInt(RegExp.$1);
-    }
-    return _0x106600;
+    elements.sort(function(a, b) { return a - b; });
+    return elements;
   };
-  Game_Actor.prototype.getProtectedWeaknessElements = function () {
-    var _0x13ad2c = Game_Battler[_0x234a('0x1d')][_0x234a('0x5b')][_0x234a('0x3b')](this);
-    var _0x330506 = this[_0x234a('0x15')]();
-    for (var _0x2e6864 = 0x0; _0x2e6864 < _0x330506[_0x234a('0xd')]; _0x2e6864++) {
-      var _0x5123f6 = _0x330506[_0x2e6864];
-      if (!!_0x5123f6 && _0x5123f6[_0x234a('0x4')][_0x234a('0x35')](/<Protect (?:Element|Elements):[ ]*(\d+(?:\s*,\s*\d+)*)>/i)) {
-        var _0x4a14dd = JSON[_0x234a('0x34')]('[' + RegExp.$1[_0x234a('0x35')](/\d+/g) + ']');
-        _0x13ad2c = _0x13ad2c[_0x234a('0x2c')](_0x4a14dd);
+
+  Game_Actor.prototype.isAffectedByBreakShield = function() {
+    return Olivia.OctoBattle.BreakShield.Actors;
+  };
+
+  Game_Actor.prototype.bareHandsElementId = function() {
+    return 0;
+  };
+
+  Game_Actor.prototype.baseBreakShield = function() {
+    var value = Olivia.OctoBattle.BreakShield.BaseShields;
+    if (!!this.currentClass() && this.currentClass().note.match(/<Break (?:Shield|Shields): (\d+)>/i)) {
+      value = parseInt(RegExp.$1);
+    } else if (this.actor() && this.actor().note.match(/<Break (?:Shield|Shields): (\d+)>/i)) {
+      value = parseInt(RegExp.$1);
+    }
+    return value;
+  };
+
+  Game_Actor.prototype.addedBreakShields = function(value) {
+    value = Game_Battler.prototype.addedBreakShields.call(this, value);
+    var equips = this.equips();
+    for (var i = 0; i < equips.length; i++) {
+      var item = equips[i];
+      if (!!item && item.note.match(/<Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
+        value += parseInt(RegExp.$1);
       }
     }
-    if (!!this[_0x234a('0x53')]() && this.currentClass().note[_0x234a('0x35')](/<Protect (?:Element|Elements):[ ]*(\d+(?:\s*,\s*\d+)*)>/i)) {
-      var _0x4a14dd = JSON[_0x234a('0x34')]('[' + RegExp.$1[_0x234a('0x35')](/\d+/g) + ']');
-      _0x13ad2c = _0x13ad2c[_0x234a('0x2c')](_0x4a14dd);
+    if (!!this.currentClass() && this.currentClass().note.match(/<Break (?:Shield|Shields): ([\+\-]\d+)>/i)) {
+      value += parseInt(RegExp.$1);
     }
-    _0x13ad2c[_0x234a('0x6')](function (_0x30e477, _0x1ce045) {
-      return _0x30e477 - _0x1ce045;
-    });
-    return _0x13ad2c;
+    return value;
   };
-  Game_Enemy[_0x234a('0x1d')][_0x234a('0x29')] = function () {
-    return Olivia.OctoBattle[_0x234a('0x46')][_0x234a('0x27')];
-  };
-  Game_Enemy[_0x234a('0x1d')][_0x234a('0x1a')] = function () {
-    var _0x4b62c6 = Olivia.OctoBattle[_0x234a('0x46')].BaseShields;
-    if (this[_0x234a('0x3c')]() && this[_0x234a('0x3c')]()[_0x234a('0x4')][_0x234a('0x35')](/<Break (?:Shield|Shields): (\d+)>/i)) {
-      _0x4b62c6 = parseInt(RegExp.$1);
-    }
-    return _0x4b62c6;
-  };
-  Game_Unit[_0x234a('0x1d')][_0x234a('0x2f')] = function () {
-    var _0x318e46 = this[_0x234a('0x4b')];
-    this[_0x234a('0x4b')] = false;
-    var _0x589f6c = this[_0x234a('0x11')]();
-    for (var _0x507c8c = 0x0; _0x507c8c < _0x589f6c[_0x234a('0xd')]; _0x507c8c++) {
-      var _0x567619 = _0x589f6c[_0x507c8c];
-      if (_0x567619) {
-        _0x567619[_0x234a('0xf')]();
+
+  Game_Actor.prototype.getProtectedWeaknessElements = function() {
+    var elements = Game_Battler.prototype.getProtectedWeaknessElements.call(this);
+    var equips = this.equips();
+    for (var i = 0; i < equips.length; i++) {
+      var item = equips[i];
+      if (!!item && item.note.match(/<Protect (?:Element|Elements):[ ]*(\d+(?:\s*,\s*\d+)*)>/i)) {
+        var list = JSON.parse('[' + RegExp.$1.match(/\d+/g) + ']');
+        elements = elements.concat(list);
       }
     }
-    this[_0x234a('0x4b')] = _0x318e46;
+    if (!!this.currentClass() && this.currentClass().note.match(/<Protect (?:Element|Elements):[ ]*(\d+(?:\s*,\s*\d+)*)>/i)) {
+      var list = JSON.parse('[' + RegExp.$1.match(/\d+/g) + ']');
+      elements = elements.concat(list);
+    }
+    elements.sort(function(a, b) { return a - b; });
+    return elements;
   };
-  Window_Base._iconBreakShield = Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x26')];
-  Window_Base._iconBreakStun = Olivia[_0x234a('0x17')].BreakShield[_0x234a('0x47')];
-  Window_Base[_0x234a('0x1d')][_0x234a('0x2')] = function (_0x133e35, _0x498d66, _0x159ae4) {
-    if (_0x133e35[_0x234a('0x29')]()) {
-      if (_0x133e35[_0x234a('0x14')]() && $dataStates[_0x133e35[_0x234a('0x1')]()][_0x234a('0x52')] > 0x0) {
-        var _0x224919 = $dataStates[_0x133e35.deathStateId()].iconIndex;
-        var _0x3bcab8 = '';
-      } else if (_0x133e35[_0x234a('0x14')]()) {
-        var _0x224919 = 0x0;
-        var _0x3bcab8 = '';
-      } else if (_0x133e35[_0x234a('0x12')]()) {
-        var _0x224919 = Window_Base[_0x234a('0x50')];
-        if (this[_0x234a('0xb')]()) {
-          var _0x3bcab8 = _0x133e35[_0x234a('0x43')][Olivia[_0x234a('0x17')].BreakShield[_0x234a('0x32')]] || 0x0;
-          if (_0x3bcab8 === 0x0) {
-            _0x3bcab8 = '';
-          }
+
+  Game_Enemy.prototype.isAffectedByBreakShield = function() {
+    return Olivia.OctoBattle.BreakShield.Enemies;
+  };
+
+  Game_Enemy.prototype.baseBreakShield = function() {
+    var value = Olivia.OctoBattle.BreakShield.BaseShields;
+    if (this.enemy() && this.enemy().note.match(/<Break (?:Shield|Shields): (\d+)>/i)) {
+      value = parseInt(RegExp.$1);
+    }
+    return value;
+  };
+
+  Game_Unit.prototype.resetBreakShields = function() {
+    var inBattle = this._inBattle;
+    this._inBattle = false;
+    var members = this.members();
+    for (var i = 0; i < members.length; i++) {
+      var battler = members[i];
+      if (battler) {
+        battler.resetBreakShield();
+      }
+    }
+    this._inBattle = inBattle;
+  };
+
+  Window_Base._iconBreakShield = Olivia.OctoBattle.BreakShield.ShieldIcon;
+  Window_Base._iconBreakStun = Olivia.OctoBattle.BreakShield.StunIcon;
+
+  Window_Base.prototype.drawBreakShieldIcon = function(battler, x, y) {
+    if (battler.isAffectedByBreakShield()) {
+      if (battler.isDead() && $dataStates[battler.deathStateId()].iconIndex > 0) {
+        var icon = $dataStates[battler.deathStateId()].iconIndex;
+        var text = '';
+      } else if (battler.isDead()) {
+        var icon = 0;
+        var text = '';
+      } else if (battler.isBreakStunned()) {
+        var icon = Window_Base._iconBreakStun;
+        if (this.showBreakStunDuration()) {
+          var text = battler._stateTurns[Olivia.OctoBattle.BreakShield.StunState] || 0;
+          if (text === 0) { text = ''; }
         } else {
-          var _0x3bcab8 = '';
+          var text = '';
         }
       } else {
-        var _0x224919 = Window_Base[_0x234a('0x48')];
-        var _0x3bcab8 = _0x133e35[_0x234a('0xc')]();
+        var icon = Window_Base._iconBreakShield;
+        var text = battler.currentBreakShield();
       }
-      this[_0x234a('0x8')](_0x224919, _0x498d66, _0x159ae4);
-      this[_0x234a('0x5a')][_0x234a('0x0')] = Olivia[_0x234a('0x17')].BreakShield[_0x234a('0x30')];
-      var _0x56dd9d = this[_0x234a('0x5a')][_0x234a('0x20')];
-      this[_0x234a('0x5a')].outlineColor = "rgba(0, 0, 0, 1.0)";
-      this.drawText(_0x3bcab8, _0x498d66, _0x159ae4, Window_Base[_0x234a('0x23')], _0x234a('0x1c'));
-      this[_0x234a('0x44')]();
-      this[_0x234a('0x5a')][_0x234a('0x20')] = _0x56dd9d;
+      this.drawIcon(icon, x, y);
+      this.contents.fontSize = Olivia.OctoBattle.BreakShield.IconFontSize;
+      var oldOutline = this.contents.outlineColor;
+      this.contents.outlineColor = "rgba(0, 0, 0, 1.0)";
+      this.drawText(text, x, y, Window_Base._iconWidth, 'center');
+      this.resetFontSettings();
+      this.contents.outlineColor = oldOutline;
     }
   };
-  Window_Base[_0x234a('0x1d')].showBreakStunDuration = function () {
+
+  Window_Base.prototype.showBreakStunDuration = function() {
     return true;
   };
-  if (Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x4e')] && Olivia[_0x234a('0x17')][_0x234a('0x46')].DrawMenu) {
-    Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x33')] = Window_Base[_0x234a('0x1d')][_0x234a('0x4d')];
-    Window_Base[_0x234a('0x1d')].drawActorIcons = function (_0x552998, _0x1f187f, _0x6acfbb, _0x13f953) {
-      if (!$gameParty[_0x234a('0x2d')]() && !(SceneManager[_0x234a('0x54')] instanceof Scene_Battle)) {
-        _0x552998[_0x234a('0xf')]();
-        this[_0x234a('0x2')](_0x552998, _0x1f187f, _0x6acfbb + 0x2);
-        _0x1f187f += Window_Base[_0x234a('0x23')];
-        _0x13f953 -= Window_Base[_0x234a('0x23')];
+
+  if (Olivia.OctoBattle.BreakShield.Actors && Olivia.OctoBattle.BreakShield.DrawMenu) {
+    Olivia.OctoBattle.Shields.___Window_Base_drawActorIcons___ = Window_Base.prototype.drawActorIcons;
+    Window_Base.prototype.drawActorIcons = function(actor, x, y, width) {
+      if (!$gameParty.inBattle() && !(SceneManager._scene instanceof Scene_Battle)) {
+        actor.resetBreakShield();
+        this.drawBreakShieldIcon(actor, x, y + 2);
+        x += Window_Base._iconWidth;
+        width -= Window_Base._iconWidth;
       }
-      Olivia[_0x234a('0x17')][_0x234a('0x1f')][_0x234a('0x33')][_0x234a('0x3b')](this, _0x552998, _0x1f187f, _0x6acfbb, _0x13f953);
+      Olivia.OctoBattle.Shields.___Window_Base_drawActorIcons___.call(this, actor, x, y, width);
     };
   }
-  if (Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x4e')] && Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x3a')]) {
-    Olivia[_0x234a('0x17')][_0x234a('0x46')][_0x234a('0x5d')] = Window_BattleStatus.prototype.drawBasicArea;
-    Window_BattleStatus[_0x234a('0x1d')][_0x234a('0x16')] = function (_0x2a2331, _0x1ec8d6) {
-      if (_0x1ec8d6[_0x234a('0x29')]()) {
-        this.drawBreakShieldBasic(_0x2a2331, _0x1ec8d6);
-        _0x2a2331.x += Window_Base[_0x234a('0x23')] + 0x2;
-        _0x2a2331[_0x234a('0x57')] -= Window_Base[_0x234a('0x23')] + 0x2;
+
+  if (Olivia.OctoBattle.BreakShield.Actors && Olivia.OctoBattle.BreakShield.ShowActorShield) {
+    Olivia.OctoBattle.BreakShield.Window_BattleStatus_drawBasicArea = Window_BattleStatus.prototype.drawBasicArea;
+    Window_BattleStatus.prototype.drawBasicArea = function(rect, actor) {
+      if (actor.isAffectedByBreakShield()) {
+        this.drawBreakShieldBasic(rect, actor);
+        rect.x += Window_Base._iconWidth + 2;
+        rect.width -= Window_Base._iconWidth + 2;
       }
-      Olivia[_0x234a('0x17')][_0x234a('0x46')].Window_BattleStatus_drawBasicArea.call(this, _0x2a2331, _0x1ec8d6);
+      Olivia.OctoBattle.BreakShield.Window_BattleStatus_drawBasicArea.call(this, rect, actor);
     };
-    Window_BattleStatus[_0x234a('0x1d')].drawBreakShieldBasic = function (_0x1af4d9, _0x36394b) {
-      this[_0x234a('0x2')](_0x36394b, _0x1af4d9.x, _0x1af4d9.y + 0x2);
-    };
-  }
-  if (Olivia.OctoBattle[_0x234a('0x46')][_0x234a('0x27')] && Olivia[_0x234a('0x17')][_0x234a('0x46')].ShowEnemyShield) {
-    Window_BattleEnemy[_0x234a('0x1d')][_0x234a('0x7')] = function (_0x3f0b56) {
-      this.resetTextColor();
-      var _0x2347d4 = this[_0x234a('0x4f')][_0x3f0b56][_0x234a('0x28')]();
-      var _0x5730c2 = this.itemRectForText(_0x3f0b56);
-      var _0x4b3eac = _0x5730c2.x;
-      var _0x49bd0b = _0x5730c2.y;
-      var _0x49bdc5 = _0x5730c2[_0x234a('0x57')];
-      this[_0x234a('0x2')](this[_0x234a('0x4f')][_0x3f0b56], _0x4b3eac, _0x49bd0b + 0x2);
-      _0x4b3eac += Window_Base[_0x234a('0x23')] + 0x2;
-      _0x49bdc5 -= Window_Base._iconWidth + 0x2;
-      this[_0x234a('0x31')](_0x2347d4, _0x4b3eac, _0x49bd0b, _0x49bdc5);
+    Window_BattleStatus.prototype.drawBreakShieldBasic = function(rect, actor) {
+      this.drawBreakShieldIcon(actor, rect.x, rect.y + 2);
     };
   }
+
+	if (Olivia.OctoBattle.BreakShield.Enemies && Olivia.OctoBattle.BreakShield.ShowEnemyShield) {
+		Window_BattleEnemy.prototype.drawItem = function(index) {
+			this.resetTextColor();
+			var enemy = this._enemies[index];
+			var rect = this.itemRectForText(index);
+			var x = rect.x;
+			var y = rect.y;
+			var width = rect.width;
+			this.drawBreakShieldIcon(enemy, x, y + 2);
+			x += Window_Base._iconWidth + 2;
+			width -= Window_Base._iconWidth + 2;
+			this.drawText(enemy.name(), x, y, width);
+		};
+	}
 }
