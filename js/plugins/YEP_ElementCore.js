@@ -131,7 +131,14 @@ Yanfly.Ele.version = 1.03;
  *   will work in a priority setting of states (highest priority to lowest),
  *   equips (first to last), then class, then actor/enemy if more than one
  *   notetag is used for the same element. If y is negative, the element is
- *   absorbed.
+ *   absorbed. Теперь y может быть выражением, например $gameVariables.value(35).
+ *
+ *   <Element Rate x: y%>
+ *   <Element Rate name: y%>
+ *   - Добавляет множитель элементального урона для элемента x (или имени).
+ *     Работает аналогично traits: перемножается с базовым сопротивлением цели
+ *     и с другими такими же тегами. Не переопределяет forced rate.
+ *     Поддерживает выражения (например, $gameVariables.value(35)).
  *
  * ============================================================================
  * Yanfly Engine Plugins - Battle Engine Extension - Action Sequence Commands
@@ -306,6 +313,9 @@ DataManager.processElementNotetags1 = function(group) {
   }
 };
 
+// ============================================================================
+// Изменённый блок processElementNotetags2
+// ============================================================================
 DataManager.processElementNotetags2 = function(group) {
   var noteA1 = /<(?:ELEMENT ABSORB):[ ](\d+)[ ](?:THROUGH|to)[ ](\d+)>/i;
   var noteB1 = /<(?:ELEMENT REFLECT)[ ](\d+):[ ]([\+\-]\d+)([%％])>/i;
@@ -314,10 +324,13 @@ DataManager.processElementNotetags2 = function(group) {
   var noteC2 = /<(?:ELEMENT AMPLIFY)[ ](.*):[ ]([\+\-]\d+)([%％])>/i;
   var noteC3 = /<(?:ELEMENT MAGNIFY)[ ](\d+):[ ]([\+\-]\d+)([%％])>/i;
   var noteC4 = /<(?:ELEMENT MAGNIFY)[ ](.*):[ ]([\+\-]\d+)([%％])>/i;
-  var noteD1 = /<FORCE ELEMENT[ ](\d+)[ ]RATE:[ ](\d+)([%％])>/i;
-  var noteD2 = /<FORCE ELEMENT[ ](\d+)[ ]RATE:[ ]-(\d+)([%％])>/i;
-  var noteD3 = /<FORCE ELEMENT[ ](.*)[ ]RATE:[ ](\d+)([%％])>/i;
-  var noteD4 = /<FORCE ELEMENT[ ](.*)[ ]RATE:[ ]-(\d+)([%％])>/i;
+  // Для <Force Element Rate> с поддержкой выражений
+  var noteD1 = /<FORCE ELEMENT[ ](\d+)[ ]RATE:[ ](.+?)%>/i;
+  var noteD2 = /<FORCE ELEMENT[ ](.*)[ ]RATE:[ ](.+?)%>/i;
+  // Для нового <Element Rate> (без force)
+  var noteE1 = /<ELEMENT RATE[ ](\d+):[ ](.+?)%>/i;
+  var noteE2 = /<ELEMENT RATE[ ](.*):[ ](.+?)%>/i;
+
   for (var n = 1; n < group.length; n++) {
     var obj = group[n];
     var notedata = obj.note.split(/[\r\n]+/);
@@ -328,6 +341,7 @@ DataManager.processElementNotetags2 = function(group) {
     obj.elementMagnify = {};
     obj.elementNull = false;
     obj.elementForcedRate = {};
+    obj.elementRateMod = {}; // новый объект для дополнительных множителей
 
     for (var i = 0; i < notedata.length; i++) {
       var line = notedata[i];
@@ -386,25 +400,45 @@ DataManager.processElementNotetags2 = function(group) {
         obj.elementNull = true;
       } else if (line.match(noteD1)) {
         var elementId = parseInt(RegExp.$1);
-        var rate = parseFloat(RegExp.$2 * 0.01);
-        obj.elementForcedRate[elementId] = rate;
-      } else if (line.match(noteD2)) {
-        var elementId = parseInt(RegExp.$1);
-        var rate = parseFloat(RegExp.$2 * 0.01);
-        obj.elementForcedRate[elementId] = rate * -1;
-      } else if (line.match(noteD3)) {
-        var name = String(RegExp.$1).toUpperCase().trim();
-        var rate = parseFloat(RegExp.$2 * 0.01);
-        if (Yanfly.ElementIdRef[name]) {
-          var id = Yanfly.ElementIdRef[name];
-          obj.elementForcedRate[id] = rate;
+        var expr = RegExp.$2.trim();
+        var num = parseFloat(expr);
+        if (!isNaN(num) && /^-?\d+(\.\d+)?$/.test(expr)) {
+          obj.elementForcedRate[elementId] = num * 0.01;
+        } else {
+          obj.elementForcedRate[elementId] = expr;
         }
-      } else if (line.match(noteD4)) {
+      } else if (line.match(noteD2)) {
         var name = String(RegExp.$1).toUpperCase().trim();
-        var rate = parseFloat(RegExp.$2 * 0.01);
+        var expr = RegExp.$2.trim();
         if (Yanfly.ElementIdRef[name]) {
           var id = Yanfly.ElementIdRef[name];
-          obj.elementForcedRate[id] = rate * -1;
+          var num = parseFloat(expr);
+          if (!isNaN(num) && /^-?\d+(\.\d+)?$/.test(expr)) {
+            obj.elementForcedRate[id] = num * 0.01;
+          } else {
+            obj.elementForcedRate[id] = expr;
+          }
+        }
+      } else if (line.match(noteE1)) {
+        var elementId = parseInt(RegExp.$1);
+        var expr = RegExp.$2.trim();
+        var num = parseFloat(expr);
+        if (!isNaN(num) && /^-?\d+(\.\d+)?$/.test(expr)) {
+          obj.elementRateMod[elementId] = num * 0.01;
+        } else {
+          obj.elementRateMod[elementId] = expr;
+        }
+      } else if (line.match(noteE2)) {
+        var name = String(RegExp.$1).toUpperCase().trim();
+        var expr = RegExp.$2.trim();
+        if (Yanfly.ElementIdRef[name]) {
+          var id = Yanfly.ElementIdRef[name];
+          var num = parseFloat(expr);
+          if (!isNaN(num) && /^-?\d+(\.\d+)?$/.test(expr)) {
+            obj.elementRateMod[id] = num * 0.01;
+          } else {
+            obj.elementRateMod[id] = expr;
+          }
         }
       }
     }
@@ -495,6 +529,8 @@ Game_BattlerBase.prototype.elementRate = function(elementId) {
   var rate = this.forcedElementRate(elementId);
   if (rate !== undefined) return rate;
   var result = Yanfly.Ele.Game_BtlrBase_elementRate.call(this, elementId);
+  // Применяем дополнительные множители из нотетогов <Element Rate>
+  result *= this.elementRateMod(elementId);
   if (this.isAbsorbElement(elementId) && result > 0) {
     result = Math.min(result - 2.0, -0.01);
   }
@@ -519,10 +555,50 @@ Game_BattlerBase.prototype.getObjElementMagnifyRate = function(obj, elementId) {
   return obj.elementMagnify[elementId] || 0;
 };
 
+// Изменённый метод для forced rate (поддержка выражений)
 Game_BattlerBase.prototype.getObjElementForcedRate = function(obj, elementId) {
   if (!obj) return undefined;
   if (!obj.elementForcedRate) return undefined;
-  return obj.elementForcedRate[elementId] || undefined;
+  var value = obj.elementForcedRate[elementId];
+  if (value === undefined) return undefined;
+  if (typeof value === 'number') return value;
+  // Вычисляем выражение
+  return this.evalForcedExpr(value);
+};
+
+// Новый метод для получения множителя из нотетога <Element Rate>
+Game_BattlerBase.prototype.getObjElementRateMod = function(obj, elementId) {
+  if (!obj) return 1;
+  if (!obj.elementRateMod) return 1;
+  var value = obj.elementRateMod[elementId];
+  if (value === undefined) return 1;
+  if (typeof value === 'number') return value;
+  // Вычисляем выражение
+  try {
+    var func = new Function('b', 'return ' + value + ';');
+    var result = func(this);
+    return parseFloat(result) * 0.01;
+  } catch (e) {
+    console.error('Error evaluating element rate expression: ' + value, e);
+    return 1;
+  }
+};
+
+// Метод для безопасного вычисления выражений forced rate
+Game_BattlerBase.prototype.evalForcedExpr = function(expr) {
+  try {
+    var func = new Function('b', 'return ' + expr + ';');
+    var value = func(this);
+    return parseFloat(value) * 0.01;
+  } catch (e) {
+    console.error('Error evaluating forced element expression: ' + expr, e);
+    return undefined;
+  }
+};
+
+// Базовый метод elementRateMod (возвращает 1, если не переопределён)
+Game_BattlerBase.prototype.elementRateMod = function(elementId) {
+  return 1;
 };
 
 //=============================================================================
@@ -587,6 +663,17 @@ Game_Battler.prototype.forcedElementRate = function(elementId) {
     if (rate !== undefined) return rate;
   }
   return undefined;
+};
+
+// Множитель из состояний (перемножается)
+Game_Battler.prototype.elementRateMod = function(elementId) {
+  var rate = 1;
+  var length = this.states().length;
+  for (var i = 0; i < length; ++i) {
+    var obj = this.states()[i];
+    rate *= this.getObjElementRateMod(obj, elementId);
+  }
+  return rate;
 };
 
 //=============================================================================
@@ -669,6 +756,19 @@ Game_Actor.prototype.forcedElementRate = function(elementId) {
   return undefined;
 };
 
+// Множитель для актора (перемножается)
+Game_Actor.prototype.elementRateMod = function(elementId) {
+  var rate = Game_Battler.prototype.elementRateMod.call(this, elementId);
+  var length = this.equips().length;
+  for (var i = 0; i < length; ++i) {
+    var obj = this.equips()[i];
+    rate *= this.getObjElementRateMod(obj, elementId);
+  }
+  rate *= this.getObjElementRateMod(this.actor(), elementId);
+  rate *= this.getObjElementRateMod(this.currentClass(), elementId);
+  return rate;
+};
+
 //=============================================================================
 // Game_Enemy
 //=============================================================================
@@ -707,6 +807,13 @@ Game_Enemy.prototype.forcedElementRate = function(elementId) {
   rate = this.getObjElementForcedRate(this.enemy(), elementId);
   if (rate !== undefined) return rate;
   return undefined;
+};
+
+// Множитель для врага (перемножается)
+Game_Enemy.prototype.elementRateMod = function(elementId) {
+  var rate = Game_Battler.prototype.elementRateMod.call(this, elementId);
+  rate *= this.getObjElementRateMod(this.enemy(), elementId);
+  return rate;
 };
 
 //=============================================================================
