@@ -5677,16 +5677,21 @@ Window_BattleEnemy.prototype.findClosestEnemy = function(x, y) {
             console.log('Враг', i, 'жив, а нужны мёртвые');
             continue;
         }
-        // Прямоугольник спрайта
-        var rect = new Rectangle();
-        rect.width = enemy.spriteWidth();
-        rect.height = enemy.spriteHeight();
-        rect.x = enemy.spritePosX() - rect.width / 2;
-        rect.y = enemy.spritePosY() - rect.height;
-        if (x >= rect.x && y >= rect.y && x < rect.x + rect.width && y < rect.y + rect.height) {
+        
+        var sw = enemy.spriteWidth();
+        var sh = enemy.spriteHeight();
+        var centerX = enemy.spritePosX();
+        var bottomY = enemy.spritePosY();
+        
+        // Расширенный влево хитбокс (на 50% ширины)
+        var expandedWidth = sw * 1.5;
+        var rectX = centerX - sw;          // левый край (сдвинут влево на половину ширины)
+        var rectY = bottomY - sh;           // верхний край (без изменений)
+        
+        if (x >= rectX && y >= rectY && x < rectX + expandedWidth && y < rectY + sh) {
             var name = enemy.name() || 'Безымянный';
             candidates.push({ index: i, enemy: enemy, name: name });
-            console.log('Враг', i, name, 'попадает в прямоугольник');
+            console.log('Враг', i, name, 'попадает в расширенный хитбокс');
         } else {
             console.log('Враг', i, enemy.name(), 'не попадает');
         }
@@ -5709,24 +5714,24 @@ Window_BattleEnemy.prototype.findClosestEnemy = function(x, y) {
         return -1;
     }
     
-    // Взвешенная Manhattan-метрика с приоритетом Y
-    var bestIndex = -1;
-    var bestScore = Infinity;
-    for (var j = 0; j < candidates.length; j++) {
-        var enemy = candidates[j].enemy;
-        var cx = enemy.spritePosX();
-        var cy = enemy.spritePosY() - enemy.spriteHeight() / 2;
-        var dy = Math.abs(y - cy);
-        var dx = Math.abs(x - cx);
-        var score = dy * 2 + dx;  // можно менять коэффициент (2, 10 и т.д.)
-        console.log('Враг', candidates[j].index, candidates[j].name, 'центр:', cx.toFixed(1), cy.toFixed(1), 'dy:', dy.toFixed(1), 'dx:', dx.toFixed(1), 'score:', score.toFixed(1));
-        if (score < bestScore) {
-            bestScore = score;
-            bestIndex = candidates[j].index;
-        }
-    }
-    var bestName = candidates.find(c => c.index === bestIndex).name;
-    console.log('Итоговый выбранный индекс:', bestIndex, bestName, 'score:', bestScore);
+    // Сортировка: сначала по вертикали, потом по горизонтали
+    candidates.sort(function(a, b) {
+        var centerAY = a.enemy.spritePosY() - a.enemy.spriteHeight() / 2;
+        var centerBY = b.enemy.spritePosY() - b.enemy.spriteHeight() / 2;
+        var dyA = Math.abs(y - centerAY);
+        var dyB = Math.abs(y - centerBY);
+        if (dyA !== dyB) return dyA - dyB;
+        
+        var centerAX = a.enemy.spritePosX();
+        var centerBX = b.enemy.spritePosX();
+        var dxA = Math.abs(x - centerAX);
+        var dxB = Math.abs(x - centerBX);
+        return dxA - dxB;
+    });
+    
+    var bestIndex = candidates[0].index;
+    var bestName = candidates[0].name;
+    console.log('Итоговый выбранный индекс:', bestIndex, bestName);
     return bestIndex;
 };
 //=============================================================================
