@@ -5650,6 +5650,64 @@ Yanfly.Util.onlyUnique = function(value, index, self) {
     return self.indexOf(value) === index;
 };
 
+Window_BattleEnemy.prototype.getClickedEnemy = function() {
+    return this.findClosestEnemy(TouchInput.x, TouchInput.y);
+};
+
+Window_BattleEnemy.prototype.getMouseOverEnemy = function() {
+    return this.findClosestEnemy(TouchInput._mouseOverX, TouchInput._mouseOverY);
+};
+
+Window_BattleEnemy.prototype.findClosestEnemy = function(x, y) {
+    // Собираем подходящих кандидатов (видимые, с учётом _selectDead)
+    var candidates = [];
+    for (var i = 0; i < this._enemies.length; i++) {
+        var enemy = this._enemies[i];
+        if (!enemy) continue;
+        if (!enemy.isSpriteVisible()) continue;
+        if ($gameTemp._disableMouseOverSelect) continue;
+        if (this._selectDead && !enemy.isDead()) continue;
+        candidates.push({ index: i, enemy: enemy });
+    }
+    if (candidates.length === 0) return -1;
+
+    // Если выбор заблокирован (только текущий враг)
+    if (this._inputLock) {
+        var currentIndex = this.index();
+        for (var j = 0; j < candidates.length; j++) {
+            if (candidates[j].index === currentIndex) {
+                var enemy = candidates[j].enemy;
+                var cx = enemy.spritePosX();
+                var cy = enemy.spritePosY() - enemy.spriteHeight() / 2;
+                var dx = x - cx;
+                var dy = y - cy;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                var radius = Math.hypot(enemy.spriteWidth() / 2, enemy.spriteHeight() / 2);
+                return (dist <= radius) ? currentIndex : -1;
+            }
+        }
+        return -1;
+    }
+
+    // Ищем ближайшего кандидата в пределах радиуса
+    var bestIndex = -1;
+    var bestDist = Infinity;
+    for (var j = 0; j < candidates.length; j++) {
+        var enemy = candidates[j].enemy;
+        var cx = enemy.spritePosX();
+        var cy = enemy.spritePosY() - enemy.spriteHeight() / 2;
+        var dx = x - cx;
+        var dy = y - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var radius = Math.hypot(enemy.spriteWidth() / 2, enemy.spriteHeight() / 2);
+        if (dist <= radius && dist < bestDist) {
+            bestDist = dist;
+            bestIndex = candidates[j].index;
+        }
+    }
+    return bestIndex;
+};
+
 //=============================================================================
 // End of File
 //=============================================================================
