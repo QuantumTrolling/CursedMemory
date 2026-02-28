@@ -5659,55 +5659,76 @@ Window_BattleEnemy.prototype.getMouseOverEnemy = function() {
 };
 
 Window_BattleEnemy.prototype.findClosestEnemy = function(x, y) {
-    // Собираем подходящих кандидатов (видимые, с учётом _selectDead)
+    console.log('findClosestEnemy вызван с координатами:', x, y);
+    
     var candidates = [];
     for (var i = 0; i < this._enemies.length; i++) {
         var enemy = this._enemies[i];
         if (!enemy) continue;
-        if (!enemy.isSpriteVisible()) continue;
-        if ($gameTemp._disableMouseOverSelect) continue;
-        if (this._selectDead && !enemy.isDead()) continue;
-        candidates.push({ index: i, enemy: enemy });
+        if (!enemy.isSpriteVisible()) {
+            console.log('Враг', i, 'не видим');
+            continue;
+        }
+        if ($gameTemp._disableMouseOverSelect) {
+            console.log('mouse over отключён глобально');
+            continue;
+        }
+        if (this._selectDead && !enemy.isDead()) {
+            console.log('Враг', i, 'жив, а нужны мёртвые');
+            continue;
+        }
+        // Прямоугольник спрайта
+        var rect = new Rectangle();
+        rect.width = enemy.spriteWidth();
+        rect.height = enemy.spriteHeight();
+        rect.x = enemy.spritePosX() - rect.width / 2;
+        rect.y = enemy.spritePosY() - rect.height;
+        if (x >= rect.x && y >= rect.y && x < rect.x + rect.width && y < rect.y + rect.height) {
+            var name = enemy.name() || 'Безымянный';
+            candidates.push({ index: i, enemy: enemy, name: name });
+            console.log('Враг', i, name, 'попадает в прямоугольник');
+        } else {
+            console.log('Враг', i, enemy.name(), 'не попадает');
+        }
     }
-    if (candidates.length === 0) return -1;
-
-    // Если выбор заблокирован (только текущий враг)
+    
+    if (candidates.length === 0) {
+        console.log('Нет врагов под курсором');
+        return -1;
+    }
+    
     if (this._inputLock) {
+        console.log('Режим _inputLock включён');
         var currentIndex = this.index();
         for (var j = 0; j < candidates.length; j++) {
             if (candidates[j].index === currentIndex) {
-                var enemy = candidates[j].enemy;
-                var cx = enemy.spritePosX();
-                var cy = enemy.spritePosY() - enemy.spriteHeight() / 2;
-                var dx = x - cx;
-                var dy = y - cy;
-                var dist = Math.sqrt(dx * dx + dy * dy);
-                var radius = Math.hypot(enemy.spriteWidth() / 2, enemy.spriteHeight() / 2);
-                return (dist <= radius) ? currentIndex : -1;
+                console.log('Выбран текущий враг', currentIndex, candidates[j].name);
+                return currentIndex;
             }
         }
         return -1;
     }
-
-    // Ищем ближайшего кандидата в пределах радиуса
+    
+    // Взвешенная Manhattan-метрика с приоритетом Y
     var bestIndex = -1;
-    var bestDist = Infinity;
+    var bestScore = Infinity;
     for (var j = 0; j < candidates.length; j++) {
         var enemy = candidates[j].enemy;
         var cx = enemy.spritePosX();
         var cy = enemy.spritePosY() - enemy.spriteHeight() / 2;
-        var dx = x - cx;
-        var dy = y - cy;
-        var dist = Math.sqrt(dx * dx + dy * dy);
-        var radius = Math.hypot(enemy.spriteWidth() / 2, enemy.spriteHeight() / 2);
-        if (dist <= radius && dist < bestDist) {
-            bestDist = dist;
+        var dy = Math.abs(y - cy);
+        var dx = Math.abs(x - cx);
+        var score = dy * 2 + dx;  // можно менять коэффициент (2, 10 и т.д.)
+        console.log('Враг', candidates[j].index, candidates[j].name, 'центр:', cx.toFixed(1), cy.toFixed(1), 'dy:', dy.toFixed(1), 'dx:', dx.toFixed(1), 'score:', score.toFixed(1));
+        if (score < bestScore) {
+            bestScore = score;
             bestIndex = candidates[j].index;
         }
     }
+    var bestName = candidates.find(c => c.index === bestIndex).name;
+    console.log('Итоговый выбранный индекс:', bestIndex, bestName, 'score:', bestScore);
     return bestIndex;
 };
-
 //=============================================================================
 // End of File
 //=============================================================================
