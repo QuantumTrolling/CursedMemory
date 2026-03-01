@@ -1,13 +1,13 @@
 /*:
- * @plugindesc Увеличивает иконки навыков в 2 раза в бою (без названий, стоимость с типом под иконкой), иконка щита врага увеличена (v3.3)
+ * @plugindesc Увеличивает иконки навыков в 2 раза в бою (без названий, стоимость AP/EP под иконкой), иконка щита врага увеличена (v4.1)
  * @author Ваше Имя
  * @help
  * - В окнах навыков/предметов в бою иконки 64x64, названия скрыты.
- * - Стоимость (MP/TP) с указанием типа отображается под иконкой по центру.
- * - Цвет стоимости: MP - синий, TP - оранжевый.
- * - Ширина колонки фиксирована (размер иконки + 6px), расстояние между колонками автоматически подбирается для равномерного заполнения окна.
- * - Выделение текущего навыка рисуется ровно вокруг иконки и текста стоимости (исправлено смещение).
- * - Высота строк в этих окнах увеличена до 96.
+ * - Стоимость (AP/EP) с указанием типа отображается под иконкой по центру с увеличенным отступом.
+ * - Цвет стоимости: AP - синий, EP - оранжевый.
+ * - Навыки распределяются по всей ширине окна с равными отступами (gap-распределение).
+ * - Прямоугольник ячейки (itemRect) охватывает иконку и текст с запасом снизу, чтобы курсор не обрезал текст.
+ * - Высота строк увеличена до 104 (опционально, можно изменить).
  * - В окнах выбора цели и уязвимостей иконки 32x32.
  * - Иконка щита в окне уязвимостей 48x48 с цифрой в 2 раза крупнее.
  * - Вне боя все иконки 32x32.
@@ -55,78 +55,81 @@
         context.imageSmoothingEnabled = smooth;
     };
 
-    // --- Увеличиваем высоту строки в окнах навыков и предметов до 96 ---
+    // --- Увеличиваем высоту строки (опционально, можно изменить или убрать) ---
     [Window_BattleSkill, Window_BattleItem].forEach(function(winClass) {
         winClass.prototype.lineHeight = function() {
-            return 96;
+            return 104; // увеличено для комфортного отображения
         };
     });
 
-    // --- Фиксированная ширина колонки (размер иконки + запас) ---
+    // --- itemWidth возвращает только размер иконки (без запаса) ---
     if (Window_BattleSkill.prototype.itemWidth) {
         Window_BattleSkill.prototype.itemWidth = function() {
-            var iconSize = getIconSize(this);
-            return iconSize + 6;
+            return getIconSize(this);
         };
     }
 
-    // --- Полное переопределение itemRect для равномерного распределения колонок с учётом остатка ---
-    if (Window_BattleSkill.prototype.itemRect) {
-        Window_BattleSkill.prototype.itemRect = function(index) {
-            var rect = new Rectangle();
-            var cols = this.maxCols();
-            var itemW = this.itemWidth();
-            var itemH = this.itemHeight();
-            var padding = this.padding;
-            var innerWidth = this.width - padding * 2;
-
-            if (cols <= 1) {
-                rect.x = padding;
-            } else {
-                var baseSpacing = Math.floor((innerWidth - itemW * cols) / (cols - 1));
-                var remainder = (innerWidth - itemW * cols) - baseSpacing * (cols - 1);
-                var colIndex = index % cols;
-                var extra = colIndex < remainder ? colIndex : remainder;
-                rect.x = padding + colIndex * itemW + colIndex * baseSpacing + extra;
-            }
-
-            rect.y = padding + Math.floor(index / cols) * itemH;
-            rect.width = itemW;
-            rect.height = itemH;
-            return rect;
-        };
-    }
-
-    // --- Отключаем использование spacing, чтобы не мешало ---
+    // --- spacing игнорируется ---
     if (Window_BattleSkill.prototype.spacing) {
         Window_BattleSkill.prototype.spacing = function() {
             return 0;
         };
     }
 
-    // --- Переопределяем отрисовку имени предмета в окне навыков: только иконка, без названия ---
-    if (Window_BattleSkill.prototype.drawItemName) {
-        Window_BattleSkill.prototype.drawItemName = function(item, x, y, width) {
-            if (!item) return;
+    // --- itemRect: равномерное распределение с учётом высоты текста и увеличенных отступов ---
+    if (Window_BattleSkill.prototype.itemRect) {
+        Window_BattleSkill.prototype.itemRect = function(index) {
+            var rect = new Rectangle();
 
-            var iconSize = getIconSize(this);
-            var iconX = x + (width - iconSize) / 2;
-            var iconY = y + 2;
+            var cols = this.maxCols();
+            var iconSize = this.itemWidth(); // размер иконки
+            var itemH = this.itemHeight();    // высота строки (увеличена)
+            var innerWidth = this.contentsWidth();
 
-            // Округляем до целых, чтобы избежать размытия и смещения
-            this.drawIcon(item.iconIndex, Math.round(iconX), Math.round(iconY));
+            // Вычисляем равномерный отступ между иконками и от краёв
+            var gap = 0;
+            if (cols > 1) {
+                gap = Math.floor((innerWidth - cols * iconSize) / (cols + 1));
+            } else {
+                gap = Math.floor((innerWidth - iconSize) / 2);
+            }
 
-            this._lastSkillIconRect = {
-                x: Math.round(iconX),
-                y: Math.round(iconY),
-                size: iconSize,
-                baseY: y,
-                width: width
-            };
+            var col = index % cols;
+            var row = Math.floor(index / cols);
+
+            rect.x = gap + col * (iconSize + gap);
+            rect.y = row * itemH + 2; // небольшой отступ сверху
+            rect.width = iconSize;
+
+            // Определяем высоту с учётом стоимости и добавляем запасы
+            if (this._list && this._list[index] && this._actor) {
+                var skill = this._list[index];
+                var actor = this._actor;
+
+                var mpCost = actor.skillMpCost(skill);
+                var tpCost = actor.skillTpCost(skill);
+                var hasCost = (mpCost > 0 || tpCost > 0);
+                var textHeight = hasCost ? 24 : 0;    // высота текста
+                var bottomPadding = hasCost ? 8 : 4;  // запас снизу
+
+                rect.height = iconSize + 8 + textHeight + bottomPadding; // 8px отступ между иконкой и текстом
+            } else {
+                rect.height = iconSize + 4;
+            }
+
+            return rect;
         };
     }
 
-    // --- Полностью переопределяем отрисовку стоимости навыка: под иконкой, с типом, по центру ---
+    // --- Переопределяем отрисовку имени предмета: только иконка, без названия ---
+    if (Window_BattleSkill.prototype.drawItemName) {
+        Window_BattleSkill.prototype.drawItemName = function(item, x, y, width) {
+            if (!item) return;
+            this.drawIcon(item.iconIndex, x, y);
+        };
+    }
+
+    // --- Переопределяем отрисовку стоимости навыка: AP/EP, увеличенный отступ, центрирование ---
     if (Window_BattleSkill.prototype.drawSkillCost) {
         Window_BattleSkill.prototype.drawSkillCost = function(skill, x, y, width) {
             var actor = this._actor;
@@ -141,65 +144,25 @@
 
             if (mpCost > 0) {
                 costValue = mpCost;
-                costType = 'MP';
-                costColor = this.mpCostColor();
+                costType = 'AP'; // заменено
+                costColor = this.mpCostColor(); // синий
             } else if (tpCost > 0) {
                 costValue = tpCost;
-                costType = 'TP';
-                costColor = '#ffa500';
+                costType = 'EP'; // заменено
+                costColor = '#ffa500'; // оранжевый
             } else {
                 return;
             }
 
-            var iconRect = this._lastSkillIconRect;
-            if (!iconRect) {
-                var iconSize = getIconSize(this);
-                iconRect = {
-                    x: Math.round(x + (width - iconSize) / 2),
-                    y: Math.round(y + 2),
-                    size: iconSize,
-                    baseY: y
-                };
-            }
-
+            // x, y, width из itemRect — координаты и размер иконки
+            var iconSize = width;
+            var textY = y + iconSize + 8; // увеличенный отступ 8px
+            var textHeight = 24;
             var costText = costValue + ' ' + costType;
-            var textY = iconRect.y + iconRect.size + 4;
-            var textHeight = 20;
 
             this.changeTextColor(costColor);
-            this.contents.drawText(costText, iconRect.x, textY, iconRect.size, textHeight, 'center');
+            this.contents.drawText(costText, x, textY, iconSize, textHeight, 'center');
             this.resetTextColor();
-
-            this._lastSkillIconRect = null;
-        };
-    }
-
-    // --- Переопределяем отрисовку курсора для окна навыков (ровно вокруг иконки и текста) ---
-    if (Window_BattleSkill.prototype.drawCursor) {
-        Window_BattleSkill.prototype.drawCursor = function() {
-            if (this._cursorAll) {
-                var rect = this.itemRect(0);
-                rect.x = this.padding;
-                rect.width = this.width - this.padding * 2;
-                this._drawCursor(rect);
-            } else {
-                var index = this.index();
-                if (index >= 0) {
-                    var rect = this.itemRect(index);
-                    var iconSize = getIconSize(this);
-                    // Вычисляем позицию иконки точно так же, как в drawItemName, с округлением
-                    var iconX = Math.round(rect.x + (rect.width - iconSize) / 2);
-                    var iconY = rect.y + 2;
-                    var textHeight = 20;
-                    var cursorRect = new Rectangle(
-                        iconX,
-                        iconY,
-                        iconSize,
-                        iconSize + 4 + textHeight
-                    );
-                    this._drawCursor(cursorRect);
-                }
-            }
         };
     }
 
