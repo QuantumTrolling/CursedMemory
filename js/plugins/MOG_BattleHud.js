@@ -3962,3 +3962,250 @@ Window_BattleSkill.prototype.standardFontSize = function() {
     }
     return Window_Selectable.prototype.standardFontSize.call(this);
 };
+
+//=============================================================================
+// ** ULTIMATE FIX: Window BattleEnemy (Actor Target Selection)
+//=============================================================================
+// Полное отключение обработки ввода окна навыков при выборе цели в окне Enemy
+
+// Сохраняем оригинальный метод обновления сцены
+var _mog_bhud_scene_update_final = Scene_Battle.prototype.update;
+Scene_Battle.prototype.update = function() {
+    // Обновляем состояние окон перед основным обновлением
+    this.updateWindowStatesFinal();
+    _mog_bhud_scene_update_final.call(this);
+};
+
+// Добавляем метод управления состоянием окон
+Scene_Battle.prototype.updateWindowStatesFinal = function() {
+    // Проверяем, активно ли окно выбора цели (Window_BattleEnemy)
+    var targetWindowActive = false;
+    
+    // В RPG Maker MV окно выбора цели для акторов - это Window_BattleEnemy
+    if (this._enemyWindow && this._enemyWindow.active && this._enemyWindow.visible) {
+        targetWindowActive = true;
+    }
+    
+    // Если окно выбора цели активно
+    if (targetWindowActive) {
+        // Полностью отключаем окно навыков
+        if (this._skillWindow) {
+            // Сохраняем состояние перед отключением
+            if (!this._skillWindow._savedState) {
+                this._skillWindow._savedState = {
+                    active: this._skillWindow.active,
+                    visible: this._skillWindow.visible
+                };
+            }
+            
+            // Полностью деактивируем окно навыков
+            this._skillWindow.active = false;
+            this._skillWindow.deactivate();
+            
+            // Делаем его полностью неактивным для ввода
+            this._skillWindow._canReceiveInput = false;
+        }
+        
+        // Аналогично для окна предметов
+        if (this._itemWindow) {
+            if (!this._itemWindow._savedState) {
+                this._itemWindow._savedState = {
+                    active: this._itemWindow.active,
+                    visible: this._itemWindow.visible
+                };
+            }
+            this._itemWindow.active = false;
+            this._itemWindow.deactivate();
+            this._itemWindow._canReceiveInput = false;
+        }
+    } else {
+        // Восстанавливаем состояние окон
+        if (this._skillWindow && this._skillWindow._savedState) {
+            this._skillWindow.active = this._skillWindow._savedState.active;
+            if (this._skillWindow.active) {
+                this._skillWindow.activate();
+            }
+            this._skillWindow._canReceiveInput = true;
+            delete this._skillWindow._savedState;
+        }
+        
+        if (this._itemWindow && this._itemWindow._savedState) {
+            this._itemWindow.active = this._itemWindow._savedState.active;
+            if (this._itemWindow.active) {
+                this._itemWindow.activate();
+            }
+            this._itemWindow._canReceiveInput = true;
+            delete this._itemWindow._savedState;
+        }
+    }
+};
+
+// Перехватываем метод обработки касания для окна навыков
+var _mog_bhud_skill_processTouch_final = Window_BattleSkill.prototype.processTouch;
+Window_BattleSkill.prototype.processTouch = function() {
+    // Если окно должно игнорировать ввод, ничего не делаем
+    if (this._canReceiveInput === false) {
+        return false;
+    }
+    return _mog_bhud_skill_processTouch_final.call(this);
+};
+
+// Перехватываем метод обработки касания для окна предметов
+var _mog_bhud_item_processTouch_final = Window_BattleItem.prototype.processTouch;
+Window_BattleItem.prototype.processTouch = function() {
+    if (this._canReceiveInput === false) {
+        return false;
+    }
+    return _mog_bhud_item_processTouch_final.call(this);
+};
+
+// Перехватываем общий метод обработки ввода для всех окон
+var _mog_bhud_window_update_final = Window_Selectable.prototype.update;
+Window_Selectable.prototype.update = function() {
+    // Сохраняем оригинальное состояние активности
+    var originalActive = this.active;
+    
+    // Если окно должно игнорировать ввод, временно деактивируем его
+    if (this._canReceiveInput === false && this.active) {
+        this.active = false;
+    }
+    
+    _mog_bhud_window_update_final.call(this);
+    
+    // Восстанавливаем активность если нужно
+    if (this._canReceiveInput === false && originalActive) {
+        this.active = originalActive;
+    }
+};
+
+// Принудительно перенаправляем ввод в окно выбора цели (Window_BattleEnemy)
+var _mog_bhud_enemy_processTouch = Window_BattleEnemy.prototype.processTouch;
+Window_BattleEnemy.prototype.processTouch = function() {
+    // Сначала проверяем, попал ли клик в нашу область
+    if (this.active && this.visible && TouchInput.isTriggered()) {
+        var x = TouchInput.x;
+        var y = TouchInput.y;
+        
+        // Проверяем, попадает ли клик в область окна
+        if (x >= this.x && x <= this.x + this.width &&
+            y >= this.y && y <= this.y + this.height) {
+            
+            // Вычисляем индекс строки и колонки
+            var col = Math.floor((x - this.x - this.padding) / (this.itemWidth() + this.spacing()));
+            var row = Math.floor((y - this.y - this.padding) / this.itemHeight());
+            var index = row * this.maxCols() + col;
+            
+            // Проверяем валидность индекса
+            if (index >= 0 && index < this.maxItems()) {
+                var hitY = y - this.y - this.padding;
+                var itemY = row * this.itemHeight();
+                
+                // Проверяем, что клик точно попал в строку
+                if (hitY >= itemY && hitY < itemY + this.itemHeight()) {
+                    this.select(index);
+                    this.processOk();
+                    return true;
+                }
+            }
+        }
+    }
+    
+    return _mog_bhud_enemy_processTouch.call(this);
+};
+
+// Полностью блокируем передачу событий мыши через окно навыков
+Window_BattleSkill.prototype.isMouseInWindow = function(x, y) {
+    // Если окно должно игнорировать ввод, всегда возвращаем false
+    if (this._canReceiveInput === false) {
+        return false;
+    }
+    
+    // Стандартная проверка
+    return x >= this.x && x <= this.x + this.width &&
+           y >= this.y && y <= this.y + this.height;
+};
+
+// То же для окна предметов
+Window_BattleItem.prototype.isMouseInWindow = function(x, y) {
+    if (this._canReceiveInput === false) {
+        return false;
+    }
+    return x >= this.x && x <= this.x + this.width &&
+           y >= this.y && y <= this.y + this.height;
+};
+
+// Добавляем принудительную проверку при активации окна цели (Window_BattleEnemy)
+var _mog_bhud_enemy_activate_final = Window_BattleEnemy.prototype.activate;
+Window_BattleEnemy.prototype.activate = function() {
+    _mog_bhud_enemy_activate_final.call(this);
+    
+    var scene = SceneManager._scene;
+    if (scene) {
+        // Принудительно обновляем состояние окон
+        if (scene.updateWindowStatesFinal) {
+            scene.updateWindowStatesFinal();
+        }
+        
+        // Делаем окно цели видимым и активным
+        this.visible = true;
+        this.active = true;
+        this._canReceiveInput = true;
+        
+        // Устанавливаем курсор на первый элемент если не выбран
+        if (this.index() < 0 && this.maxItems() > 0) {
+            this.select(0);
+        }
+    }
+};
+
+// Патчим метод выбора навыка
+var _mog_bhud_skill_onOk_final = Window_BattleSkill.prototype.onOk;
+Window_BattleSkill.prototype.onOk = function() {
+    _mog_bhud_skill_onOk_final.call(this);
+    
+    // После выбора навыка, окно цели будет активировано сценой
+    var scene = SceneManager._scene;
+    if (scene && scene._enemyWindow) {
+        // Убеждаемся, что окно цели будет правильно обработано
+        scene._enemyWindow._canReceiveInput = true;
+    }
+};
+
+// Патчим метод отмены выбора навыка
+var _mog_bhud_skill_onCancel_final = Window_BattleSkill.prototype.onCancel;
+Window_BattleSkill.prototype.onCancel = function() {
+    _mog_bhud_skill_onCancel_final.call(this);
+    
+    // При отмене возвращаем активность окну команд
+    var scene = SceneManager._scene;
+    if (scene && scene._actorCommandWindow) {
+        scene._actorCommandWindow.activate();
+    }
+};
+
+// Добавляем специальную обработку для окна Enemy из MOG_BattleHud
+var _mog_bhud_enemy_update = Window_BattleEnemy.prototype.update;
+Window_BattleEnemy.prototype.update = function() {
+    _mog_bhud_enemy_update.call(this);
+    
+    // Если окно активно, убеждаемся что оно может получать ввод
+    if (this.active && this.visible) {
+        // Принудительно обновляем позицию курсора при наведении мыши
+        if (TouchInput.isMoved() || TouchInput.isTriggered()) {
+            var x = TouchInput.x;
+            var y = TouchInput.y;
+            
+            if (x >= this.x && x <= this.x + this.width &&
+                y >= this.y && y <= this.y + this.height) {
+                
+                var col = Math.floor((x - this.x - this.padding) / (this.itemWidth() + this.spacing()));
+                var row = Math.floor((y - this.y - this.padding) / this.itemHeight());
+                var index = row * this.maxCols() + col;
+                
+                if (index >= 0 && index < this.maxItems() && index !== this.index()) {
+                    this.select(index);
+                }
+            }
+        }
+    }
+};
