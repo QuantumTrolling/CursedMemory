@@ -60,6 +60,13 @@
  * @default 4
  * @parent -> MAIN <<<<<<<<<<<<<<<<<<<<<<<
  *
+ * @param Active Offset Y
+ * @text Active HUD offset Y
+ * @desc На сколько пикселей поднимать HUD активного персонажа (отрицательное значение = вверх)
+ * @type number
+ * @default -20
+ * @parent -> MAIN <<<<<<<<<<<<<<<<<<<<<<<
+ *
  * @param
  * 
  * @param -> LAYOUT OVERLAY <<<<<<<<<<<<<<<<<<<<<<<
@@ -99,13 +106,13 @@
  *
  * @param Turn X-Axis
  * @text X-Axis
- * @desc Definição da posição X-Axis do turno.
+ * @desc Definição da posição X-Axis do turno (offset em relação ao centro do rosto).
  * @default 0
  * @parent -> TURN <<<<<<<<<<<<<<<<<<<<<<<
  *
  * @param Turn Y-Axis
  * @text Y-Axis
- * @desc Definição da posição Y-Axis do turno.
+ * @desc Definição da posição Y-Axis do turno (offset em relação ao centro do rosto).
  * @default 0
  * @parent -> TURN <<<<<<<<<<<<<<<<<<<<<<<
  *
@@ -1271,6 +1278,7 @@
 	Moghunter.bhud_max_battle_members = Number(Moghunter.parameters['Max Battle Members'] || 4);
 	Moghunter.bhud_slideX = Number(Moghunter.parameters['Hud Slide X'] || 0);
 	Moghunter.bhud_slideY = Number(Moghunter.parameters['Hud Slide Y'] || 0);
+	Moghunter.bhud_active_offset = Number(Moghunter.parameters['Active Offset Y'] || -20);
 	
     // Layout Overlay
 	Moghunter.bhud_layoverlay_visible = String(Moghunter.parameters['Layout2 Visible'] || "true");
@@ -2602,6 +2610,10 @@ Battle_Hud.prototype.initialize = function(hud_id) {
 	this.opacity = 0;
 	$gameTemp._bhud_position_active = null;
 	$gameTemp._battleEnd = false;
+
+	// НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ СМЕЩЕНИЯ АКТИВНОЙ ПЛАШКИ
+	this._activeOffsetY = 0;
+	this._targetActiveOffset = 0;
 };
 
 //==============================
@@ -2695,10 +2707,7 @@ Battle_Hud.prototype.refresh_position = function() {
      	 this._face.x = this._pos_x + Moghunter.bhud_face_pos_x;
  	     this._face.y = this._pos_y + Moghunter.bhud_face_pos_y + this._face.ph;
      };
-	 if (this._turn) {
-        this._turn.x = this._pos_x + (this._turn.width / 2) + Moghunter.bhud_turn_pos_x;
-	    this._turn.y = this._pos_y + (this._turn.height / 2) + Moghunter.bhud_turn_pos_y;
-	 };
+	 // Turn позиция больше не устанавливается здесь — она будет обновляться в update_turn
 	 if (this._layout2) { 
 	  	 this._layout2.x = this._pos_x + Moghunter.bhud_layoverlay_x;
 	     this._layout2.y = this._pos_y + Moghunter.bhud_layoverlay_y;
@@ -2746,6 +2755,11 @@ Battle_Hud.prototype.update = function() {
 	if (this._hud_size[0] === 0) {this.refresh_position();return};
 	this.update_sprites();
 	this.updateSlide();
+
+	// после завершения начальной анимации slide обновляем смещение активной плашки
+	if (this._slideA[0] <= 0) {
+		this.updateActiveShift();
+	}
 };
 
 //==============================
@@ -2761,14 +2775,26 @@ Battle_Hud.prototype.updateSlide = function() {
 	 };
 	 this.visible = true;
 	 this.x = this.update_dif(this.x,0,20);
-	 this.y = this.update_dif(this.y,0,20);
+	 if (this._targetActiveOffset === 0) {
+		 this.y = this.update_dif(this.y,0,20);
+	 }
+};
+
+//==============================
+// * Update Active Shift
+//==============================
+Battle_Hud.prototype.updateActiveShift = function() {
+    if (this._activeOffsetY !== this._targetActiveOffset) {
+        this._activeOffsetY = this.update_dif(this._activeOffsetY, this._targetActiveOffset, 20);
+        this.y = this._activeOffsetY;
+    }
 };
 
 //==============================
 // * Create Base Sprites
 //==============================
 Battle_Hud.prototype.create_base_sprites = function() {
-	this.create_turn();
+	// Сначала создаём лицо и layout
 	if (Number(Moghunter.bhud_face_priority) === 0) {
    	    this.create_face();
 	    this.create_layout();}
@@ -2776,6 +2802,8 @@ Battle_Hud.prototype.create_base_sprites = function() {
 		this.create_layout();
    	    this.create_face();	    		
     };
+    // Turn создаём последним, чтобы он был поверх всех
+    this.create_turn();
 };
 
 //==============================
@@ -2808,7 +2836,7 @@ Battle_Hud.prototype.create_sprites = function() {
 Battle_Hud.prototype.update_sprites = function() {	
     this.update_active();
 	this.update_visible();
-	this.update_turn();
+	this.update_turn();  // здесь теперь обновляется позиция
 	this.update_face();	
     this.update_hp();
 	this.update_mp();
@@ -2840,6 +2868,13 @@ Battle_Hud.prototype.update_active = function() {
 		   $gameTemp._bhud_position_active = $gameTemp._bhud_position[this._hud_id]
 	   };
    };
+
+   // установка целевого смещения активной плашки
+   if (this._active) {
+       this._targetActiveOffset = Moghunter.bhud_active_offset;
+   } else {
+       this._targetActiveOffset = 0;
+   }
 };
 
 //==============================
@@ -3035,6 +3070,16 @@ Battle_Hud.prototype.create_turn = function() {
 Battle_Hud.prototype.update_turn = function() {
 	if (!this._turn) {return};
     if (!this._active) {this._turn.visible = false;return;};
+
+	// Обновляем позицию каждый кадр, чтобы следовать за лицом
+	if (this._face) {
+	    this._turn.x = this._face.x + (this._turn.width / 2) + Moghunter.bhud_turn_pos_x;
+	    this._turn.y = this._face.y + (this._turn.height / 2) + Moghunter.bhud_turn_pos_y;
+	} else {
+	    this._turn.x = this._pos_x + (this._turn.width / 2) + Moghunter.bhud_turn_pos_x;
+	    this._turn.y = this._pos_y + (this._turn.height / 2) + Moghunter.bhud_turn_pos_y;
+	}
+
 	if (this._turn.rt != 0) {this._turn.rotation += this._turn.rt};
 	if (this._turn.zt) {this.updateTurnZoom()};
 	this._turn.visible = true;
