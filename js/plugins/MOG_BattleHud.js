@@ -1544,6 +1544,8 @@ Game_Temp.prototype.initialize = function() {
 	this._refreshBhud = false;
 	this._forceCreateBattleHud = false;
 	this._forceRemoveBattleHud = false;
+	// FIX: добавили флаг хода врага
+	this._bhud_enemyTurn = false;
 };
 
 //=============================================================================
@@ -1635,6 +1637,12 @@ BattleManager.processDefeat = function() {
 	 _alias_mog_bhud_processDefeat.call(this);	 
 };
 
+// FIX: перехватываем startTurn для установки флага хода врага (один раз)
+var _mog_bhud_startTurn = BattleManager.startTurn;
+BattleManager.startTurn = function() {
+    _mog_bhud_startTurn.call(this);
+    $gameTemp._bhud_enemyTurn = !this.actor();
+};
 
 //=============================================================================
 // ** Game BattlerBase
@@ -2610,8 +2618,6 @@ Battle_Hud.prototype.initialize = function(hud_id) {
 	this.opacity = 0;
 	$gameTemp._bhud_position_active = null;
 	$gameTemp._battleEnd = false;
-
-	// НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ СМЕЩЕНИЯ АКТИВНОЙ ПЛАШКИ
 	this._activeOffsetY = 0;
 	this._targetActiveOffset = 0;
 };
@@ -2755,29 +2761,24 @@ Battle_Hud.prototype.update = function() {
 	if (this._hud_size[0] === 0) {this.refresh_position();return};
 	this.update_sprites();
 	this.updateSlide();
-
-	// после завершения начальной анимации slide обновляем смещение активной плашки
-	if (this._slideA[0] <= 0) {
-		this.updateActiveShift();
-	}
+	// FIX: всегда вызываем updateActiveShift
+	this.updateActiveShift();
 };
 
 //==============================
-// * Update Slide
+// * Update Slide (FIX: убрано изменение y)
 //==============================
 Battle_Hud.prototype.updateSlide = function() {
-	 if (!this.is_hud_visible()) {return}; 
-	 if (this._slideA[0] > 0) {
-		 this.visible = false;
-		 this.opacity = 0;
-		 this._slideA[0]--;
-	     return;
-	 };
-	 this.visible = true;
-	 this.x = this.update_dif(this.x,0,20);
-	 if (this._targetActiveOffset === 0) {
-		 this.y = this.update_dif(this.y,0,20);
-	 }
+    if (!this.is_hud_visible()) { return; }
+    if (this._slideA[0] > 0) {
+        this.visible = false;
+        this.opacity = 0;
+        this._slideA[0]--;
+        this.x = this.update_dif(this.x, 0, 20);
+        return;
+    }
+    this.visible = true;
+    this.x = this.update_dif(this.x, 0, 20);
 };
 
 //==============================
@@ -2831,50 +2832,63 @@ Battle_Hud.prototype.create_sprites = function() {
 };
 
 //==============================
-// * Update Sprites
+// * Update Sprites (FIX: добавлен принудительный сброс по флагу хода врага)
 //==============================
 Battle_Hud.prototype.update_sprites = function() {	
+    // FIX: принудительно опускаем, если ход врага
+    if ($gameTemp._bhud_enemyTurn) {
+        this._active = false;
+        this._targetActiveOffset = 0;
+    }
+
     this.update_active();
-	this.update_visible();
-	this.update_turn();  // здесь теперь обновляется позиция
-	this.update_face();	
+    this.update_visible();
+    this.update_turn();
+    this.update_face();	
     this.update_hp();
-	this.update_mp();
+    this.update_mp();
     this.update_tp();
-	this.update_at();	 
+    this.update_at();	 
+    
     if (this._state_icon) {
-		if (this._stateType === 0) {
- 		     this.update_states();
-		} else {
-			 this.update_states2();
-		};
-	};
+        if (this._stateType === 0) {
+            this.update_states();
+        } else {
+            this.update_states2();
+        }
+    }
 };
 
 //==============================
-// * Update Active
+// * Update Active (исправленная версия)
 //==============================
 Battle_Hud.prototype.update_active = function() {	
-   this._active = false
-   if (this.isChronoBattle()) {
-	   if (this._battler == $gameTemp._chronoCom.user[1]) {
-		   this._active = true;
-		   $gameTemp._bhud_position_active = $gameTemp._bhud_position[this._hud_id]
-	   };   
-   
-   } else {
-	   if (this._battler == BattleManager.actor()) {
-		   this._active = true;
-		   $gameTemp._bhud_position_active = $gameTemp._bhud_position[this._hud_id]
-	   };
-   };
+    // 👇 ХОД ВРАГА — ВСЕГДА ОПУСКАЕМ
+    if ($gameTemp._bhud_enemyTurn) {
+        this._active = false;
+        this._targetActiveOffset = 0;
+        // сбрасываем глобальную позицию только от имени первой плашки
+        if (this._hud_id === 0) {
+            $gameTemp._bhud_position_active = null;
+        }
+        return;
+    }
 
-   // установка целевого смещения активной плашки
-   if (this._active) {
-       this._targetActiveOffset = Moghunter.bhud_active_offset;
-   } else {
-       this._targetActiveOffset = 0;
-   }
+    this._active = false;
+
+    if (this.isChronoBattle()) {
+        if (this._battler == $gameTemp._chronoCom.user[1]) {
+            this._active = true;
+            $gameTemp._bhud_position_active = $gameTemp._bhud_position[this._hud_id];
+        }
+    } else {
+        if (BattleManager.actor() && this._battler == BattleManager.actor()) {
+            this._active = true;
+            $gameTemp._bhud_position_active = $gameTemp._bhud_position[this._hud_id];
+        }
+    }
+
+    this._targetActiveOffset = this._active ? Moghunter.bhud_active_offset : 0;
 };
 
 //==============================

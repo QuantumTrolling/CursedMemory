@@ -9,10 +9,10 @@
  */
 
 (function() {
-  const lang = () => ConfigManager.getLanguage?.() || null;
+  const lang = () => (ConfigManager.getLanguage ? ConfigManager.getLanguage() : null);
 
   function translateField(data, field) {
-    if (!data || !data._tt_translations || !lang()) return data?.[field];
+    if (!data || !data._tt_translations || !lang()) return data ? data[field] : undefined;
     const trans = data._tt_translations[lang()];
     return (trans && trans[field]) || data[field];
   }

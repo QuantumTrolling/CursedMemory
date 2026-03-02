@@ -5659,22 +5659,22 @@ Window_BattleEnemy.prototype.getMouseOverEnemy = function() {
 };
 
 Window_BattleEnemy.prototype.findClosestEnemy = function(x, y) {
-    console.log('findClosestEnemy вызван с координатами:', x, y);
+    //console.log('findClosestEnemy вызван с координатами:', x, y);
     
     var candidates = [];
     for (var i = 0; i < this._enemies.length; i++) {
         var enemy = this._enemies[i];
         if (!enemy) continue;
         if (!enemy.isSpriteVisible()) {
-            console.log('Враг', i, 'не видим');
+            //console.log('Враг', i, 'не видим');
             continue;
         }
         if ($gameTemp._disableMouseOverSelect) {
-            console.log('mouse over отключён глобально');
+            //console.log('mouse over отключён глобально');
             continue;
         }
         if (this._selectDead && !enemy.isDead()) {
-            console.log('Враг', i, 'жив, а нужны мёртвые');
+            //console.log('Враг', i, 'жив, а нужны мёртвые');
             continue;
         }
         
@@ -5691,14 +5691,14 @@ Window_BattleEnemy.prototype.findClosestEnemy = function(x, y) {
         if (x >= rectX && y >= rectY && x < rectX + expandedWidth && y < rectY + sh) {
             var name = enemy.name() || 'Безымянный';
             candidates.push({ index: i, enemy: enemy, name: name });
-            console.log('Враг', i, name, 'попадает в расширенный хитбокс');
+            //console.log('Враг', i, name, 'попадает в расширенный хитбокс');
         } else {
-            console.log('Враг', i, enemy.name(), 'не попадает');
+            //console.log('Враг', i, enemy.name(), 'не попадает');
         }
     }
     
     if (candidates.length === 0) {
-        console.log('Нет врагов под курсором');
+        //console.log('Нет врагов под курсором');
         return -1;
     }
     
@@ -5707,7 +5707,7 @@ Window_BattleEnemy.prototype.findClosestEnemy = function(x, y) {
         var currentIndex = this.index();
         for (var j = 0; j < candidates.length; j++) {
             if (candidates[j].index === currentIndex) {
-                console.log('Выбран текущий враг', currentIndex, candidates[j].name);
+                //console.log('Выбран текущий враг', currentIndex, candidates[j].name);
                 return currentIndex;
             }
         }
@@ -5731,7 +5731,7 @@ Window_BattleEnemy.prototype.findClosestEnemy = function(x, y) {
     
     var bestIndex = candidates[0].index;
     var bestName = candidates[0].name;
-    console.log('Итоговый выбранный индекс:', bestIndex, bestName);
+    //console.log('Итоговый выбранный индекс:', bestIndex, bestName);
     return bestIndex;
 };
 //=============================================================================

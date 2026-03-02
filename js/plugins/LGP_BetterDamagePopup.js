@@ -984,7 +984,7 @@ Sprite_Damage.prototype.drawDefaultNumber = function() {
     if (Imported.LGP_CustomWindowText) bitmap.textShadow = LGP.Param.BDPtextShadow;
 //BDPhpDmgC
     if (result.hpAffected) {
-		console.log("hp affected")
+		//console.log("hp affected")
         if (value > 0) {
             if (Imported.YEP_AbsorptionBarrier && result._barrierAffected) {
                 bitmap.textColor = LGP.Param.BDPshC;   
@@ -1257,8 +1257,8 @@ Sprite_Damage.prototype.getTextWidth = function(text, fontSize) {
 LGP.Util = LGP.Util || {};
 
 LGP.Util.displayError = function(e, code, message) {
-    console.log(message);
-    console.log(code || 'NON-EXISTENT');
+    //console.log(message);
+    //console.log(code || 'NON-EXISTENT');
     console.error(e);
     if (Utils.isNwjs() && Utils.isOptionValid('test')) {
         require('nw.gui').Window.get().showDevTools();

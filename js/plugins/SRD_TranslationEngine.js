@@ -1880,7 +1880,7 @@ Window_Command.prototype.addCommand = function(name, symbol, enabled, ext) {
 		return;
 	}
 	var lang = ConfigManager.getLanguage();
-	console.log("::: " , lang);
+	//console.log("::: " , lang);
 	if($dataTranslations['cmd'] && $dataTranslations['cmd'][name] && $dataTranslations['cmd'][name][lang]) {
 		name = $dataTranslations['cmd'][name][lang];
 	}
