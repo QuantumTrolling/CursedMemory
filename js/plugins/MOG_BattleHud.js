@@ -2782,11 +2782,18 @@ Battle_Hud.prototype.updateSlide = function() {
 };
 
 //==============================
-// * Update Active Shift
+// * Update Active Shift (Correct Logic)
 //==============================
 Battle_Hud.prototype.updateActiveShift = function() {
-    if (this._activeOffsetY !== this._targetActiveOffset) {
-        this._activeOffsetY = this.update_dif(this._activeOffsetY, this._targetActiveOffset, 20);
+
+    var shouldBeActive =
+        BattleManager.actor() === this._battler &&
+        BattleManager.isInputting();
+
+    var target = shouldBeActive ? Moghunter.bhud_active_offset : 0;
+
+    if (this._activeOffsetY !== target) {
+        this._activeOffsetY = this.update_dif(this._activeOffsetY, target, 20);
         this.y = this._activeOffsetY;
     }
 };
