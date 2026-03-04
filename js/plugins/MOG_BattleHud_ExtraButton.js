@@ -1,33 +1,26 @@
 /*:
  * @target MV
- * @plugindesc (Addon) HUD кнопка в бою для MOG_BattleHud, мгновенно запускающая Common Event (с сохранением прогресса боя)
+ * @plugindesc (Addon) HUD кнопка в бою для MOG_BattleHud, с мгновенным восстановлением состояния после глоссария (без затемнения).
+ * @help
+ * ============================================================================
+ * MOG_BattleHud Extra Button + Glossary Support
+ * ============================================================================
+ * Этот плагин добавляет в бою дополнительную кнопку, которая может запускать
+ * общее событие или открывать глоссарий. При открытии глоссария состояние боя
+ * полностью сохраняется (HP, состояния, скрытость врагов и т.д.) и мгновенно
+ * восстанавливается после выхода из глоссария, без появления ранее невидимых
+ * врагов.
  *
- * @param --- Extra Battle Button ---
- * @default
+ * Для работы требуется плагин SceneGlossary.js (triacontane).
  *
- * @param Extra Button Image
- * @parent --- Extra Battle Button ---
- * @desc Имя файла из img/pictures (без .png)
- * @default
+ * Параметры:
+ *   Extra Button Image      – имя картинки для кнопки (в папке img/pictures/)
+ *   Extra Button X, Y       – координаты кнопки на экране
+ *   Extra Button Common Event – ID общего события, которое запускается при нажатии
+ *                             (если 0 – кнопка работает как открытие глоссария)
+ *   Count As Turn           – считать ли нажатие за ход (true/false)
  *
- * @param Extra Button X
- * @parent --- Extra Battle Button ---
- * @type number
- * @default 0
- *
- * @param Extra Button Y
- * @parent --- Extra Battle Button ---
- * @type number
- * @default 0
- *
- * @param Extra Button Common Event
- * @parent --- Extra Battle Button ---
- * @type common_event
- * @default 0
- *
- * @param Count As Turn
- * @type boolean
- * @default true
+ * Версия: 1.2.1 – удалено затемнение экрана.
  */
 
 var Imported = Imported || {};
@@ -55,56 +48,46 @@ if (!BattleManager.restartTurn) {
 }
 
 //=============================================================================
-// [SAVE/RESTORE] Снимок состояния боя перед Common Event
+// [SAVE/RESTORE] Снимок состояния боя
 //=============================================================================
 BattleManager._exBtnBattleSnapshot = null;
 BattleManager._exBtnEventRunning = false;
+BattleManager._exBtnRestorePending = false;
+BattleManager._exBtnGlossaryReturnPending = false;  // флаг возврата из глоссария
+BattleManager._exBtnGlossaryOpenedFromBattle = false;
 
 BattleManager.exBtnMakeBattlerSnapshot = function(b) {
     if (!b) return null;
-
     return {
         hp: b._hp,
         mp: b._mp,
         tp: b._tp,
-
         states: b._states ? b._states.slice() : [],
         stateTurns: b._stateTurns ? JSON.parse(JSON.stringify(b._stateTurns)) : {},
-
         buffs: b._buffs ? b._buffs.slice() : [],
         buffTurns: b._buffTurns ? b._buffTurns.slice() : [],
-
-        // иногда помогает избежать визуальных глюков
         result: b._result ? JsonEx.makeDeepCopy(b._result) : null
     };
 };
 
 BattleManager.exBtnApplyBattlerSnapshot = function(b, snap) {
     if (!b || !snap) return;
-
     b._hp = snap.hp;
     b._mp = snap.mp;
     b._tp = snap.tp;
-
     b._states = snap.states ? snap.states.slice() : [];
     b._stateTurns = snap.stateTurns ? JSON.parse(JSON.stringify(snap.stateTurns)) : {};
-
     b._buffs = snap.buffs ? snap.buffs.slice() : [];
     b._buffTurns = snap.buffTurns ? snap.buffTurns.slice() : [];
-
     if (snap.result) b._result = JsonEx.makeDeepCopy(snap.result);
-
-    // рефреш чтобы иконки/параметры обновились
     b.refresh();
 };
 
 BattleManager.exBtnSaveBattleState = function() {
-    // защита от двойного клика
     if (this._exBtnBattleSnapshot) return;
 
     var snap = {};
 
-    // Состояние BattleManager
     snap.phase = this._phase;
     snap.actorIndex = this._actorIndex;
     snap.inputting = this._inputting;
@@ -114,10 +97,8 @@ BattleManager.exBtnSaveBattleState = function() {
     snap.subject = this._subject;
     snap.turnCount = this._turnCount;
 
-    // Массив actionBattlers (копия)
     snap.actionBattlers = this._actionBattlers ? this._actionBattlers.slice() : null;
 
-    // Снапшот ВСЕХ battler'ов (актеры + враги)
     snap.partyBattlers = [];
     var p = $gameParty ? $gameParty.battleMembers() : [];
     for (var i = 0; i < p.length; i++) {
@@ -130,7 +111,6 @@ BattleManager.exBtnSaveBattleState = function() {
         snap.troopBattlers[j] = this.exBtnMakeBattlerSnapshot(t[j]);
     }
 
-    // Скрытость врагов (Game_Enemy._hidden)
     snap.enemyHidden = [];
     var members = $gameTroop ? $gameTroop.members() : [];
     for (var k = 0; k < members.length; k++) {
@@ -138,7 +118,6 @@ BattleManager.exBtnSaveBattleState = function() {
         snap.enemyHidden[k] = e ? !!e._hidden : false;
     }
 
-    // Видимость/opacity спрайтов врагов (на случай если refresh их ломает)
     snap.enemySpriteState = [];
     if (SceneManager._scene && SceneManager._scene._spriteset) {
         var es = SceneManager._scene._spriteset._enemySprites || [];
@@ -158,7 +137,6 @@ BattleManager.exBtnRestoreBattleState = function() {
     var snap = this._exBtnBattleSnapshot;
     if (!snap) return;
 
-    // Восстановление BattleManager
     this._phase = snap.phase;
     this._actorIndex = snap.actorIndex;
     this._inputting = snap.inputting;
@@ -172,7 +150,6 @@ BattleManager.exBtnRestoreBattleState = function() {
         this._actionBattlers = snap.actionBattlers.slice();
     }
 
-    // Восстановление скрытости врагов
     var members = $gameTroop ? $gameTroop.members() : [];
     for (var i = 0; i < members.length; i++) {
         var e = members[i];
@@ -180,28 +157,44 @@ BattleManager.exBtnRestoreBattleState = function() {
         e._hidden = !!snap.enemyHidden[i];
     }
 
-    // Восстановление состояния спрайтов врагов
-    if (SceneManager._scene && SceneManager._scene._spriteset) {
-        var es = SceneManager._scene._spriteset._enemySprites || [];
-        for (var j = 0; j < es.length; j++) {
-            var spr = es[j];
-            var st = snap.enemySpriteState[j];
-            if (!spr || !st) continue;
-            spr.visible = st.visible;
-            spr.opacity = st.opacity;
-        }
-    }
-
-    // Восстановление состояний/баффов/HP/MP/TP у актеров
     var p = $gameParty ? $gameParty.battleMembers() : [];
     for (var k = 0; k < p.length; k++) {
         this.exBtnApplyBattlerSnapshot(p[k], snap.partyBattlers ? snap.partyBattlers[k] : null);
     }
 
-    // Восстановление состояний/баффов/HP/MP/TP у врагов
     var t = $gameTroop ? $gameTroop.members() : [];
     for (var m = 0; m < t.length; m++) {
         this.exBtnApplyBattlerSnapshot(t[m], snap.troopBattlers ? snap.troopBattlers[m] : null);
+    }
+
+    // Принудительно синхронизируем спрайты врагов
+    if (SceneManager._scene && SceneManager._scene._spriteset) {
+        var es = SceneManager._scene._spriteset._enemySprites || [];
+        for (var j = 0; j < es.length; j++) {
+            var spr = es[j];
+            if (!spr || !spr._battler) continue;
+
+            if (spr._battler.isHidden()) {
+                spr._appeared = false;
+                spr.visible = false;
+                spr.opacity = 0;
+                spr._effectType = null;
+                spr._effectDuration = 0;
+            } else {
+                spr._appeared = true;
+                spr.visible = true;
+                spr.opacity = 255;
+                spr._effectType = null;
+                spr._effectDuration = 0;
+            }
+            spr.update();
+        }
+        SceneManager._scene._spriteset.update();
+    }
+
+    // Сбрасываем флаги плагина волн (если есть)
+    if ($gameSystem._consBaPhase) {
+        $gameSystem._consBaPhase = [false, false];
     }
 
     this._exBtnBattleSnapshot = null;
@@ -214,11 +207,11 @@ var _mog_exbtn_BM_updateEventMain = BattleManager.updateEventMain;
 BattleManager.updateEventMain = function() {
     var result = _mog_exbtn_BM_updateEventMain.call(this);
 
-    // Если событие было запущено кнопкой и оно уже закончилось — вернуть бой
     if (this._exBtnEventRunning) {
         if (!$gameTroop.isEventRunning() && !$gameMessage.isBusy()) {
             this._exBtnEventRunning = false;
-            this.exBtnRestoreBattleState();
+            this._exBtnRestorePending = true;
+            // Затемнение удалено
         }
     }
 
@@ -226,12 +219,43 @@ BattleManager.updateEventMain = function() {
 };
 
 //=============================================================================
-// CREATE BUTTON
+// Основное обновление сцены битвы (добавлена обработка возврата из глоссария)
+//=============================================================================
+var _base_sceneBattle_update = Scene_Battle.prototype.update;
+
+Scene_Battle.prototype.update = function() {
+    // Если есть ожидающее восстановление после Common Event
+    if (BattleManager._exBtnRestorePending) {
+        BattleManager._exBtnRestorePending = false;
+        BattleManager.exBtnRestoreBattleState();
+        if (this._spriteset) {
+            this._spriteset.update();
+        }
+    }
+
+    // Если есть ожидающее восстановление после глоссария
+    if (BattleManager._exBtnGlossaryReturnPending && SceneManager._scene === this) {
+        BattleManager._exBtnGlossaryReturnPending = false;
+        // Восстанавливаем состояние боя
+        if (typeof BattleManager.exBtnRestoreBattleState === 'function') {
+            BattleManager.exBtnRestoreBattleState();
+        }
+        // Затемнение удалено
+    }
+
+    _base_sceneBattle_update.call(this);
+    this.updateBattleHudExtraButton();
+    this.updateExtraButtonEvent();
+};
+
+//=============================================================================
+// Создание кнопки (без затемнения)
 //=============================================================================
 var _mog_exbtn_createSpriteset = Scene_Battle.prototype.createSpriteset;
 Scene_Battle.prototype.createSpriteset = function() {
     _mog_exbtn_createSpriteset.call(this);
     this.createBattleHudExtraButton();
+    // createExtraButtonFade() удалён
 };
 
 Scene_Battle.prototype.createBattleHudExtraButton = function() {
@@ -247,15 +271,8 @@ Scene_Battle.prototype.createBattleHudExtraButton = function() {
 };
 
 //=============================================================================
-// UPDATE
+// Обработка нажатия на кнопку
 //=============================================================================
-var _mog_exbtn_update = Scene_Battle.prototype.update;
-Scene_Battle.prototype.update = function() {
-    _mog_exbtn_update.call(this);
-    this.updateBattleHudExtraButton();
-    this.updateExtraButtonEvent();
-};
-
 Scene_Battle.prototype.updateBattleHudExtraButton = function() {
     if (!this._bhudExtraButton || !$gameParty.inBattle()) return;
     if (!this._bhudExtraButton.bitmap.isReady()) return;
@@ -276,33 +293,36 @@ Scene_Battle.prototype.updateBattleHudExtraButton = function() {
     if (TouchInput.isTriggered() && touching) {
         SoundManager.playOk();
 
-        // [SAVE] сохраняем состояние боя ДО любых изменений
-        BattleManager.exBtnSaveBattleState();
-        BattleManager._exBtnEventRunning = true;
+        // Если задано общее событие – запускаем его, иначе открываем глоссарий
+        if (Moghunter.bhud_extraBtnCE > 0) {
+            // Запуск общего события
+            BattleManager.exBtnSaveBattleState();
+            BattleManager._exBtnEventRunning = true;
 
-        // 🔻 СБРОС ВВОДА ТЕКУЩЕГО АКТЁРА (MV способ)
-        BattleManager._actorIndex = -1;
-        BattleManager._inputting = false;
+            BattleManager._actorIndex = -1;
+            BattleManager._inputting = false;
 
-        // Резервируем событие
-        $gameTemp.reserveCommonEvent(Moghunter.bhud_extraBtnCE);
+            $gameTemp.reserveCommonEvent(Moghunter.bhud_extraBtnCE);
 
-        if (Moghunter.bhud_extraBtnTurn) {
-            // Засчитать как завершение хода
-            BattleManager.restartTurn();
+            if (Moghunter.bhud_extraBtnTurn) {
+                BattleManager.restartTurn();
+            } else {
+                BattleManager._phase = 'event';
+            }
+
+            this._delayBattleEvent = 1;
         } else {
-            // Просто перейти к обработке событий
-            BattleManager._phase = 'event';
+            // Открытие глоссария
+            if (typeof $gameParty.setSelectedGlossaryType === 'function') {
+                BattleManager.exBtnSaveBattleState();          // сохраняем состояние боя
+                BattleManager._exBtnGlossaryOpenedFromBattle = true;
+                $gameParty.setSelectedGlossaryType(1);        // тип глоссария (можно параметризовать)
+                SceneManager.push(Scene_Glossary);
+            }
         }
-
-        // Немедленно запустить обработку событий
-        this._delayBattleEvent = 1;
     }
 };
 
-//=============================================================================
-// 🔥 МГНОВЕННЫЙ ЗАПУСК ОБЩЕГО СОБЫТИЯ
-//=============================================================================
 Scene_Battle.prototype.updateExtraButtonEvent = function() {
     if (this._delayBattleEvent > 0) {
         this._delayBattleEvent--;
@@ -312,3 +332,47 @@ Scene_Battle.prototype.updateExtraButtonEvent = function() {
         }
     }
 };
+
+//=============================================================================
+// Дополнительная защита спрайтов врагов (на всякий случай)
+//=============================================================================
+var _exBtn_spriteEnemy_update = Sprite_Enemy.prototype.update;
+Sprite_Enemy.prototype.update = function() {
+    _exBtn_spriteEnemy_update.call(this);
+
+    if (this._battler && this._battler.isHidden()) {
+        this._appeared = false;
+        this.visible = false;
+        this.opacity = 0;
+        this._effectType = null;
+        this._effectDuration = 0;
+    }
+};
+
+//=============================================================================
+// Обработка открытия/закрытия глоссария
+//=============================================================================
+var _Scene_Glossary_initialize = Scene_Glossary.prototype.initialize;
+Scene_Glossary.prototype.initialize = function() {
+    _Scene_Glossary_initialize.call(this);
+    var currentScene = SceneManager._scene;
+    if (currentScene instanceof Scene_Battle) {
+        // Если глоссарий открыт из боя – ставим флаг (сохранение уже выполнено в кнопке)
+        BattleManager._exBtnGlossaryOpenedFromBattle = true;
+    } else {
+        BattleManager._exBtnGlossaryOpenedFromBattle = false;
+    }
+};
+
+var _Scene_Glossary_terminate = Scene_Glossary.prototype.terminate;
+Scene_Glossary.prototype.terminate = function() {
+    _Scene_Glossary_terminate.call(this);
+    if (BattleManager._exBtnGlossaryOpenedFromBattle) {
+        // При закрытии глоссария, открытого из боя, ставим флаг восстановления
+        BattleManager._exBtnGlossaryReturnPending = true;
+    }
+};
+
+//=============================================================================
+// Конец файла
+//=============================================================================

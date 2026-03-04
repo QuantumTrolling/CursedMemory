@@ -2725,4 +2725,5 @@ function Window_GlossaryComplete() {
         this._upArrowSprite.rotation = 90 * Math.PI / 180;
         this._upArrowSprite.move(w - q, h / 2);
     };
+	
 })();
