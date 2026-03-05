@@ -565,7 +565,7 @@ var opentype=(()=>{var e=Object.defineProperty,t=Object.getOwnPropertyDescriptor
   var $ft = CanvasRenderingContext2D.prototype.fillText;
 	CanvasRenderingContext2D.prototype._fillText = function (g, f, x, y, w) {
 		if (OPENFONT_DEBUG) {
-			console.log(`_fillText: text="${g.text}", requestedSize=${f.size}, actualWidth=${w.toFixed(2)}`);
+			//console.log(`_fillText: text="${g.text}", requestedSize=${f.size}, actualWidth=${w.toFixed(2)}`);
 		}
 		if (g.font) {
 			var path = this._pathText(g, f, x, y, w);
@@ -597,7 +597,7 @@ var opentype=(()=>{var e=Object.defineProperty,t=Object.getOwnPropertyDescriptor
       this.restore();
     } else {
 		if (OPENFONT_DEBUG) {
-            console.log(`fillText (standard): text="${t}", requestedSize=${f.size}, maxWidth=${w}`);
+            //console.log(`fillText (standard): text="${t}", requestedSize=${f.size}, maxWidth=${w}`);
         }
       return $ft.call(this, t, x, y, w);
     }
@@ -606,7 +606,7 @@ var opentype=(()=>{var e=Object.defineProperty,t=Object.getOwnPropertyDescriptor
   var $st = CanvasRenderingContext2D.prototype.strokeText;
 	CanvasRenderingContext2D.prototype._strokeText = function (g, f, x, y, w) {
 		if (OPENFONT_DEBUG) {
-			console.log(`_strokeText: text="${g.text}", requestedSize=${f.size}, actualWidth=${w.toFixed(2)}`);
+			//console.log(`_strokeText: text="${g.text}", requestedSize=${f.size}, actualWidth=${w.toFixed(2)}`);
 		}
 		if (g.font) {
 			var path = this._pathText(g, f, x, y, w);
@@ -640,7 +640,7 @@ var opentype=(()=>{var e=Object.defineProperty,t=Object.getOwnPropertyDescriptor
       this.restore();
     } else {
 		if (OPENFONT_DEBUG) {
-            console.log(`strokeText (standard): text="${t}", requestedSize=${f.size}, maxWidth=${w}`);
+            //console.log(`strokeText (standard): text="${t}", requestedSize=${f.size}, maxWidth=${w}`);
 		}
       return $st.call(this, t, x, y, w);
     }
