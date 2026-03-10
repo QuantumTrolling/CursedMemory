@@ -8,17 +8,17 @@ Imported.LGP_BetterDamagePopup = true;
 
 var LGP = LGP || {};
 LGP.BDP = LGP.BDP || {};
-LGP.BDP.version = 1.7;
+LGP.BDP.version = 1.85; // отладочная версия
 
 /*:
  * @title Better Damage Popup
  * @author Azel (modified by ChatGPT)
  * @date 13.07.18
- * @version 1.7
+ * @version 1.85
  * @filename LGP_BetterDamagePopup.js
  *
- * @plugindesc v1.7 YEP_BattleEngineCore required! 
- * completly reworked the damage popup system.
+ * @plugindesc v1.85 YEP_BattleEngineCore required! 
+ * completly reworked the damage popup system. Now with fixed layer.
  *
  * @param ---Font Settings---
  * @default
@@ -46,6 +46,33 @@ LGP.BDP.version = 1.7;
  * @desc Requires LGP_CustomWindowText. Drop a Shadow behind the Number
  * @type boolean
  * @default true
+ *
+ * @param ---Popup Offset Settings---
+ * @default
+ *
+ * @param Actor Offset X
+ * @parent ---Popup Offset Settings---
+ * @desc Horizontal offset for popups on actors (in pixels). Positive = right.
+ * @type number
+ * @default 0
+ *
+ * @param Actor Offset Y
+ * @parent ---Popup Offset Settings---
+ * @desc Vertical offset for popups on actors (in pixels). Positive = down.
+ * @type number
+ * @default 0
+ *
+ * @param Enemy Offset X
+ * @parent ---Popup Offset Settings---
+ * @desc Horizontal offset for popups on enemies (in pixels). Positive = right.
+ * @type number
+ * @default 0
+ *
+ * @param Enemy Offset Y
+ * @parent ---Popup Offset Settings---
+ * @desc Vertical offset for popups on enemies (in pixels). Positive = down.
+ * @type number
+ * @default 0
  *
  * @param ---Popup Duration Settings---
  * @default
@@ -346,6 +373,14 @@ LGP.BDP.version = 1.7;
  * manually instead.
  *
  * ============================================================================
+ * Offset Settings
+ * ============================================================================
+ * You can fine‑tune the position of popups using the parameters:
+ *   Actor Offset X / Y  – horizontal/vertical shift for actors.
+ *   Enemy Offset X / Y  – horizontal/vertical shift for enemies.
+ * Positive X moves the popup to the right, positive Y moves it down.
+ *
+ * ============================================================================
  * Lunatic Code - JavaScript Code for customisation
  * ============================================================================
  * 
@@ -416,6 +451,9 @@ LGP.BDP.version = 1.7;
  * v1.5 - Fixed Debuff error.
  * v1.6 - Fixed an error that caused no damage to appear.
  * v1.7 - Fixed an error that was caused by compatiblity issues with other plugins that for some reason set the x and y values of Sprite_Actor intances to 0.
+ * v1.8 - Added offset parameters for actors and enemies.
+ * v1.84- All popups are forced into a separate layer above everything.
+ * v1.85- Debug version with console output.
  */
 //=============================================================================
 
@@ -431,6 +469,18 @@ LGP.Param.BDPfontFamily = LGP.Parameters['Font Family'];
 LGP.Param.BDPfontSize = Number(LGP.Parameters['Font Size']);
 LGP.Param.BDPtextShadow = eval(LGP.Parameters['Text Shadow']);
 LGP.Param.BDPfontSizeBuffer = Number(LGP.Parameters['Font Size Buffer']);
+
+// --- Offset settings ---
+LGP.Param.actorOffsetX = Number(LGP.Parameters['Actor Offset X'] || 0);
+LGP.Param.actorOffsetY = Number(LGP.Parameters['Actor Offset Y'] || 0);
+LGP.Param.enemyOffsetX = Number(LGP.Parameters['Enemy Offset X'] || 0);
+LGP.Param.enemyOffsetY = Number(LGP.Parameters['Enemy Offset Y'] || 0);
+
+console.log('LGP_BetterDamagePopup - Offset parameters:');
+console.log('  Actor Offset X:', LGP.Param.actorOffsetX);
+console.log('  Actor Offset Y:', LGP.Param.actorOffsetY);
+console.log('  Enemy Offset X:', LGP.Param.enemyOffsetX);
+console.log('  Enemy Offset Y:', LGP.Param.enemyOffsetY);
 
 LGP.Param.BDPpopDuration = Number(LGP.Parameters['Popup Duration']);
 LGP.Param.BDPpopNumberDuration = Number(LGP.Parameters['Popup Number Duration']);
@@ -489,14 +539,15 @@ LGP.Param.BDPbuffRemoveC = LGP.Parameters['Buff Remove Color'];
 LGP.Param.BDPbuffRemoveOC = LGP.Parameters['Buff Remove Outline Color'];
 
 //=============================================================================
-// Создание отдельного слоя для попапов поверх всего
+// Создание отдельного слоя для попапов прямо в сцене
 //=============================================================================
-var _Spriteset_Battle_createUpperLayer = Spriteset_Battle.prototype.createUpperLayer;
-Spriteset_Battle.prototype.createUpperLayer = function() {
-    _Spriteset_Battle_createUpperLayer.call(this);
+var _Scene_Battle_createDisplayObjects = Scene_Battle.prototype.createDisplayObjects;
+Scene_Battle.prototype.createDisplayObjects = function() {
+    _Scene_Battle_createDisplayObjects.call(this);
     this._damagePopupLayer = new Sprite();
-    this._damagePopupLayer.z = 1000; // выше всех стандартных слоёв
+    this._damagePopupLayer.z = 10000; // выше всего
     this.addChild(this._damagePopupLayer);
+    console.log('LGP_BetterDamagePopup: _damagePopupLayer created with z=10000.');
 };
 
 //=============================================================================
@@ -672,23 +723,19 @@ Sprite_Battler.prototype.setupDamagePopup = function() {
             sprite.setup(this._battler);
             this._damages.push(sprite);
 
+            console.log('LGP_BetterDamagePopup: setting up popup for', this._battler.name());
+
+            // Определяем позицию
             if (code !== "") {
-                // Пользовательский код – выполнить и добавить в слой попапов
+                console.log('  Using custom position code. Offsets will NOT be applied automatically.');
+                // Пользовательский код позиционирования
                 try {
                     eval(code);
                 } catch (e) {
                     LGP.Util.displayError(e, code, "CUSTOM POPUP POSITION ERROR");
                 }
-                // Добавляем в специальный слой для попапов
-                if (BattleManager._spriteset && BattleManager._spriteset._damagePopupLayer) {
-                    BattleManager._spriteset._damagePopupLayer.addChild(sprite);
-                } else if (BattleManager._spriteset && BattleManager._spriteset._windowLayer) {
-                    BattleManager._spriteset._windowLayer.addChild(sprite);
-                } else {
-                    BattleManager._spriteset._battleField.addChild(sprite);
-                }
             } else {
-                // Стандартное поведение: центрируем на спрайте баттлера
+                // Стандартное центрирование
                 var battlerSprite = this;
                 var center = getSpriteCenter(battlerSprite);
                 var bf = BattleManager._spriteset._battleField;
@@ -697,23 +744,47 @@ Sprite_Battler.prototype.setupDamagePopup = function() {
                     var scaleY = bf.scale.y;
                     var offsetX = bf.x;
                     var offsetY = bf.y;
-                    // Экранные координаты центра с учётом масштаба и смещения камеры
-                    sprite.x = center.x * scaleX + offsetX;
-                    sprite.y = center.y * scaleY + offsetY;
+                    var targetX = center.x * scaleX + offsetX;
+                    var targetY = center.y * scaleY + offsetY;
+
+                    if (this._battler && this._battler.isActor()) {
+                        console.log('  Actor, applying offsets: X=' + LGP.Param.actorOffsetX + ', Y=' + LGP.Param.actorOffsetY);
+                        targetX += LGP.Param.actorOffsetX;
+                        targetY += LGP.Param.actorOffsetY;
+                    } else if (this._battler && this._battler.isEnemy()) {
+                        console.log('  Enemy, applying offsets: X=' + LGP.Param.enemyOffsetX + ', Y=' + LGP.Param.enemyOffsetY);
+                        targetX += LGP.Param.enemyOffsetX;
+                        targetY += LGP.Param.enemyOffsetY;
+                    } else {
+                        console.log('  Unknown battler type, no offsets applied.');
+                    }
+
+                    sprite.x = targetX;
+                    sprite.y = targetY;
+                    console.log('  Final position: (' + sprite.x + ', ' + sprite.y + ')');
                 } else {
-                    // fallback – просто координаты спрайта
+                    console.log('  battlefield not found, using fallback position');
                     sprite.x = this.x;
                     sprite.y = this.y - this.height / 2;
                 }
+            }
 
-                // Добавляем в слой попапов
-                if (BattleManager._spriteset && BattleManager._spriteset._damagePopupLayer) {
-                    BattleManager._spriteset._damagePopupLayer.addChild(sprite);
-                } else if (BattleManager._spriteset && BattleManager._spriteset._windowLayer) {
-                    BattleManager._spriteset._windowLayer.addChild(sprite);
-                } else {
-                    BattleManager._spriteset._battleField.addChild(sprite);
-                }
+            // Удаляем спрайт из текущего родителя (если кастомный код уже добавил его куда-то)
+            if (sprite.parent) {
+                console.log('  Sprite already had parent:', sprite.parent);
+                sprite.parent.removeChild(sprite);
+            }
+
+            // Добавляем в наш специальный слой (всегда)
+            if (SceneManager._scene && SceneManager._scene._damagePopupLayer) {
+                SceneManager._scene._damagePopupLayer.addChild(sprite);
+                console.log('  Added to _damagePopupLayer');
+            } else if (BattleManager._spriteset && BattleManager._spriteset._windowLayer) {
+                BattleManager._spriteset._windowLayer.addChild(sprite);
+                console.log('  Added to _windowLayer');
+            } else {
+                BattleManager._spriteset._battleField.addChild(sprite);
+                console.log('  Added to _battleField (WARNING: may move with camera)');
             }
 
             this._battler.clearResult();
