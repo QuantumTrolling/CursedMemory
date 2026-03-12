@@ -1,50 +1,66 @@
 /*:
- * @plugindesc v1.4 Альтернативный метод – через z-индекс
+ * @plugindesc Patch for YED_SideviewBattler + YEP_X_AnimatedSVEnemies (v1.6)
+ * @author Community
+ * @help This plugin enables custom motions for enemies and ensures idle animation plays at battle start.
  */
+
 (function() {
-    var _BattleManager_startAction = BattleManager.startAction;
-    var _BattleManager_endAction = BattleManager.endAction;
-    var savedZ = {};
+    if (!Imported.YED_SideviewBattler || !Imported.YEP_X_AnimatedSVEnemies) return;
 
-    BattleManager.startAction = function() {
-        _BattleManager_startAction.call(this);
-        var subject = this._subject;
-        if (!subject) return;
-        var sprite = subject.battler();
-        if (!sprite) return;
-
-        // Сохраняем оригинальный z всех спрайтов
-        var spriteset = SceneManager._scene._spriteset;
-        var all = spriteset.battlerSprites();
-        all.forEach(function(s) {
-            var b = s._battler;
-            if (b && !savedZ[b._objectId]) savedZ[b._objectId] = s.z;
-        });
-
-        // Поднимаем субъект выше максимального z среди противоположной стороны
-        var oppositeSide = subject.isActor() ? 'enemy' : 'actor';
-        var maxOppositeZ = -Infinity;
-        all.forEach(function(s) {
-            var b = s._battler;
-            if (b && ((oppositeSide === 'enemy' && b.isEnemy()) || (oppositeSide === 'actor' && b.isActor()))) {
-                if (s.z > maxOppositeZ) maxOppositeZ = s.z;
-            }
-        });
-        if (maxOppositeZ > -Infinity) sprite.z = maxOppositeZ + 1;
+    // 1. Связываем forceSideviewMotion с requestMotion для YEP
+    var _forceSideviewMotion = Sprite_Enemy.prototype.forceSideviewMotion;
+    Sprite_Enemy.prototype.forceSideviewMotion = function(motionType) {
+        _forceSideviewMotion.call(this, motionType);
+        if (this._enemy) this._enemy.requestMotion(motionType);
     };
 
-    BattleManager.endAction = function() {
-        var spriteset = SceneManager._scene._spriteset;
-        if (spriteset) {
-            var all = spriteset.battlerSprites();
-            all.forEach(function(s) {
-                var b = s._battler;
-                if (b && savedZ[b._objectId] !== undefined) {
-                    s.z = savedZ[b._objectId];
-                }
-            });
+    var _startSideviewMotion = Sprite_Enemy.prototype.startSideviewMotion;
+    Sprite_Enemy.prototype.startSideviewMotion = function(motionType) {
+        _startSideviewMotion.call(this, motionType);
+        if (this._enemy) this._enemy.requestMotion(motionType);
+    };
+
+    // 2. Перехватываем startMotion для использования индексов из YED
+    var _Sprite_Enemy_startMotion = Sprite_Enemy.prototype.startMotion;
+    Sprite_Enemy.prototype.startMotion = function(motionType) {
+        if (this._enemy && typeof this._enemy.isSideviewBattler === 'function' && this._enemy.isSideviewBattler()) {
+            var motion = this._enemy.getSideviewMotion(motionType);
+            if (motion) {
+                // Создаём объект движения с необходимыми полями для YEP
+                this._motion = {
+                    index: motion.index,
+                    loop: motion.loop || false,
+                    frames: motion.frames || 4,
+                    speed: motion.speed || 10
+                };
+                this._motionCount = 0;
+                this._pattern = 0;
+                return;
+            }
         }
-        savedZ = {};
-        _BattleManager_endAction.call(this);
+        _Sprite_Enemy_startMotion.call(this, motionType);
+    };
+
+    // 3. Запускаем idle-анимацию после полной загрузки спрайта
+    var _Sprite_Enemy_updateBitmap = Sprite_Enemy.prototype.updateBitmap;
+    Sprite_Enemy.prototype.updateBitmap = function() {
+        _Sprite_Enemy_updateBitmap.call(this);
+        if (this._svBattlerEnabled && this._mainSprite && this._mainSprite.bitmap && this._mainSprite.bitmap.isReady()) {
+            if (!this._idleMotionInitialized) {
+                this._idleMotionInitialized = true;
+                // Запрашиваем idle-движение (walk)
+                if (this._enemy && typeof this._enemy.idleMotion === 'function') {
+                    this._enemy.requestMotion(this._enemy.idleMotion());
+                }
+            }
+        }
+    };
+
+    // 4. Сбрасываем флаг при смене цели
+    var _setSVBattler = Sprite_Enemy.prototype.setSVBattler;
+    Sprite_Enemy.prototype.setSVBattler = function(battler) {
+        _setSVBattler.call(this, battler);
+        this._idleMotionInitialized = false;
+        this._motion = null;
     };
 })();

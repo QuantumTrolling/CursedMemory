@@ -77,7 +77,8 @@ Sprite_Enemy.prototype.updateSVFrame = function() {
 
 	this._effectTarget = this._mainSprite;
 
-	var motionIndex = this._motion ? this._motion.index : 0;
+	var motion = this.getCurrentMotion();
+	var motionIndex = motion ? motion.index : 0;
 	var pattern = this._pattern;
 	var cw = frameSizes[0];
 	var ch = frameSizes[1];
