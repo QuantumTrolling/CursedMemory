@@ -34,6 +34,8 @@
 
 (function() {
 'use strict';
+var DEFAULT_CAMERA_SPEED = 0.15;
+var SLOW_CAMERA_SPEED   = 0.10;   // можно уменьшить до 0.02 или 0.01
 
 // -----------------------------------------------------------------------------
 // GLOBAL NO-BLUR FIX
@@ -102,64 +104,80 @@ var BattleCamera = {
     y: 0,
     scale: 1.0,
 
-    // Целевые координаты камеры (куда должна двигаться)
+    // Целевые координаты камеры
     tx: 0,
     ty: 0,
     tScale: 1.0,
 
-    followSprite: null,       // спрайт, за которым камера следует
-    focusedBattler: null,     // баттлер, на котором фокус
-    forcedCenter: false,      // если true, камера центрируется по центру экрана
+    followSprite: null,
+    focusedBattler: null,
+    lastBattler: null,         // <-- новое поле: запоминаем последнего battler'а (не сбрасывается)
+    forcedCenter: false,
 
-    speed: 0.15,              // скорость движения камеры (чем выше, тем быстрее)
+    speed: DEFAULT_CAMERA_SPEED,
 
     // Обновление позиции камеры
-	update: function() {
-		if (this.forcedCenter) {
-			this.tx = 0;
-			this.ty = 0;
-		} else if (this.followSprite) {
-			var center = getSpriteCenter(this.followSprite);
+    update: function() {
+        if (this.forcedCenter) {
+            this.tx = 0;
+            this.ty = 0;
+        } else if (this.followSprite) {
+            var center = getSpriteCenter(this.followSprite);
 
-			var jump = this.followSprite._jumpHeight || 0;
-			var moveX = this.followSprite._moveX || 0;   // ASP3
-			var moveY = this.followSprite._moveY || 0;   // ASP3
-			center.x += moveX;
-			center.y += moveY - jump;
+            var jump = this.followSprite._jumpHeight || 0;
+            var moveX = this.followSprite._moveX || 0;
+            var moveY = this.followSprite._moveY || 0;
+            center.x += moveX;
+            center.y += moveY - jump;
 
-			this.tx = Graphics.width / 2 - center.x;
-			this.ty = Graphics.height / 2 - center.y;
+            this.tx = Graphics.width / 2 - center.x;
+            this.ty = Graphics.height / 2 - center.y;
 
-			const MAX_OFFSET_X = 100; // макс смещение вправо/влево
-			const MAX_OFFSET_Y = 10; // макс смещение вниз
+            const MAX_OFFSET_X = 100;
+            const MAX_OFFSET_Y = 10;
 
-			// Ограничение по X
-			if (this.tx > MAX_OFFSET_X) this.tx = MAX_OFFSET_X;
-			if (this.tx < -MAX_OFFSET_X) this.tx = -MAX_OFFSET_X;
+            if (this.tx > MAX_OFFSET_X) this.tx = MAX_OFFSET_X;
+            if (this.tx < -MAX_OFFSET_X) this.tx = -MAX_OFFSET_X;
+            if (this.ty < -MAX_OFFSET_Y) this.ty = -MAX_OFFSET_Y;
+        }
 
-			// Ограничение только по нижней границе Y
-			if (this.ty < -MAX_OFFSET_Y) this.ty = -MAX_OFFSET_Y;
-			// Верхняя граница убрана → камера может уходить вверх на любое значение
-		}
+        // Плавное движение
+        this.x += (this.tx - this.x) * this.speed;
+        this.y += (this.ty - this.y) * this.speed;
+        this.scale += (this.tScale - this.scale) * this.speed;
 
-		// Плавное движение камеры к целевой позиции
-		this.x += (this.tx - this.x) * this.speed;
-		this.y += (this.ty - this.y) * this.speed;
-		this.scale += (this.tScale - this.scale) * this.speed;
+        // Возврат к обычной скорости после приближения (можно увеличить порог или убрать)
+        if (this.speed !== DEFAULT_CAMERA_SPEED &&
+            Math.abs(this.tx - this.x) < 30 &&    // было 5, теперь 30 для более долгого медленного движения
+            Math.abs(this.ty - this.y) < 30) {
+            this.speed = DEFAULT_CAMERA_SPEED;
+        }
 
-		// Привязка к пикселям для "pixel-perfect"
-		this.x = snap(this.x);
-		this.y = snap(this.y);
-		this.scale = snapScale(this.scale);
-	},
+        // Привязка к пикселям (можно закомментировать для большей плавности)
+        this.x = snap(this.x);
+        this.y = snap(this.y);
+        this.scale = snapScale(this.scale);
+    },
 
     // Фокус на конкретный спрайт/баттлер
     focus: function(sprite, battler, scale) {
         if (!sprite || this.focusedBattler === battler) return;
+
+        // Предыдущий battler: если focusedBattler есть — берём его, иначе используем lastBattler
+        var prev = this.focusedBattler || this.lastBattler;
+
+        // Определяем скорость: если типы разные (актёр↔враг) — медленно
+        if (prev && battler && prev.isEnemy() !== battler.isEnemy()) {
+            this.speed = SLOW_CAMERA_SPEED;   // например, 0.05
+        } else {
+            this.speed = DEFAULT_CAMERA_SPEED;
+        }
+
         this.focusedBattler = battler;
+        this.lastBattler = battler;           // запоминаем последнего
         this.followSprite = sprite;
         this.forcedCenter = false;
-        this.tScale = scale || 1.0625; // немного увеличиваем персонажа
+        this.tScale = scale || 1.0625;
     },
 
     // Центрирование камеры на экран
@@ -168,13 +186,17 @@ var BattleCamera = {
         this.focusedBattler = null;
         this.followSprite = null;
         this.tScale = 1.0;
+        this.speed = DEFAULT_CAMERA_SPEED;
+        // lastBattler не сбрасываем — он нам ещё пригодится
     },
 
-    // Плавное возвращение к стандартной позиции
+    // Плавное возвращение к стандартной позиции (после действия)
     soften: function() {
         this.forcedCenter = false;
         this.focusedBattler = null;
         this.tScale = 1.0;
+        this.speed = DEFAULT_CAMERA_SPEED;
+        // lastBattler остаётся
     }
 };
 
