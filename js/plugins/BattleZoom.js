@@ -407,6 +407,95 @@ Spriteset_Battle.prototype.update = function() {
 
 })();
 
+// -----------------------------------------------------------------------------
+// Принудительное обновление позиций попапов каждый кадр (следование за юнитами)
+// -----------------------------------------------------------------------------
+var _Scene_Battle_update_popups = Scene_Battle.prototype.update;
+Scene_Battle.prototype.update = function() {
+    _Scene_Battle_update_popups.call(this);
+    if (this._damagePopupLayer) {
+        var popups = this._damagePopupLayer.children;
+        for (var i = 0; i < popups.length; i++) {
+            var popup = popups[i];
+            if (popup instanceof Sprite_Damage && popup._target) {
+                var battlerSprite = findBattlerSprite(popup._target);
+                if (battlerSprite) {
+                    var center = getSpriteCenter(battlerSprite);
+                    var bf = BattleManager._spriteset._battleField;
+                    if (bf) {
+                        var scaleX = bf.scale.x;
+                        var scaleY = bf.scale.y;
+                        var offsetX = bf.x;
+                        var offsetY = bf.y;
+                        var targetX = center.x * scaleX + offsetX;
+                        var targetY = center.y * scaleY + offsetY;
 
+                        // Применяем смещения из параметров LGP_BetterDamagePopup, если они доступны
+                        if (typeof LGP !== 'undefined' && LGP.Param) {
+                            if (popup._target.isActor()) {
+                                targetX += LGP.Param.actorOffsetX;
+                                targetY += LGP.Param.actorOffsetY;
+                            } else if (popup._target.isEnemy()) {
+                                targetX += LGP.Param.enemyOffsetX;
+                                targetY += LGP.Param.enemyOffsetY;
+                            }
+                        }
+
+                        popup.x = targetX;
+                        popup.y = targetY;
+                    }
+                }
+            }
+        }
+    }
+};
+
+// -----------------------------------------------------------------------------
+// Фикс для MOG_HPGauge: полоски HP не двигаются с камерой
+// -----------------------------------------------------------------------------
+(function() {
+    // Если плагин MOG_HPGauge не загружен – ничего не делаем
+    if (typeof HPGaugeSprite === 'undefined') return;
+
+    // Сохраняем оригинальные методы расчёта позиции
+    var _posX = HPGaugeSprite.prototype.posX;
+    var _posY = HPGaugeSprite.prototype.posY;
+
+    // Переопределяем posX – преобразуем локальные координаты в экранные
+    HPGaugeSprite.prototype.posX = function() {
+        var localX = _posX.call(this);
+        var spriteset = BattleManager._spriteset;
+        if (spriteset && spriteset._battleField) {
+            var bf = spriteset._battleField;
+            // Учитываем масштаб и смещение поля боя
+            return localX * bf.scale.x + bf.x;
+        }
+        return localX;
+    };
+
+    // Аналогично для posY
+    HPGaugeSprite.prototype.posY = function() {
+        var localY = _posY.call(this);
+        var spriteset = BattleManager._spriteset;
+        if (spriteset && spriteset._battleField) {
+            var bf = spriteset._battleField;
+            return localY * bf.scale.y + bf.y;
+        }
+        return localY;
+    };
+
+    // Отключаем автоматическую синхронизацию контейнера _hpField с _battleField
+    var _updateHPField = Spriteset_Battle.prototype.updateHPField;
+    Spriteset_Battle.prototype.updateHPField = function() {
+        // Фиксируем _hpField в нулевых координатах и масштабе 1
+        if (this._hpField) {
+            this._hpField.x = 0;
+            this._hpField.y = 0;
+            this._hpField.scale.x = 1;
+            this._hpField.scale.y = 1;
+        }
+        // Оригинальный метод не вызываем, чтобы избежать сдвига
+    };
+})();
 
 })();

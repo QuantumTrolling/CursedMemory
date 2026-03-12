@@ -8,17 +8,17 @@ Imported.LGP_BetterDamagePopup = true;
 
 var LGP = LGP || {};
 LGP.BDP = LGP.BDP || {};
-LGP.BDP.version = 1.85; // отладочная версия
+LGP.BDP.version = 1.7;
 
 /*:
  * @title Better Damage Popup
- * @author Azel (modified by ChatGPT)
+ * @author Azel
  * @date 13.07.18
- * @version 1.85
+ * @version 1.7
  * @filename LGP_BetterDamagePopup.js
  *
- * @plugindesc v1.85 YEP_BattleEngineCore required! 
- * completly reworked the damage popup system. Now with fixed layer.
+ * @plugindesc v1.7 YEP_BattleEngineCore required! 
+ * completly reworked the damage popup system.
  *
  * @param ---Font Settings---
  * @default
@@ -46,33 +46,6 @@ LGP.BDP.version = 1.85; // отладочная версия
  * @desc Requires LGP_CustomWindowText. Drop a Shadow behind the Number
  * @type boolean
  * @default true
- *
- * @param ---Popup Offset Settings---
- * @default
- *
- * @param Actor Offset X
- * @parent ---Popup Offset Settings---
- * @desc Horizontal offset for popups on actors (in pixels). Positive = right.
- * @type number
- * @default 0
- *
- * @param Actor Offset Y
- * @parent ---Popup Offset Settings---
- * @desc Vertical offset for popups on actors (in pixels). Positive = down.
- * @type number
- * @default 0
- *
- * @param Enemy Offset X
- * @parent ---Popup Offset Settings---
- * @desc Horizontal offset for popups on enemies (in pixels). Positive = right.
- * @type number
- * @default 0
- *
- * @param Enemy Offset Y
- * @parent ---Popup Offset Settings---
- * @desc Vertical offset for popups on enemies (in pixels). Positive = down.
- * @type number
- * @default 0
  *
  * @param ---Popup Duration Settings---
  * @default
@@ -373,14 +346,6 @@ LGP.BDP.version = 1.85; // отладочная версия
  * manually instead.
  *
  * ============================================================================
- * Offset Settings
- * ============================================================================
- * You can fine‑tune the position of popups using the parameters:
- *   Actor Offset X / Y  – horizontal/vertical shift for actors.
- *   Enemy Offset X / Y  – horizontal/vertical shift for enemies.
- * Positive X moves the popup to the right, positive Y moves it down.
- *
- * ============================================================================
  * Lunatic Code - JavaScript Code for customisation
  * ============================================================================
  * 
@@ -451,9 +416,6 @@ LGP.BDP.version = 1.85; // отладочная версия
  * v1.5 - Fixed Debuff error.
  * v1.6 - Fixed an error that caused no damage to appear.
  * v1.7 - Fixed an error that was caused by compatiblity issues with other plugins that for some reason set the x and y values of Sprite_Actor intances to 0.
- * v1.8 - Added offset parameters for actors and enemies.
- * v1.84- All popups are forced into a separate layer above everything.
- * v1.85- Debug version with console output.
  */
 //=============================================================================
 
@@ -469,18 +431,6 @@ LGP.Param.BDPfontFamily = LGP.Parameters['Font Family'];
 LGP.Param.BDPfontSize = Number(LGP.Parameters['Font Size']);
 LGP.Param.BDPtextShadow = eval(LGP.Parameters['Text Shadow']);
 LGP.Param.BDPfontSizeBuffer = Number(LGP.Parameters['Font Size Buffer']);
-
-// --- Offset settings ---
-LGP.Param.actorOffsetX = Number(LGP.Parameters['Actor Offset X'] || 0);
-LGP.Param.actorOffsetY = Number(LGP.Parameters['Actor Offset Y'] || 0);
-LGP.Param.enemyOffsetX = Number(LGP.Parameters['Enemy Offset X'] || 0);
-LGP.Param.enemyOffsetY = Number(LGP.Parameters['Enemy Offset Y'] || 0);
-
-console.log('LGP_BetterDamagePopup - Offset parameters:');
-console.log('  Actor Offset X:', LGP.Param.actorOffsetX);
-console.log('  Actor Offset Y:', LGP.Param.actorOffsetY);
-console.log('  Enemy Offset X:', LGP.Param.enemyOffsetX);
-console.log('  Enemy Offset Y:', LGP.Param.enemyOffsetY);
 
 LGP.Param.BDPpopDuration = Number(LGP.Parameters['Popup Duration']);
 LGP.Param.BDPpopNumberDuration = Number(LGP.Parameters['Popup Number Duration']);
@@ -539,35 +489,6 @@ LGP.Param.BDPbuffRemoveC = LGP.Parameters['Buff Remove Color'];
 LGP.Param.BDPbuffRemoveOC = LGP.Parameters['Buff Remove Outline Color'];
 
 //=============================================================================
-// Создание отдельного слоя для попапов прямо в сцене
-//=============================================================================
-var _Scene_Battle_createDisplayObjects = Scene_Battle.prototype.createDisplayObjects;
-Scene_Battle.prototype.createDisplayObjects = function() {
-    _Scene_Battle_createDisplayObjects.call(this);
-    this._damagePopupLayer = new Sprite();
-    this._damagePopupLayer.z = 10000; // выше всего
-    this.addChild(this._damagePopupLayer);
-    console.log('LGP_BetterDamagePopup: _damagePopupLayer created with z=10000.');
-};
-
-//=============================================================================
-// Вспомогательная функция для получения центра спрайта (из BattleZoom.js)
-//=============================================================================
-function getSpriteCenter(sprite) {
-    if (!sprite) return { x: 0, y: 0 };
-    var screenX = sprite.x;
-    var screenY = sprite.y;
-    var floatOffset = sprite._float || 0;
-    var jumpOffset = sprite._jumpHeight || 0;
-    var moveX = sprite._moveX || 0;
-    var moveY = sprite._moveY || 0;
-    var anchorY = sprite.anchor ? sprite.anchor.y : 1;
-    var bitmapHeight = sprite.bitmap && sprite.bitmap.isReady() ? sprite.bitmap.height : 0;
-    var centerY = screenY - bitmapHeight * anchorY / 2 + floatOffset + jumpOffset + moveY;
-    return { x: screenX + moveX, y: centerY };
-}
-
-//=============================================================================
 // Game_Action
 //=============================================================================
 LGP.BDP.Game_Action_clear = Game_Action.prototype.clear;
@@ -593,6 +514,7 @@ Game_Action.prototype.calcElementRate = function(target) {
     return result;
 };
 
+
 LGP.BDP.Game_Action_executeDamage = Game_Action.prototype.executeDamage;
 Game_Action.prototype.executeDamage = function(target, value) {
     LGP.BDP.Game_Action_executeDamage.call(this, target, value);
@@ -602,8 +524,6 @@ Game_Action.prototype.executeDamage = function(target, value) {
         result.resist = this._resist;
     } else if (this._resist === 'absorb' && value < 0) {
         result.resist = 'absorb';
-    } else if (this._resist === 'immune' && value === 0) {
-        result.resist = 'immune';
     }
 };
 
@@ -650,170 +570,118 @@ Game_Battler.prototype.customPopup = function(value, format) {
 Game_Battler.prototype.startDamagePopup = function() {
     var result = this.result();
     if (result.missed || result.evaded) {
-        var copyResult = JsonEx.makeDeepCopy(result);
-        copyResult.hpAffected = false;
-        copyResult.mpDamage = 0;
-        copyResult.tpDamage = 0;
-        copyResult.addedStates = [];
-        copyResult.removedStates = [];
-        copyResult.addedBuffs = [];
-        copyResult.addedDebuffs = [];
-        copyResult.removedBuffs = [];
-        this._damagePopup.push(copyResult);
+		var copyResult = JsonEx.makeDeepCopy(result);
+		copyResult.hpAffected = false;
+		copyResult.mpDamage = 0;
+		copyResult.tpDamage = 0;
+		copyResult.addedStates = [];
+		copyResult.removedStates = [];
+		copyResult.addedBuffs = [];
+		copyResult.addedDebuffs = [];
+		copyResult.removedBuffs = [];
+		this._damagePopup.push(copyResult);
     }
     if (result.hpAffected) {
-        var copyResult = JsonEx.makeDeepCopy(result);
-        copyResult.mpDamage = 0;
-        copyResult.tpDamage = 0;
-        copyResult.missed = false;
-        copyResult.evaded = false;
-        copyResult.addedStates = [];
-        copyResult.removedStates = [];
-        copyResult.addedBuffs = [];
-        copyResult.addedDebuffs = [];
-        copyResult.removedBuffs = [];
-        this._damagePopup.push(copyResult);
+		var copyResult = JsonEx.makeDeepCopy(result);
+		copyResult.mpDamage = 0;
+		copyResult.tpDamage = 0;
+		copyResult.missed = false;
+    	copyResult.evaded = false;
+		copyResult.addedStates = [];
+		copyResult.removedStates = [];
+		copyResult.addedBuffs = [];
+		copyResult.addedDebuffs = [];
+		copyResult.removedBuffs = [];
+		this._damagePopup.push(copyResult);
     }
     if (result.mpDamage !== 0) {
-        var copyResult = JsonEx.makeDeepCopy(result);
-        copyResult.hpAffected = false;
-        copyResult.tpDamage = 0;
-        copyResult.missed = false;
-        copyResult.evaded = false;
-        copyResult.addedStates = [];
-        copyResult.removedStates = [];
-        copyResult.addedBuffs = [];
-        copyResult.addedDebuffs = [];
-        copyResult.removedBuffs = [];
-        this._damagePopup.push(copyResult);
+		var copyResult = JsonEx.makeDeepCopy(result);
+		copyResult.hpAffected = false;
+		copyResult.tpDamage = 0;
+		copyResult.missed = false;
+    	copyResult.evaded = false;
+		copyResult.addedStates = [];
+		copyResult.removedStates = [];
+		copyResult.addedBuffs = [];
+		copyResult.addedDebuffs = [];
+		copyResult.removedBuffs = [];
+		this._damagePopup.push(copyResult);
     }
     if (result.tpDamage !== 0) {
-        var copyResult = JsonEx.makeDeepCopy(result);
-        copyResult.hpAffected = false;
-        copyResult.mpDamage = 0;
-        copyResult.missed = false;
-        copyResult.evaded = false;
-        copyResult.addedStates = [];
-        copyResult.removedStates = [];
-        copyResult.addedBuffs = [];
-        copyResult.addedDebuffs = [];
-        copyResult.removedBuffs = [];
-        this._damagePopup.push(copyResult);
+		var copyResult = JsonEx.makeDeepCopy(result);
+		copyResult.hpAffected = false;
+		copyResult.mpDamage = 0;
+		copyResult.missed = false;
+    	copyResult.evaded = false;
+		copyResult.addedStates = [];
+		copyResult.removedStates = [];
+		copyResult.addedBuffs = [];
+		copyResult.addedDebuffs = [];
+		copyResult.removedBuffs = [];
+		this._damagePopup.push(copyResult);
     }
     if (result.isStatusAffected()) {
-        var copyResult = JsonEx.makeDeepCopy(result);
-        copyResult.clear();
-        copyResult.addedStates = result.addedStates;
-        copyResult.removedStates = result.removedStates;
-        copyResult.addedBuffs = result.addedBuffs;
-        copyResult.addedDebuffs = result.addedDebuffs;
-        copyResult.removedBuffs = result.removedBuffs;
-        this._damagePopup.push(copyResult);
+    	var copyResult = JsonEx.makeDeepCopy(result);
+    	copyResult.clear();
+    	copyResult.addedStates = result.addedStates;
+    	copyResult.removedStates = result.removedStates;
+    	copyResult.addedBuffs = result.addedBuffs;
+    	copyResult.addedDebuffs = result.addedDebuffs;
+    	copyResult.removedBuffs = result.removedBuffs;
+		this._damagePopup.push(copyResult);
     }
 };
+
 
 //=============================================================================
 // Sprite_Battler
 //=============================================================================
 Sprite_Battler.prototype.setupDamagePopup = function() {
     if (this._battler.isDamagePopupRequested()) {
-        if (this._battler.isSpriteVisible()) {
-            var sprite = new Sprite_Damage();
-            var code = LGP.Param.BDPpopPosCode;
-            sprite.setup(this._battler);
-            this._damages.push(sprite);
+		if (this._battler.isSpriteVisible()) {
+			var sprite = new Sprite_Damage();
+			var code = LGP.Param.BDPpopPosCode;
+			sprite.setup(this._battler);
+			this._damages.push(sprite);
+			if (code === "") {
+			    sprite.x = this._battler.spritePosX() + this.damageOffsetX();
+			    sprite.y = this._battler.spritePosY() + this.damageOffsetY();        
+				this.pushDamageSprite(sprite);
+			} else {
+			    try {
+			        eval(code);    
+			    } catch (e) {
+			        LGP.Util.displayError(e, code, "CUSTOM POPUP POSITION ERROR")
+			    }
+			}
 
-            console.log('LGP_BetterDamagePopup: setting up popup for', this._battler.name());
-
-            // Определяем позицию
-            if (code !== "") {
-                console.log('  Using custom position code. Offsets will NOT be applied automatically.');
-                // Пользовательский код позиционирования
-                try {
-                    eval(code);
-                } catch (e) {
-                    LGP.Util.displayError(e, code, "CUSTOM POPUP POSITION ERROR");
-                }
-            } else {
-                // Стандартное центрирование
-                var battlerSprite = this;
-                var center = getSpriteCenter(battlerSprite);
-                var bf = BattleManager._spriteset._battleField;
-                if (bf) {
-                    var scaleX = bf.scale.x;
-                    var scaleY = bf.scale.y;
-                    var offsetX = bf.x;
-                    var offsetY = bf.y;
-                    var targetX = center.x * scaleX + offsetX;
-                    var targetY = center.y * scaleY + offsetY;
-
-                    if (this._battler && this._battler.isActor()) {
-                        console.log('  Actor, applying offsets: X=' + LGP.Param.actorOffsetX + ', Y=' + LGP.Param.actorOffsetY);
-                        targetX += LGP.Param.actorOffsetX;
-                        targetY += LGP.Param.actorOffsetY;
-                    } else if (this._battler && this._battler.isEnemy()) {
-                        console.log('  Enemy, applying offsets: X=' + LGP.Param.enemyOffsetX + ', Y=' + LGP.Param.enemyOffsetY);
-                        targetX += LGP.Param.enemyOffsetX;
-                        targetY += LGP.Param.enemyOffsetY;
-                    } else {
-                        console.log('  Unknown battler type, no offsets applied.');
-                    }
-
-                    sprite.x = targetX;
-                    sprite.y = targetY;
-                    console.log('  Final position: (' + sprite.x + ', ' + sprite.y + ')');
-                } else {
-                    console.log('  battlefield not found, using fallback position');
-                    sprite.x = this.x;
-                    sprite.y = this.y - this.height / 2;
-                }
-            }
-
-            // Удаляем спрайт из текущего родителя (если кастомный код уже добавил его куда-то)
-            if (sprite.parent) {
-                console.log('  Sprite already had parent:', sprite.parent);
-                sprite.parent.removeChild(sprite);
-            }
-
-            // Добавляем в наш специальный слой (всегда)
-            if (SceneManager._scene && SceneManager._scene._damagePopupLayer) {
-                SceneManager._scene._damagePopupLayer.addChild(sprite);
-                console.log('  Added to _damagePopupLayer');
-            } else if (BattleManager._spriteset && BattleManager._spriteset._windowLayer) {
-                BattleManager._spriteset._windowLayer.addChild(sprite);
-                console.log('  Added to _windowLayer');
-            } else {
-                BattleManager._spriteset._battleField.addChild(sprite);
-                console.log('  Added to _battleField (WARNING: may move with camera)');
-            }
-
-            this._battler.clearResult();
-        }
+			BattleManager._spriteset.addChild(sprite);
+			this._battler.clearResult();
+		}
     } else {
         this._battler.clearDamagePopup();
     }
 };
 
-// -----------------------------------------------------------------------------
-// Вспомогательный метод для совместимости (не используется, но оставлен)
-// -----------------------------------------------------------------------------
+
 Sprite_Battler.prototype.pushDamageSprite = function(sprite) {
-    var heightBuffer = Yanfly.Param.BECPopupOverlap;
-    if (Yanfly.Param.BECNewPopBottom) {
-        this._damages.forEach(function(spr) {
-            for (var i = 0; i < spr.children.length; i++) {
-                childSprite = spr.children[i];
-                childSprite.anchor.y += heightBuffer;
-            }
-        }, this);
-    } else {
-        heightBuffer *= this._damages.length
-        for (var i = 0; i < sprite.children.length; i++) {
-            childSprite = sprite.children[i];
-            childSprite.anchor.y += heightBuffer;
-        }
-    }
+	var heightBuffer = Yanfly.Param.BECPopupOverlap;
+	if (Yanfly.Param.BECNewPopBottom) {
+		this._damages.forEach(function(spr) {
+			for (var i = 0; i < spr.children.length; i++) {
+				childSprite = spr.children[i];
+				childSprite.anchor.y += heightBuffer;
+			}
+		}, this);
+	} else {
+		heightBuffer *= this._damages.length
+		for (var i = 0; i < sprite.children.length; i++) {
+			childSprite = sprite.children[i];
+			childSprite.anchor.y += heightBuffer;
+		}
+	}
 };
+
 
 //=============================================================================
 // Sprite_Damage
@@ -992,63 +860,80 @@ Sprite_Damage.prototype.drawCustomText = function() {
 Sprite_Damage.prototype.defaultMovementCode = function() {
     var result = this._result;
 
-    if ((result.hpDamage > 0 || (result.hpDamage === 0 && result.resist == "immune") || result.mpDamage > 0 || result.tpDamage > 0) && (Imported.YEP_AbsorptionBarrier || !result._barrierAffected)) {
-        var sprite = this.getChild("number");
-        var d = this._duration;    
-        sprite.scale.x = Math.min(1, sprite.scale.x + 0.05);
-        sprite.scale.y = Math.min(1, sprite.scale.y + 0.05);       
-        if (this._target.isEnemy()) {
-            sprite.x -= 0.5;
-            sprite.y = (0.1 * Math.pow(sprite.x, 2) + (5 * sprite.x));
-        } else if (this._target.isActor()) {
-            sprite.x += 0.5;
-            sprite.y = -(-0.1 * Math.pow(sprite.x, 2) + (5 * sprite.x));
-        }
+    // Since we dont know which child is used for, we use this.getCild(...)to get the correct
+    // sprite of the current effect.
+
+    // Damage Numbers expect blocked damage
+    if ((result.hpDamage > 0 || result.mpDamage > 0 || result.tpDamage > 0) && (Imported.YEP_AbsorptionBarrier || !result._barrierAffected)) {
+    	var sprite = this.getChild("number");
+    	var d = this._duration;	
+
+    	sprite.scale.x = Math.min(1, sprite.scale.x + 0.05);
+    	sprite.scale.y = Math.min(1, sprite.scale.y + 0.05);    	
+
+    	if (this._target.isEnemy()) {
+			sprite.x -= 0.5;
+			sprite.y = (0.1 * Math.pow(sprite.x, 2) + (5 * sprite.x));
+    	} else if (this._target.isActor()) {
+			sprite.x += 0.5;
+			sprite.y = -(-0.1 * Math.pow(sprite.x, 2) + (5 * sprite.x));
+    	}
     }
 
+
+    // Critical Effect on numbers
     if (result.critical) {
         var sprite = this.getChild("number");
         var d = this._critDuration;
         sprite.scale.x = Math.min(2, Math.max(1, (this.getFullCritDuration() / 100 * d)));
         sprite.scale.y = sprite.scale.x;   
     }
+
     
+    // Healing Numbers
     if ((result.hpDamage < 0 || result.mpDamage < 0 || result.tpDamage < 0) || (Imported.YEP_AbsorptionBarrier && result._barrierAffected)) {
         if (!this._critDuration > 0){
             var sprite = this.getChild("number");
+
             sprite.scale.x = 1;
             sprite.scale.y = 1;
+
             var d = this._duration;
             sprite.y -= 0.4;
-            if (d < 10) sprite.opacity = 255 * d / 10;
+	        if (d < 10) sprite.opacity = 255 * d / 10
         }
     }
 
+    // Missing animation
     if (result.missed || result.evaded) {
         var sprite = this.getChild("miss");
-        if (this._target.isEnemy()) {
-            sprite.x -= 0.5;
-            sprite.y = (0.1 * Math.pow(sprite.x, 2) + (5 * sprite.x));
-        } else if (this._target.isActor()) {
-            sprite.x += 0.5;
-            sprite.y = -(-0.1 * Math.pow(sprite.x, 2) + (5 * sprite.x));
-        }
+     	if (this._target.isEnemy()) {
+			sprite.x -= 0.5;
+			sprite.y = (0.1 * Math.pow(sprite.x, 2) + (5 * sprite.x));
+    	} else if (this._target.isActor()) {
+			sprite.x += 0.5;
+			sprite.y = -(-0.1 * Math.pow(sprite.x, 2) + (5 * sprite.x));
+    	}
     }
 
+    // State effect
     if (result.addedStates.length > 0 || result.removedStates.length > 0) {
         var sprite = this.getChild("state");
-        sprite.y -= 0.5;
+       	sprite.y -= 0.5;
     }
 
+    // Buff effect
     if (result.addedBuffs.length > 0 || result.removedBuffs.length > 0) {
         var sprite = this.getChild("buff");
-        sprite.y -= 0.5;
+       	sprite.y -= 0.5;
     }
 
+    // Global Opacity
     if (this._duration < 10) {
-        this.opacity = 255 * this._duration / 10;
+    	this.opacity = 255 * this._duration / 10;
     }
 };
+
 
 Sprite_Damage.prototype.getChild = function(index) {
     return this.children[this._spriteIds[index]];
@@ -1065,10 +950,10 @@ Sprite_Damage.prototype.drawDefaultNumber = function() {
     sprite.anchor.y = 1;
 
     var heals = this._target.battler()._damages.filter(function(dmg) {
-        var result = dmg._result;
-        if ((result.hpDamage < 0 || result.mpDamage < 0 || result.tpDamage < 0)) {
-            return dmg;
-        }
+    	var result = dmg._result;
+    	if ((result.hpDamage < 0 || result.mpDamage < 0 || result.tpDamage < 0)) {
+	    	return dmg;
+    	}
     });
     sprite.anchor.y += heals.length - 1;
 
@@ -1107,9 +992,6 @@ Sprite_Damage.prototype.drawDefaultNumber = function() {
                     bitmap.outlineColor = LGP.Param.BDPhpDmgOC;        
                 }
             }
-        } else if(value === 0){
-            bitmap.textColor = LGP.Param.BDPhpDmgC
-            bitmap.outlineColor = LGP.Param.BDPhpDmgOC
         } else {
             bitmap.textColor = LGP.Param.BDPhpRecC;   
             bitmap.outlineColor = LGP.Param.BDPhpRecOC;    
@@ -1118,11 +1000,11 @@ Sprite_Damage.prototype.drawDefaultNumber = function() {
         if (value > 0) {
             bitmap.textColor = LGP.Param.BDPmpDmgC;
             bitmap.outlineColor = LGP.Param.BDPmpDmgOC
-        } else {
+            } else {
             bitmap.textColor = LGP.Param.BDPmpRecC;
             bitmap.outlineColor = LGP.Param.BDPmpRecOC;
         } 
-    } else if (result.tpDamage !== 0) {
+    } else if (result.tpDamage !== 0)
         if (value > 0) {
             bitmap.textColor = LGP.Param.BDPtpDmgC
             bitmap.outlineColor = LGP.Param.BDPtpDmgOC;
@@ -1130,32 +1012,29 @@ Sprite_Damage.prototype.drawDefaultNumber = function() {
             bitmap.textColor = LGP.Param.BDPtpRecC
             bitmap.outlineColor = LGP.Param.BDPtpRecOC;
         }
-    }
     
     if (result.resist !== '') {
-        var resSprite = new Sprite();
-        sprite.addChild(resSprite);
-        resSprite.anchor.x = 0.5;
-        resSprite.anchor.y = 1;
-        var resistText = '';
-        if (result.resist === 'weak') {
-            resistText = this._customTextValues[2];
-        } else if (result.resist === 'resist') {
-            resistText = this._customTextValues[3];
-        } else if (result.resist === 'absorbed') {
-            resistText = this._customTextValues[4];
-        } else if (result.resist === 'immune') {
-            resistText = this._customTextValues[7];
-        }
-        var rw = this.getTextWidth(resistText) + LGP.Param.BDPfontSizeBuffer;
-        var rh = this._fontSize;
-        resSprite.bitmap = new Bitmap(rw, rh);
+    	var resSprite = new Sprite();
+    	sprite.addChild(resSprite);
+    	resSprite.anchor.x = 0.5;
+    	resSprite.anchor.y = 1;
+    	var resistText = '';
+    	if (result.resist === 'weak') {
+    		resistText = this._customTextValues[2];
+    	} else if (result.resist === 'resist') {
+    		resistText = this._customTextValues[3];
+    	} else if (result.Resist === 'absorbed') {
+    		resistText = this._customTextValues[4];
+    	}
+    	var rw = this.getTextWidth(resistText) + LGP.Param.BDPfontSizeBuffer;
+    	var rh = this._fontSize;
+    	resSprite.bitmap = new Bitmap(rw, rh);
         resSprite.bitmap.textColor = LGP.Param.BDPmissC;        
-        resSprite.bitmap.outlineColor = LGP.Param.BDPmissOC;           
+        resSprite.bitmap.outlineColor = LGP.Param.BDPmissOC;   		
         if (Imported.LGP_CustomWindowText) resSprite.bitmap.textShadow = LGP.Param.BDPtextShadow;
-        resSprite.bitmap.drawText(resistText, 0, 0, rw, h);
-        resSprite.scale.x = 0.8;
-        resSprite.scale.y = 0.8;
+    	resSprite.bitmap.drawText(resistText, 0, 0, rw, h);
+    	resSprite.scale.x = 0.8;
+    	resSprite.scale.y = 0.8;
     }
     bitmap.drawText(number, 0, 0, w, h);
 };
@@ -1164,20 +1043,20 @@ Sprite_Damage.prototype.drawDefaultMiss = function() {
     var sprite = new Sprite();
     this.addChild(sprite);
 
-    sprite.anchor.x = 0.5;
-    sprite.anchor.y = 0.5;
+	sprite.anchor.x = 0.5;
+	sprite.anchor.y = 0.5;
 
     var string = LGP.Param.BDPmissText;
 
     var w = this.getTextWidth(string) + LGP.Param.BDPfontSizeBuffer;
     var h = this._fontSize;
 
-    sprite.bitmap = new Bitmap(w, h);
-    sprite.bitmap.fontFace = this._fontFace;
-    sprite.bitmap.fontSize = this._fontSize;
-    if (Imported.LGP_CustomWindowText) sprite.bitmap.textShadow = LGP.Param.BDPtextShadow;
-    sprite.bitmap.textColor = LGP.Param.BDPmissC;
-    sprite.bitmap.outlineColor = LGP.Param.BDPmissOC;        
+	sprite.bitmap = new Bitmap(w, h);
+	sprite.bitmap.fontFace = this._fontFace;
+	sprite.bitmap.fontSize = this._fontSize;
+	if (Imported.LGP_CustomWindowText) sprite.bitmap.textShadow = LGP.Param.BDPtextShadow;
+	sprite.bitmap.textColor = LGP.Param.BDPmissC;
+	sprite.bitmap.outlineColor = LGP.Param.BDPmissOC;        
  
     var bitmap = sprite.bitmap;  
     bitmap.drawText(string, 0, 0, w, h);    
@@ -1189,12 +1068,12 @@ Sprite_Damage.prototype.drawDefaultBuff = function() {
     var addedDebuffs = result.addedDebuffs;
     var removedBuffs = result.removedBuffs;
 
-    var sprite = new Sprite();
+ 	var sprite = new Sprite();
     sprite.anchor.x = 0.5;
     sprite.anchor.y = 0.5;
     this.addChild(sprite);
 
-    for (var i = 0; i < addedBuffs.length; i++ ) {
+	for (var i = 0; i < addedBuffs.length; i++ ) {
         var buffSprite = new Sprite();
         sprite.addChild(buffSprite);
  
@@ -1221,7 +1100,7 @@ Sprite_Damage.prototype.drawDefaultBuff = function() {
         buffSprite.anchor.x = 0.5;
         buffSprite.anchor.y = 0.5 + addedBuffs.length + i; 
         
-        var paramName = $dataSystem.terms.params[addedDebuffs[i]];
+ 		var paramName = $dataSystem.terms.params[addedDebuffs[i]];
         
         var w = Window_Base._iconWidth + 5 + this.getTextWidth(paramName) + LGP.Param.BDPfontSizeBuffer;
         var h = Window_Base._iconHeight;
@@ -1238,12 +1117,12 @@ Sprite_Damage.prototype.drawDefaultBuff = function() {
         var buffSprite = new Sprite();
         sprite.addChild(buffSprite);
 
-        var sign = this._customTextValues[1];
+ 		var sign = this._customTextValues[1];
 
         buffSprite.anchor.x = 0.5;
         buffSprite.anchor.y = 0.5 + addedBuffs.length + addedDebuffs.length + i; 
         
-        var paramName = $dataSystem.terms.params[removedBuffs[i]];
+ 		var paramName = $dataSystem.terms.params[removedBuffs[i]];
         
         var w = this.getTextWidth(sign) + this.getTextWidth(paramName) + Window_Base._iconWidth + 5 + LGP.Param.BDPfontSizeBuffer;
         var h = Window_Base._iconHeight;
@@ -1351,10 +1230,10 @@ Sprite_Damage.prototype.drawPopupIcon = function(bitmap, iconIndex, x, y) {
 };
 
 Sprite_Damage.prototype.getTextWidth = function(text, fontSize) {
-    var bitmap = new Bitmap();
-    var fs = fontSize || this._fontSize;
-    bitmap._fontSize = fs;
-    return bitmap.measureTextWidth(text);
+	var bitmap = new Bitmap();
+	var fs = fontSize ||this._fontSize;
+	bitmap._fontSize = fs;
+	return bitmap.measureTextWidth(text);
 };
 
 //=============================================================================
@@ -1364,6 +1243,8 @@ Sprite_Damage.prototype.getTextWidth = function(text, fontSize) {
 LGP.Util = LGP.Util || {};
 
 LGP.Util.displayError = function(e, code, message) {
+    console.log(message);
+    console.log(code || 'NON-EXISTENT');
     console.error(e);
     if (Utils.isNwjs() && Utils.isOptionValid('test')) {
         require('nw.gui').Window.get().showDevTools();
