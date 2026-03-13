@@ -20,7 +20,7 @@
  *                             (если 0 – кнопка работает как открытие глоссария)
  *   Count As Turn           – считать ли нажатие за ход (true/false)
  *
- * Версия: 1.2.1 – удалено затемнение экрана.
+ * Версия: 1.3 – добавлено сохранение Break Shields (Olivia_OctoBattle).
  */
 
 var Imported = Imported || {};
@@ -48,7 +48,7 @@ if (!BattleManager.restartTurn) {
 }
 
 //=============================================================================
-// [SAVE/RESTORE] Снимок состояния боя
+// [SAVE/RESTORE] Снимок состояния боя (с поддержкой Break Shields)
 //=============================================================================
 BattleManager._exBtnBattleSnapshot = null;
 BattleManager._exBtnEventRunning = false;
@@ -66,7 +66,9 @@ BattleManager.exBtnMakeBattlerSnapshot = function(b) {
         stateTurns: b._stateTurns ? JSON.parse(JSON.stringify(b._stateTurns)) : {},
         buffs: b._buffs ? b._buffs.slice() : [],
         buffTurns: b._buffTurns ? b._buffTurns.slice() : [],
-        result: b._result ? JsonEx.makeDeepCopy(b._result) : null
+        result: b._result ? JsonEx.makeDeepCopy(b._result) : null,
+        // Добавлено для совместимости с Olivia_OctoBattle (Break Shields)
+        breakShield: b._currentBreakShield
     };
 };
 
@@ -80,6 +82,8 @@ BattleManager.exBtnApplyBattlerSnapshot = function(b, snap) {
     b._buffs = snap.buffs ? snap.buffs.slice() : [];
     b._buffTurns = snap.buffTurns ? snap.buffTurns.slice() : [];
     if (snap.result) b._result = JsonEx.makeDeepCopy(snap.result);
+    // Восстанавливаем Break Shields, если они были сохранены
+    if (snap.breakShield !== undefined) b._currentBreakShield = snap.breakShield;
     b.refresh();
 };
 

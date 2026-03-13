@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v1.8 CTB Vertical Turn Order (With Ally/Enemy Side Color Bar)
+ * @plugindesc v1.9 CTB Vertical Turn Order (With Future Position Preview while selecting skill)
  * @author You
  *
  * @param HorizontalAlign
@@ -63,6 +63,32 @@ const VISIBLE_COUNT = 6;
 const ICON_GAP    = 6;
 const ACTIVE_GAP  = 10;
 const ACTIVE_LIFT = 10;
+
+// ==================================================
+// РАСЧЁТ БУДУЩИХ ТИКОВ (теперь с параметром item)
+// ==================================================
+if (!Game_Battler.prototype.calcFutureTicksToReady) {
+    Game_Battler.prototype.calcFutureTicksToReady = function(item) {
+        // Если передан item, используем его; иначе берём текущее действие
+        var testItem = item || (this.currentAction() ? this.currentAction().item() : null);
+        if (!testItem) return this.ctbTicksToReady();
+
+        var futureSpeed = 0;
+        if (testItem) {
+            if (testItem.afterCTBFlat !== undefined) {
+                futureSpeed = testItem.afterCTBFlat;
+            } else if (testItem.afterCTBRate !== undefined) {
+                futureSpeed = testItem.afterCTBRate * BattleManager.ctbTarget();
+            } else if (testItem.speed > 0) {
+                futureSpeed = testItem.speed;
+            }
+        }
+        futureSpeed += BattleManager.ctbTarget() * this.ctbTurnRate() + this.ctbTurnFlat();
+        var goal = BattleManager.ctbTarget();
+        if (futureSpeed >= goal) return 0;
+        return (goal - futureSpeed) / this.ctbSpeedTick();
+    };
+}
 
 // ==================================================
 // РАМКА + ЦВЕТНАЯ ПОЛОСА
@@ -244,8 +270,80 @@ Window_CTBIcon.prototype.updateCTBHighlight = function() {
 };
 
 // ==================================================
+// ПРЕДСКАЗАНИЕ БУДУЩЕЙ ПОЗИЦИИ (с учётом выбранного навыка)
+// ==================================================
+
+Window_CTBIcon.prototype.calcFutureIndex = function(testItem) {
+    if (!this._battler) return -1;
+    if (!testItem) return -1;
+
+    var futureTicks = this._battler.calcFutureTicksToReady(testItem);
+    var members = $gameParty.aliveMembers().concat($gameTroop.aliveMembers());
+    var futureTicksArray = members.map(function(battler) {
+        if (battler === this._battler) {
+            return futureTicks;
+        } else {
+            return battler.ctbTicksToReady();
+        }
+    }, this);
+
+    var sorted = futureTicksArray.slice().sort(function(a, b) { return a - b; });
+    var index = sorted.indexOf(futureTicks);
+    return index;
+};
+
+Window_CTBIcon.prototype.updateFutureIndex = function() {
+    if (!this._futureIndexSprite) return;
+
+    // Показываем только для текущего субъекта, живого, в состоянии inputting или waiting
+    if (BattleManager._subject === this._battler && this._battler.isAlive() &&
+        (this._battler._actionState === 'inputting' || this._battler._actionState === 'waiting')) {
+
+        var scene = SceneManager._scene;
+        var testItem = null;
+
+        // Если окно навыков активно, используем выбранный в нём навык
+        if (scene && scene._skillWindow && scene._skillWindow.active) {
+            testItem = scene._skillWindow.item();
+        }
+        // Иначе, если есть текущее действие, используем его
+        else if (this._battler.currentAction()) {
+            testItem = this._battler.currentAction().item();
+        }
+
+        if (testItem) {
+            var futureIndex = this.calcFutureIndex(testItem);
+            if (futureIndex >= 0) {
+                this._futureIndexSprite.visible = true;
+                this._futureIndexSprite.bitmap.clear();
+                this._futureIndexSprite.bitmap.fontSize = 14;
+                this._futureIndexSprite.bitmap.drawText((futureIndex+1).toString(), 0, 0, 20, 20, 'right');
+            } else {
+                this._futureIndexSprite.visible = false;
+            }
+        } else {
+            this._futureIndexSprite.visible = false;
+        }
+    } else {
+        this._futureIndexSprite.visible = false;
+    }
+};
+
+// ==================================================
 // UPDATE
 // ==================================================
+
+const _Window_CTBIcon_initialize = Window_CTBIcon.prototype.initialize;
+Window_CTBIcon.prototype.initialize = function(mainSprite) {
+    _Window_CTBIcon_initialize.call(this, mainSprite);
+    // Добавляем спрайт для отображения будущей позиции
+    this._futureIndexSprite = new Sprite(new Bitmap(20, 20));
+    this._futureIndexSprite.bitmap.fontSize = 14;
+    this._futureIndexSprite.x = this.width - 22;
+    this._futureIndexSprite.y = this.height - 22;
+    this.addChild(this._futureIndexSprite);
+    this._futureIndexSprite.visible = false;
+};
 
 const _update = Window_CTBIcon.prototype.update;
 Window_CTBIcon.prototype.update = function() {
@@ -257,6 +355,7 @@ Window_CTBIcon.prototype.update = function() {
   this.refreshSideBar();
   this.updateCTBHighlight();
   this.updateCTBVisibility();
+  this.updateFutureIndex();  // Обновляем предсказание
 };
 
 })();
