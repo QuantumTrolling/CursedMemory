@@ -2081,13 +2081,29 @@ Sprite_Enemy.prototype.alterEnemyHome = function(index) {
       var homeX = 0;
       Yanfly.Util.displayError(e, code, 'ROW FORMATION ENEMY HOME X ERROR');
     }
-    var code = Yanfly.Param.RowEnemyY
+    var code = Yanfly.Param.RowEnemyX;
     try {
-      var homeY = eval(code);
+        var homeX = eval(code);
     } catch (e) {
-      var homeY = 0;
-      Yanfly.Util.displayError(e, code, 'ROW FORMATION ENEMY HOME Y ERROR');
+        var homeX = 0;
+        Yanfly.Util.displayError(e, code, 'ROW FORMATION ENEMY HOME X ERROR');
     }
+
+    // --- Надёжное определение высоты спрайта ---
+    var spriteHeight = 64; // значение по умолчанию
+    if (this._enemy) {
+        var h = this._enemy.spriteHeight();
+        if (h && h > 0) spriteHeight = h;
+    }
+
+    var code = Yanfly.Param.RowEnemyY;
+    try {
+        var homeY = eval(code);
+    } catch (e) {
+        var homeY = 0;
+        Yanfly.Util.displayError(e, code, 'ROW FORMATION ENEMY HOME Y ERROR');
+    }
+
     this._homeX = homeX;
     this._homeY = homeY;
 };
