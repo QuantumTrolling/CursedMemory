@@ -64,8 +64,12 @@ const ICON_GAP    = 6;
 const ACTIVE_GAP  = 10;
 const ACTIVE_LIFT = 10;
 
+// Глобальные переменные для информации о клоне
+let _cloneVisualIndex = -1;
+let _cloneBattler = null;
+
 // ==================================================
-// РАМКА + ЦВЕТНАЯ ПОЛОСА (для основных плашек)
+// РАСШИРЕНИЕ Window_CTBIcon: рамка + цветная полоса
 // ==================================================
 
 Window_CTBIcon.prototype.createFrameSprite = function() {
@@ -153,7 +157,7 @@ Window_CTBIcon.prototype.baseY = function() {
 };
 
 // ==================================================
-// ПОЗИЦИЯ В ОЧЕРЕДИ
+// ПОЗИЦИЯ В ОЧЕРЕДИ (с учётом клона)
 // ==================================================
 
 Window_CTBIcon.prototype.destinationY = function() {
@@ -163,7 +167,15 @@ Window_CTBIcon.prototype.destinationY = function() {
   const index = order.indexOf(this._battler);
   if (index < 0) return this.baseY();
 
-  let y = this.baseY() + index * this.ctbSpacing();
+  // Сдвиг из-за присутствия клона
+  let shift = 0;
+  if (_cloneVisualIndex >= 0 && this._battler !== _cloneBattler) {
+    if (index >= _cloneVisualIndex) {
+      shift = 1;
+    }
+  }
+
+  let y = this.baseY() + (index + shift) * this.ctbSpacing();
   if (index === 0) y -= ACTIVE_LIFT;
   if (index > 0) y += ACTIVE_GAP;
   return y;
@@ -206,7 +218,7 @@ Window_CTBIcon.prototype.updateCTBHighlight = function() {
 };
 
 // ==================================================
-// ОСНОВНОЙ UPDATE (без призрака)
+// ОСНОВНОЙ UPDATE (для основных плашек)
 // ==================================================
 
 const _Window_CTBIcon_update = Window_CTBIcon.prototype.update;
@@ -221,14 +233,14 @@ Window_CTBIcon.prototype.update = function() {
 };
 
 // ==================================================
-// CLONE TURN PREVIEW — КОПИЯ ПЛАШКИ В БУДУЩЕМ МЕСТЕ
+// CLONE TURN PREVIEW — ИДЕНТИЧНАЯ КОПИЯ ПЛАШКИ
 // ==================================================
 
 let _ctbCloneWindow = null;
 
-// ---- Расчёт будущих тиков с учётом выбранного навыка
+// ---- Расчёт будущих тиков с учётом предмета (или без)
 Game_Battler.prototype.calcFutureTicksWithItem = function(item) {
-    let futureSpeed;
+    let futureSpeed = 0;
     if (item) {
         if (item.afterCTBFlat !== undefined) {
             futureSpeed = item.afterCTBFlat;
@@ -236,11 +248,7 @@ Game_Battler.prototype.calcFutureTicksWithItem = function(item) {
             futureSpeed = item.afterCTBRate * BattleManager.ctbTarget();
         } else if (item.speed > 0) {
             futureSpeed = item.speed;
-        } else {
-            futureSpeed = 0;
         }
-    } else {
-        futureSpeed = 0;
     }
     futureSpeed += BattleManager.ctbTarget() * this.ctbTurnRate() + this.ctbTurnFlat();
     const goal = BattleManager.ctbTarget();
@@ -248,7 +256,7 @@ Game_Battler.prototype.calcFutureTicksWithItem = function(item) {
     return (goal - futureSpeed) / this.ctbSpeedTick();
 };
 
-// ---- Найти будущий индекс в очереди с учётом предмета
+// ---- Найти будущий индекс в очереди с учётом предмета (или без)
 function calcFutureIndexForBattler(battler, testItem) {
     const futureTicks = battler.calcFutureTicksWithItem(testItem);
 
@@ -268,7 +276,7 @@ function calcFutureIndexForBattler(battler, testItem) {
 }
 
 // ==================================================
-// ОКНО КОПИИ
+// КЛОН — НАСТОЯЩАЯ CTB ПЛАШКА (наследует Window_CTBIcon)
 // ==================================================
 
 function Window_CTBClone() {
@@ -279,186 +287,111 @@ Window_CTBClone.prototype = Object.create(Window_CTBIcon.prototype);
 Window_CTBClone.prototype.constructor = Window_CTBClone;
 
 Window_CTBClone.prototype.initialize = function() {
-    const width  = this.iconWidth() + 8 + this.standardPadding() * 2;
-    const height = this.iconHeight() + 8 + this.standardPadding() * 2;
-    Window_Base.prototype.initialize.call(this, 0, 0, width, height);
+    // Фиктивный спрайт (чтобы родительский конструктор не сломался)
+    const dummy = { _battler: null };
+    Window_CTBIcon.prototype.initialize.call(this, dummy);
     this.opacity = 0;
     this.contentsOpacity = 160; // полупрозрачный
-    this._battler = null;
-    this._futureIndex = -1;
 };
 
 // ---- Установить баттлера
 Window_CTBClone.prototype.setBattler = function(battler) {
-    if (this._battler === battler) return;
-    this._battler = battler;
-    this._iconIndex = battler ? battler.ctbIcon() : 0;
-    this.loadBattlerImage();
-    this.refresh();
+    if (!battler) return;
+    this._mainSprite._battler = battler;
+    Window_CTBIcon.prototype.updateBattler.call(this); // загружает изображение
+    this.updateRedraw(); // принудительная перерисовка
 };
 
-// ---- Загрузка изображения (адаптировано из Window_CTBIcon)
-Window_CTBClone.prototype.loadBattlerImage = function() {
-    if (!this._battler) return;
-    if (this._iconIndex > 0) {
-        this._image = ImageManager.loadSystem('IconSet');
-    } else if (this._battler.isEnemy()) {
-        const battlerName = this._battler.battlerName();
-        const battlerHue = this._battler.battlerHue();
-        if ($gameSystem.isSideView()) {
-            this._image = ImageManager.loadSvEnemy(battlerName, battlerHue);
-        } else {
-            this._image = ImageManager.loadEnemy(battlerName, battlerHue);
-        }
-    } else if (this._battler.isActor()) {
-        const faceName = this._battler.faceName();
-        this._image = ImageManager.loadFace(faceName);
-    }
-    this._redraw = true;
+// ---- Отключаем автоматическое движение (клон позиционируется вручную)
+Window_CTBClone.prototype.updatePositionX = function() {};
+Window_CTBClone.prototype.updatePositionY = function() {};
+Window_CTBClone.prototype.updateDestinationX = function() {};
+Window_CTBClone.prototype.updateBattler = function() {}; // не даём родительскому методу сбрасывать battler
+
+// ---- Но остальной родительский update нужен (прозрачность, перерисовка)
+Window_CTBClone.prototype.update = function() {
+    Window_CTBIcon.prototype.update.call(this);
+    // После родительского update прозрачность могла измениться, восстанавливаем
+    this.contentsOpacity = 160;
 };
 
-// ---- Полная отрисовка: рамка, полоса, иконка
-Window_CTBClone.prototype.refresh = function() {
-    this.contents.clear();
-    if (!this._battler) return;
-
-    // Рисуем рамку как в оригинале
-    const w = this.contents.width;
-    const h = this.contents.height;
-    const borderColor = this.textColor(this._battler.ctbBorderColor() || 0);
-    const backColor = this.textColor(this._battler.ctbBackgroundColor() || 0);
-
-    // Внешний контур (цвет рамки)
-    this.contents.fillRect(2, 2, w - 4, h - 4, borderColor);
-    // Внутренний фон (цвет фона)
-    this.contents.fillRect(6, 6, w - 12, h - 12, backColor);
-
-    // Рисуем вертикальную полосу справа (как в оригинале, но без спрайта)
-    const barColor = this._battler.isActor() ? ALLY_COLOR : ENEMY_COLOR;
-    this.contents.fillRect(w - BAR_WIDTH - 4, 8, BAR_WIDTH, h - 16, barColor);
-
-    // Рисуем иконку/лицо
-    if (this._iconIndex > 0) {
-        this.drawIcon(this._iconIndex, 4, 4);
-    } else if (this._battler.isActor()) {
-        this.redrawActorFace();
-    } else if (this._battler.isEnemy()) {
-        this.redrawEnemy();
-    }
-};
-
-// ---- Вспомогательные методы для рисования лица/врага (как в Window_CTBIcon)
-Window_CTBClone.prototype.redrawActorFace = function() {
-    const bitmap = this._image;
-    if (!bitmap) return;
-    const pw = Window_Base._faceWidth;
-    const ph = Window_Base._faceHeight;
-    const faceIndex = this._battler.faceIndex();
-    const sx = faceIndex % 4 * pw;
-    const sy = Math.floor(faceIndex / 4) * ph;
-    const dw = this.contents.width - 8;
-    const dh = this.contents.height - 8;
-    this.contents.blt(bitmap, sx, sy, pw, ph, 4, 4, dw, dh);
-};
-
-Window_CTBClone.prototype.redrawEnemy = function() {
-    const bitmap = this._image;
-    if (!bitmap) return;
-    let sw = bitmap.width;
-    let sh = bitmap.height;
-    let dw = this.contents.width - 8;
-    let dh = this.contents.height - 8;
-    let dx = 4;
-    let dy = 4;
-    if (sw > sh) {
-        const rate = sh / sw;
-        dh = dw * rate;
-        dy += (this.contents.height - 8 - dh) / 2;
-    } else {
-        const rate = sw / sh;
-        dw = dh * rate;
-        dx += (this.contents.width - 8 - dw) / 2;
-    }
-    this.contents.blt(bitmap, 0, 0, sw, sh, dx, dy, dw, dh);
-};
-
-// ---- Позиционирование по будущему индексу
+// ---- Установить позицию по будущему индексу
 Window_CTBClone.prototype.setFutureIndex = function(index) {
-    this._futureIndex = index;
-    this.updatePositionFromFuture();
-};
-
-Window_CTBClone.prototype.updatePositionFromFuture = function() {
-    if (this._futureIndex < 0) return;
     const spacing = this.ctbSpacing();
-    let y = this.baseY() + this._futureIndex * spacing;
-    if (this._futureIndex === 0) y -= ACTIVE_LIFT;
-    if (this._futureIndex > 0) y += ACTIVE_GAP;
+    let y = this.baseY() + index * spacing;
+    if (index === 0) y -= ACTIVE_LIFT;
+    if (index > 0)  y += ACTIVE_GAP;
     this.x = this.baseX();
     this.y = y;
 };
 
-// ---- Пустые методы, чтобы избежать ошибок от родительского класса
-Window_CTBClone.prototype.updateBattler = function() {};
-Window_CTBClone.prototype.update = function() {
-    if (this._redraw) {
-        this.refresh();
-        this._redraw = false;
-    }
-};
-// Отключаем всё, что связано со спрайтами рамки и полосы (они нам не нужны)
-Window_CTBClone.prototype.createFrameSprite = function() {};
-Window_CTBClone.prototype.refreshSideBar = function() {};
-Window_CTBClone.prototype.updateCTBHighlight = function() {};
-Window_CTBClone.prototype.updateCTBVisibility = function() {};
-Window_CTBClone.prototype.manageGhost = function() {};
-
 // ==================================================
-// УПРАВЛЕНИЕ КЛОНОМ
+// УПРАВЛЕНИЕ КЛОНОМ (всегда используем базовый расчёт без навыка)
 // ==================================================
 
 function updateCTBClone() {
     const subject = BattleManager._subject;
 
-    if (!subject || !subject.isAlive() || subject.isHidden()) {
+    // Нет активного персонажа — скрываем
+    if (!subject || !subject.isAlive()) {
         if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
+        _cloneVisualIndex = -1;
+        _cloneBattler = null;
         return;
     }
 
-    // Определяем текущий выбранный предмет (если окно навыков активно)
-    const scene = SceneManager._scene;
-    let testItem = null;
-    if (scene && scene._skillWindow && scene._skillWindow.active) {
-        testItem = scene._skillWindow.item();
-    } else if (subject.currentAction()) {
-        testItem = subject.currentAction().item();
+    const order = BattleManager.ctbTurnOrder();
+    const currentIndex = order.indexOf(subject);
+
+    if (currentIndex < 0) {
+        if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
+        _cloneVisualIndex = -1;
+        _cloneBattler = null;
+        return;
     }
 
-    const futureIndex = calcFutureIndexForBattler(subject, testItem);
+    // ---- ВАЖНО: считаем будущее БЕЗ навыка (передаём null)
+    const futureIndex = calcFutureIndexForBattler(subject, null);
 
     if (futureIndex < 0) {
         if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
+        _cloneVisualIndex = -1;
+        _cloneBattler = null;
         return;
     }
 
+    // ---- Корректируем визуальный индекс, чтобы клон не накладывался на текущего субъекта
+    let visualIndex;
+    if (futureIndex > currentIndex) {
+        visualIndex = futureIndex;
+    } else {
+        // futureIndex <= currentIndex (обычно равно, если субъект сразу идёт следующим)
+        visualIndex = currentIndex + 1;
+    }
+
+    _cloneVisualIndex = visualIndex;
+    _cloneBattler = subject;
+
+    // ---- Создать окно если нет
     if (!_ctbCloneWindow) {
         _ctbCloneWindow = new Window_CTBClone();
         SceneManager._scene.addChild(_ctbCloneWindow);
     }
 
+    // ---- Настроить клон
     _ctbCloneWindow.setBattler(subject);
-    _ctbCloneWindow.setFutureIndex(futureIndex);
+    _ctbCloneWindow.setFutureIndex(visualIndex);
     _ctbCloneWindow.visible = true;
 }
 
 // ==================================================
-// ИНТЕГРАЦИЯ В СЦЕНУ БОЯ
+// ИНТЕГРАЦИЯ В СЦЕНУ БОЯ (правильный порядок)
 // ==================================================
 
 const _Scene_Battle_update = Scene_Battle.prototype.update;
 Scene_Battle.prototype.update = function() {
+    updateCTBClone(); // сначала обновляем информацию о клоне, чтобы плашки в этом же кадре могли скорректировать свои позиции
     _Scene_Battle_update.call(this);
-    updateCTBClone();
 };
 
 const _Scene_Battle_terminate = Scene_Battle.prototype.terminate;
@@ -467,6 +400,8 @@ Scene_Battle.prototype.terminate = function() {
         this.removeChild(_ctbCloneWindow);
         _ctbCloneWindow = null;
     }
+    _cloneVisualIndex = -1;
+    _cloneBattler = null;
     _Scene_Battle_terminate.call(this);
 };
 
