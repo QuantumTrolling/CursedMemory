@@ -67,6 +67,7 @@ const ACTIVE_LIFT = 10;
 let _cloneVisualIndex = -1;
 let _cloneBattler = null;
 let _ctbCloneWindow = null;
+let _lastCloneShouldShow = false;
 
 // ==================================================
 // РАСШИРЕНИЕ Window_CTBIcon: рамка + цветная полоса
@@ -322,6 +323,7 @@ Window_CTBClone.prototype.setFutureIndex = function(index) {
 // ==================================================
 
 function showCloneForActor(actor) {
+	console.log('showCloneForActor() called for', actor.name(), 'actor.isAlive() =', actor.isAlive());
     if (!actor || !actor.isAlive() || !actor.isActor()) {
         hideClone();
         return;
@@ -369,6 +371,7 @@ function showCloneForActor(actor) {
 }
 
 function hideClone() {
+    console.log('hideClone() called, _cloneBattler =', _cloneBattler);
     if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
     _cloneVisualIndex = -1;
     _cloneBattler = null;
@@ -409,14 +412,15 @@ const _Scene_Battle_update = Scene_Battle.prototype.update;
 Scene_Battle.prototype.update = function() {
     _Scene_Battle_update.call(this);
 
-    const actor = BattleManager.actor();
-    if (actor && actor.isAlive()) {
-        showCloneForActor(actor);
-    } else {
-        hideClone();
-    }
+	const actor = BattleManager.actor();
 
-    // Если клон видим, обновляем его позицию (на случай изменения порядка)
+	if (BattleManager.isInputting() && actor) {
+		showCloneForActor(actor);
+	} else {
+		hideClone();
+	}
+
+    // Далее без изменений — обновление позиции клона
     if (_ctbCloneWindow && _ctbCloneWindow.visible && _cloneBattler) {
         const order = BattleManager.ctbTurnOrder();
         if (!order) return;
