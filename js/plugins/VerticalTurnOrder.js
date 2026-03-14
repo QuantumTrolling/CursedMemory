@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v1.9 CTB Vertical Turn Order (With Future Clone Preview)
+ * @plugindesc v1.9 CTB Vertical Turn Order (With Future Clone Preview) - Only for Actors
  * @author You
  *
  * @param HorizontalAlign
@@ -64,15 +64,12 @@ const ICON_GAP    = 6;
 const ACTIVE_GAP  = 10;
 const ACTIVE_LIFT = 10;
 
-// Глобальные переменные для информации о клоне
 let _cloneVisualIndex = -1;
 let _cloneBattler = null;
-
-// ==================================================
-// РАСШИРЕНИЕ Window_CTBIcon: рамка + цветная полоса
-// ==================================================
+let _ctbCloneWindow = null;
 
 Window_CTBIcon.prototype.createFrameSprite = function() {
+
   if (!FRAME_IMAGE) return;
   if (this._frameSprite) return;
 
@@ -80,6 +77,7 @@ Window_CTBIcon.prototype.createFrameSprite = function() {
   this._frameSprite.bitmap = ImageManager.loadPicture(FRAME_IMAGE);
 
   this._frameSprite.bitmap.addLoadListener(() => {
+
     const fw = this._frameSprite.bitmap.width;
     const fh = this._frameSprite.bitmap.height;
 
@@ -89,320 +87,474 @@ Window_CTBIcon.prototype.createFrameSprite = function() {
     this.addChildToBack(this._frameSprite);
 
     if (this._windowContentsSprite) {
+
       this._windowContentsSprite.x = (this.width - this.iconWidth()) / 2;
       this._windowContentsSprite.y = (this.height - this.iconHeight()) / 2;
+
     }
 
     this.createSideBar(fw, fh);
+
   });
+
 };
 
 Window_CTBIcon.prototype.createSideBar = function(fw, fh) {
+
   if (this._sideBar) return;
 
   this._sideBar = new Sprite(new Bitmap(BAR_WIDTH, fh));
   this._sideBar.x = this._frameSprite.x + fw - BAR_WIDTH;
   this._sideBar.y = this._frameSprite.y;
+
   this.addChild(this._sideBar);
+
   this.refreshSideBar();
+
 };
 
 Window_CTBIcon.prototype.refreshSideBar = function() {
+
   if (!this._sideBar || !this._battler) return;
+
   const color = this._battler.isActor() ? ALLY_COLOR : ENEMY_COLOR;
+
   this._sideBar.bitmap.clear();
   this._sideBar.bitmap.fillAll(color);
+
 };
 
-// ==================================================
-// УТИЛИТЫ
-// ==================================================
-
 Window_CTBIcon.prototype.ctbSpacing = function() {
+
   if (this._frameSprite && this._frameSprite.bitmap.isReady()) {
     return this._frameSprite.bitmap.height + 6;
   }
+
   return this.iconHeight() + ICON_GAP;
+
 };
 
 Window_CTBIcon.prototype.isFirstInQueue = function() {
+
   const order = BattleManager.ctbTurnOrder();
+
   return order && order[0] === this._battler;
+
 };
 
-// ==================================================
-// БАЗОВАЯ ПОЗИЦИЯ
-// ==================================================
-
 Window_CTBIcon.prototype.baseX = function() {
+
   const margin = 8;
+
   let x = 0;
+
   switch (H_ALIGN) {
+
     case "Left":   x = margin; break;
     case "Center": x = (Graphics.boxWidth - this.width) / 2; break;
     case "Right":  x = Graphics.boxWidth - this.width - margin; break;
+
   }
+
   return x + OFFSET_X;
+
 };
 
 Window_CTBIcon.prototype.baseY = function() {
+
   const margin = 8;
+
   let y = 0;
+
   switch (V_ALIGN) {
+
     case "Top":     y = margin; break;
     case "Center":  y = Graphics.boxHeight / 2 - (this.ctbSpacing() * VISIBLE_COUNT) / 2; break;
     case "Bottom":  y = Graphics.boxHeight - (this.ctbSpacing() * VISIBLE_COUNT) - margin; break;
+
   }
+
   return y + OFFSET_Y;
+
 };
 
-// ==================================================
-// ПОЗИЦИЯ В ОЧЕРЕДИ (с учётом клона)
-// ==================================================
-
 Window_CTBIcon.prototype.destinationY = function() {
+
   const order = BattleManager.ctbTurnOrder();
+
   if (!order) return this.baseY();
 
   const index = order.indexOf(this._battler);
+
   if (index < 0) return this.baseY();
 
-  // Сдвиг из-за присутствия клона
   let shift = 0;
+
   if (_cloneVisualIndex >= 0 && this._battler !== _cloneBattler) {
+
     if (index >= _cloneVisualIndex) {
       shift = 1;
     }
+
   }
 
   let y = this.baseY() + (index + shift) * this.ctbSpacing();
+
   if (index === 0) y -= ACTIVE_LIFT;
   if (index > 0) y += ACTIVE_GAP;
+
   return y;
+
 };
 
 Window_CTBIcon.prototype.updateDestinationX = function() {
-  this._destinationX = this.baseX();
-};
 
-// ==================================================
-// ПЛАВНОЕ ДВИЖЕНИЕ
-// ==================================================
+  this._destinationX = this.baseX();
+
+};
 
 Window_CTBIcon.prototype.updatePositionY = function() {
+
   const desY = this.destinationY();
+
   const move = Math.max(1, Math.abs(desY - this.y) / 4);
+
   if (this.y > desY) this.y = Math.max(this.y - move, desY);
   if (this.y < desY) this.y = Math.min(this.y + move, desY);
+
 };
 
-// ==================================================
-// ВИДИМОСТЬ И ПОДСВЕТКА
-// ==================================================
-
 Window_CTBIcon.prototype.updateCTBVisibility = function() {
+
   const order = BattleManager.ctbTurnOrder();
+
   if (!order) return;
+
   const index = order.indexOf(this._battler);
+
   this.visible = index >= 0 && index < VISIBLE_COUNT;
+
 };
 
 Window_CTBIcon.prototype.updateCTBHighlight = function() {
+
   if (!this.isFirstInQueue()) {
+
     this.contentsOpacity = 255;
+
     this._pulse = 0;
+
     return;
+
   }
+
   this._pulse = (this._pulse || 0) + 0.1;
+
   this.contentsOpacity = 210 + Math.sin(this._pulse) * 45;
+
 };
 
-// ==================================================
-// ОСНОВНОЙ UPDATE (для основных плашек)
-// ==================================================
-
 const _Window_CTBIcon_update = Window_CTBIcon.prototype.update;
+
 Window_CTBIcon.prototype.update = function() {
+
   _Window_CTBIcon_update.call(this);
+
   if (!this._battler) return;
 
   this.createFrameSprite();
   this.refreshSideBar();
+
   this.updateCTBHighlight();
   this.updateCTBVisibility();
+
 };
 
-// ==================================================
-// CLONE TURN PREVIEW — ИДЕНТИЧНАЯ КОПИЯ ПЛАШКИ
-// ==================================================
-
-let _ctbCloneWindow = null;
-
-// ---- Расчёт будущих тиков с учётом предмета (или без)
 Game_Battler.prototype.calcFutureTicksWithItem = function(item) {
+
     let futureSpeed = 0;
+
     if (item) {
+
         if (item.afterCTBFlat !== undefined) {
             futureSpeed = item.afterCTBFlat;
-        } else if (item.afterCTBRate !== undefined) {
+        }
+
+        else if (item.afterCTBRate !== undefined) {
             futureSpeed = item.afterCTBRate * BattleManager.ctbTarget();
-        } else if (item.speed > 0) {
+        }
+
+        else if (item.speed > 0) {
             futureSpeed = item.speed;
         }
+
     }
+
     futureSpeed += BattleManager.ctbTarget() * this.ctbTurnRate() + this.ctbTurnFlat();
+
     const goal = BattleManager.ctbTarget();
+
     if (futureSpeed >= goal) return 0;
+
     return (goal - futureSpeed) / this.ctbSpeedTick();
+
 };
 
-// ---- Найти будущий индекс в очереди с учётом предмета (или без)
-function calcFutureIndexForBattler(battler, testItem) {
-    const futureTicks = battler.calcFutureTicksWithItem(testItem);
+function calcFutureIndexForBattler(battler) {
+
+    const futureTicks = battler.calcFutureTicksWithItem(null);
 
     const members = $gameParty.aliveMembers().concat($gameTroop.aliveMembers());
 
     const ticksArray = members.map(b => {
+
         if (b === battler) return futureTicks;
+
         return b.ctbTicksToReady();
+
     });
 
     const sorted = ticksArray.slice().sort((a, b) => a - b);
+
     const epsilon = 0.0001;
+
     for (let i = 0; i < sorted.length; i++) {
+
         if (Math.abs(sorted[i] - futureTicks) < epsilon) return i;
+
     }
+
     return -1;
+
 }
 
-// ==================================================
-// КЛОН — НАСТОЯЩАЯ CTB ПЛАШКА (наследует Window_CTBIcon)
-// ==================================================
-
 function Window_CTBClone() {
+
     this.initialize.apply(this, arguments);
+
 }
 
 Window_CTBClone.prototype = Object.create(Window_CTBIcon.prototype);
+
 Window_CTBClone.prototype.constructor = Window_CTBClone;
 
 Window_CTBClone.prototype.initialize = function() {
-    // Фиктивный спрайт (чтобы родительский конструктор не сломался)
+
     const dummy = { _battler: null };
+
     Window_CTBIcon.prototype.initialize.call(this, dummy);
+
     this.opacity = 0;
-    this.contentsOpacity = 160; // полупрозрачный
+    this.contentsOpacity = 160;
+
 };
 
-// ---- Установить баттлера
 Window_CTBClone.prototype.setBattler = function(battler) {
+
     if (!battler) return;
+
     this._mainSprite._battler = battler;
-    Window_CTBIcon.prototype.updateBattler.call(this); // загружает изображение
-    this.updateRedraw(); // принудительная перерисовка
+
+    Window_CTBIcon.prototype.updateBattler.call(this);
+
+    this.updateRedraw();
+
 };
 
-// ---- Отключаем автоматическое движение (клон позиционируется вручную)
 Window_CTBClone.prototype.updatePositionX = function() {};
 Window_CTBClone.prototype.updatePositionY = function() {};
 Window_CTBClone.prototype.updateDestinationX = function() {};
-Window_CTBClone.prototype.updateBattler = function() {}; // не даём родительскому методу сбрасывать battler
+Window_CTBClone.prototype.updateBattler = function() {};
 
-// ---- Но остальной родительский update нужен (прозрачность, перерисовка)
 Window_CTBClone.prototype.update = function() {
+
     Window_CTBIcon.prototype.update.call(this);
-    // После родительского update прозрачность могла измениться, восстанавливаем
+
     this.contentsOpacity = 160;
+
 };
 
-// ---- Установить позицию по будущему индексу
 Window_CTBClone.prototype.setFutureIndex = function(index) {
+
     const spacing = this.ctbSpacing();
+
     let y = this.baseY() + index * spacing;
+
     if (index === 0) y -= ACTIVE_LIFT;
     if (index > 0)  y += ACTIVE_GAP;
+
     this.x = this.baseX();
     this.y = y;
+
 };
 
-// ==================================================
-// УПРАВЛЕНИЕ КЛОНОМ (всегда используем базовый расчёт без навыка)
-// ==================================================
+function showCloneForActor(actor) {
 
-function updateCTBClone() {
-    const subject = BattleManager._subject;
-
-    // Нет активного персонажа — скрываем
-    if (!subject || !subject.isAlive()) {
-        if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
-        _cloneVisualIndex = -1;
-        _cloneBattler = null;
+    if (!actor || !actor.isAlive() || !actor.isActor()) {
+        hideClone();
         return;
     }
 
     const order = BattleManager.ctbTurnOrder();
-    const currentIndex = order.indexOf(subject);
+
+    if (!order) {
+        hideClone();
+        return;
+    }
+
+    const currentIndex = order.indexOf(actor);
 
     if (currentIndex < 0) {
-        if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
-        _cloneVisualIndex = -1;
-        _cloneBattler = null;
+        hideClone();
         return;
     }
 
-    // ---- ВАЖНО: считаем будущее БЕЗ навыка (передаём null)
-    const futureIndex = calcFutureIndexForBattler(subject, null);
+    const futureIndex = calcFutureIndexForBattler(actor);
 
     if (futureIndex < 0) {
-        if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
-        _cloneVisualIndex = -1;
-        _cloneBattler = null;
+        hideClone();
         return;
     }
 
-    // ---- Корректируем визуальный индекс, чтобы клон не накладывался на текущего субъекта
+    // Помещаем клон на одну позицию ниже futureIndex,
+    // чтобы он всегда оказывался после всех, кто остаётся впереди,
+    // и особенно после врагов.
     let visualIndex;
-    if (futureIndex > currentIndex) {
-        visualIndex = futureIndex;
-    } else {
-        // futureIndex <= currentIndex (обычно равно, если субъект сразу идёт следующим)
+    if (futureIndex <= currentIndex) {
         visualIndex = currentIndex + 1;
+    } else {
+        visualIndex = futureIndex + 1;
     }
 
     _cloneVisualIndex = visualIndex;
-    _cloneBattler = subject;
+    _cloneBattler = actor;
 
-    // ---- Создать окно если нет
     if (!_ctbCloneWindow) {
+
         _ctbCloneWindow = new Window_CTBClone();
+
         SceneManager._scene.addChild(_ctbCloneWindow);
+
     }
 
-    // ---- Настроить клон
-    _ctbCloneWindow.setBattler(subject);
+    _ctbCloneWindow.setBattler(actor);
+
     _ctbCloneWindow.setFutureIndex(visualIndex);
+
     _ctbCloneWindow.visible = true;
+
 }
 
-// ==================================================
-// ИНТЕГРАЦИЯ В СЦЕНУ БОЯ (правильный порядок)
-// ==================================================
+function hideClone() {
+
+    if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
+
+    _cloneVisualIndex = -1;
+    _cloneBattler = null;
+
+}
+
+const _Scene_Battle_startActorCommandSelection = Scene_Battle.prototype.startActorCommandSelection;
+
+Scene_Battle.prototype.startActorCommandSelection = function() {
+
+    _Scene_Battle_startActorCommandSelection.call(this);
+
+    const actor = BattleManager.actor();
+
+    if (actor) showCloneForActor(actor);
+
+};
+
+const _BattleManager_startCTBInput = BattleManager.startCTBInput;
+
+BattleManager.startCTBInput = function(battler) {
+
+    _BattleManager_startCTBInput.call(this, battler);
+
+    if (battler && battler.isActor() && battler.canInput()) {
+
+        showCloneForActor(battler);
+
+    }
+
+};
+
+const _BattleManager_startTurn = BattleManager.startTurn;
+
+BattleManager.startTurn = function() {
+
+    const subject = this._subject;
+
+    if (subject && subject.isEnemy()) {
+
+        hideClone();
+
+    }
+
+    _BattleManager_startTurn.call(this);
+
+};
 
 const _Scene_Battle_update = Scene_Battle.prototype.update;
+
 Scene_Battle.prototype.update = function() {
-    updateCTBClone(); // сначала обновляем информацию о клоне, чтобы плашки в этом же кадре могли скорректировать свои позиции
+
     _Scene_Battle_update.call(this);
+
+    if (!_ctbCloneWindow || !_ctbCloneWindow.visible || !_cloneBattler) return;
+
+    const order = BattleManager.ctbTurnOrder();
+
+    if (!order) return;
+
+    const currentIndex = order.indexOf(_cloneBattler);
+
+    if (currentIndex < 0) {
+        hideClone();
+        return;
+    }
+
+    const futureIndex = calcFutureIndexForBattler(_cloneBattler);
+
+    if (futureIndex < 0) {
+        hideClone();
+        return;
+    }
+
+    let visualIndex;
+    if (futureIndex <= currentIndex) {
+        visualIndex = currentIndex + 1;
+    } else {
+        visualIndex = futureIndex + 1;
+    }
+
+    if (visualIndex !== _cloneVisualIndex) {
+
+        _cloneVisualIndex = visualIndex;
+
+        _ctbCloneWindow.setFutureIndex(visualIndex);
+
+    }
+
 };
 
 const _Scene_Battle_terminate = Scene_Battle.prototype.terminate;
+
 Scene_Battle.prototype.terminate = function() {
+
+    hideClone();
+
     if (_ctbCloneWindow) {
+
         this.removeChild(_ctbCloneWindow);
+
         _ctbCloneWindow = null;
+
     }
-    _cloneVisualIndex = -1;
-    _cloneBattler = null;
+
     _Scene_Battle_terminate.call(this);
+
 };
 
 })();
