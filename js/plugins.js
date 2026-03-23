@@ -120,5 +120,6 @@ var $plugins =
 {"name":"RS_SimpleCanvasFilter","status":true,"description":"This plugin applies CSS filter to canvas","parameters":{}},
 {"name":"A_biggerIcons","status":true,"description":"Увеличивает иконки навыков в 2 раза и корректирует высоту строк в окнах боя (v1.1)","parameters":{}},
 {"name":"A_turn_arrow_actors","status":true,"description":"Показывает Turn.png над актёром во время выбора навыка v2.5","parameters":{"OffsetX":"0","OffsetY":"0","Actor1X":"20","Actor1Y":"-190","Actor2X":"20","Actor2Y":"-190","Actor3X":"5","Actor3Y":"-170","Actor4X":"20","Actor4Y":"-190","Actor5X":"20","Actor5Y":"-190","Actor6X":"20","Actor6Y":"-190","Actor7X":"20","Actor7Y":"-190","Actor8X":"20","Actor8Y":"-190","Actor9X":"20","Actor9Y":"-190","Actor10X":"20","Actor10Y":"-190","Actor11X":"20","Actor11Y":"-190","Actor12X":"20","Actor12Y":"-190","Actor13X":"20","Actor13Y":"-190","Actor14X":"20","Actor14Y":"-190","Actor15X":"20","Actor15Y":"-190","Actor16X":"20","Actor16Y":"-190"}},
-{"name":"A_sprite_dynamic_priority","status":false,"description":"Patch for YED_SideviewBattler + YEP_X_AnimatedSVEnemies (v1.6)","parameters":{}}
+{"name":"A_sprite_dynamic_priority","status":false,"description":"Patch for YED_SideviewBattler + YEP_X_AnimatedSVEnemies (v1.6)","parameters":{}},
+{"name":"MOG_OugiAnimation","status":true,"description":"(v1.3) Ativa uma animação antes de executar a ação. Suporte a GIF.","parameters":{"For Enemies":"false","File Extension":"gif"}}
 ];
