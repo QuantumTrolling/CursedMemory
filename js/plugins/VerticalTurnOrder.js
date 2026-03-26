@@ -323,7 +323,6 @@ Window_CTBClone.prototype.setFutureIndex = function(index) {
 // ==================================================
 
 function showCloneForActor(actor) {
-	console.log('showCloneForActor() called for', actor.name(), 'actor.isAlive() =', actor.isAlive());
     if (!actor || !actor.isAlive() || !actor.isActor()) {
         hideClone();
         return;
@@ -371,7 +370,6 @@ function showCloneForActor(actor) {
 }
 
 function hideClone() {
-    console.log('hideClone() called, _cloneBattler =', _cloneBattler);
     if (_ctbCloneWindow) _ctbCloneWindow.visible = false;
     _cloneVisualIndex = -1;
     _cloneBattler = null;
