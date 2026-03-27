@@ -2677,6 +2677,13 @@ Yanfly.Util.displayError = function(e, code, message) {
   }
 };
 
+// Исправление поворота врага при появлении
+var _Game_Enemy_appear = Game_Enemy.prototype.appear;
+Game_Enemy.prototype.appear = function() {
+    _Game_Enemy_appear.call(this);
+    if (this.setMirror) this.setMirror(true);
+};
+
 //=============================================================================
 // End of File
 //=============================================================================
