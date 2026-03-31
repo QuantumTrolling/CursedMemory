@@ -188,6 +188,13 @@
  * @type boolean
  * @parent Layout
  *
+ * @param IconScale
+ * @text アイコンの拡大率
+ * @desc アイコン(\i[n])の表示倍率です。1.0で標準サイズ。
+ * @default 1.0
+ * @type number
+ * @parent Layout
+ *
  * @param AutoAddition
  * @desc 文章の表示の命令中に同一単語が出現した場合に自動登録します。(ON/OFF)
  * @default false
@@ -560,6 +567,13 @@
  * @desc 複数のページが存在する場合、最後のページまで到達していたら最初のページに戻します。
  * @default true
  * @type boolean
+ * @parent Layout
+ *
+ * @param IconScale
+ * @text アイコンの拡大率
+ * @desc アイコン(\i[n])の表示倍率です。1.0で標準サイズ。
+ * @default 1.0
+ * @type number
  * @parent Layout
  *
  * @param AutoAddition
@@ -1117,6 +1131,13 @@ function Window_GlossaryComplete() {
     var param = createPluginParameter('SceneGlossary');
     if (!param.GlossaryInfo) {
         param.GlossaryInfo = [];
+    }
+
+    // Инициализация параметра масштабирования иконок
+    if (typeof param.IconScale === 'undefined') {
+        param.IconScale = 1.0;
+    } else {
+        param.IconScale = parseFloat(param.IconScale) || 1.0;
     }
 
     //=============================================================================
@@ -2061,15 +2082,39 @@ function Window_GlossaryComplete() {
         return $gameParty.isUseGlossaryItemNumber();
     };
 
+    // Переопределение drawIcon с вертикальным центрированием и горизонтальным центрированием
+    Window_GlossaryList.prototype.drawIcon = function(iconIndex, x, y) {
+        var scale = param.IconScale;
+        var pw = Window_Base._iconWidth;
+        var ph = Window_Base._iconHeight;
+        var sx = (iconIndex % 16) * pw;
+        var sy = Math.floor(iconIndex / 16) * ph;
+        var dw = Math.floor(pw * scale);
+        var dh = Math.floor(ph * scale);
+        var dx = x + (pw - dw) / 2;               // центрируем по горизонтали
+        var dy = y + (this.lineHeight() - dh) / 2;
+        var bitmap = ImageManager.loadSystem('IconSet');
+        this.contents.blt(bitmap, sx, sy, pw, ph, dx, dy, dw, dh);
+    };
+
+    // Корректировка высоты строки, если масштаб > 1
+    Window_GlossaryList.prototype.lineHeight = function() {
+        var scale = param.IconScale;
+        if (scale > 1.0) {
+            return Window_Base.prototype.lineHeight.call(this) * scale;
+        }
+        return Window_Base.prototype.lineHeight.call(this);
+    };
+
     Window_GlossaryList.prototype.drawItemName = function(item, x, y, width) {
         if (!item) {
             return;
         }
-        var iconBoxWidth = this.isShowIcon(item) ? Window_Base._iconWidth + 4 : 0;
+        var iconBoxWidth = this.isShowIcon(item) ? Window_Base._iconWidth * param.IconScale + 4 : 0;
         var name;
         if ($gameParty.hasGlossary(item)) {
             if (iconBoxWidth > 0) {
-                this.drawIcon(item.iconIndex, x + 2, y + 2);
+                this.drawIcon(item.iconIndex, x + 2, y);
             }
             name = item.name;
         } else {
@@ -2595,6 +2640,30 @@ function Window_GlossaryComplete() {
 
     Window_Glossary.prototype.calcItemPictureHeight = function(bitmap, text) {
         return bitmap ? bitmap.height * this.getPictureScale(this._itemData, bitmap, text) + 4 : 0;
+    };
+
+    // Переопределение drawIcon для окна описания с центрированием
+    Window_Glossary.prototype.drawIcon = function(iconIndex, x, y) {
+        var scale = param.IconScale;
+        var pw = Window_Base._iconWidth;
+        var ph = Window_Base._iconHeight;
+        var sx = (iconIndex % 16) * pw;
+        var sy = Math.floor(iconIndex / 16) * ph;
+        var dw = Math.floor(pw * scale);
+        var dh = Math.floor(ph * scale);
+        var dx = x + (pw - dw) / 2;               // центрируем по горизонтали
+        var dy = y - 5 + (this.lineHeight() - dh) / 2;
+        var bitmap = ImageManager.loadSystem('IconSet');
+        this.contents.blt(bitmap, sx, sy, pw, ph, dx, dy, dw, dh);
+    };
+
+    // Корректировка высоты строки для окна описания (опционально)
+    Window_Glossary.prototype.lineHeight = function() {
+        var scale = param.IconScale;
+        if (scale > 1.0) {
+            return Window_Base.prototype.lineHeight.call(this) * scale;
+        }
+        return Window_Base.prototype.lineHeight.call(this);
     };
 
     Window_Glossary.prototype.drawItemText = function(text, y) {

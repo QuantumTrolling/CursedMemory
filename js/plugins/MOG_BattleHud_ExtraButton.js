@@ -20,7 +20,7 @@
  *                             (если 0 – кнопка работает как открытие глоссария)
  *   Count As Turn           – считать ли нажатие за ход (true/false)
  *
- * Версия: 1.7 – окончательное исправление для мёртвых акторов с блокировкой движения.
+ * Версия: 1.8 – добавлено сохранение и восстановление навыков акторов.
  */
 
 var Imported = Imported || {};
@@ -58,7 +58,7 @@ BattleManager._exBtnGlossaryOpenedFromBattle = false;
 
 BattleManager.exBtnMakeBattlerSnapshot = function(b) {
     if (!b) return null;
-    return {
+    var snap = {
         hp: b._hp,
         mp: b._mp,
         tp: b._tp,
@@ -70,6 +70,11 @@ BattleManager.exBtnMakeBattlerSnapshot = function(b) {
         breakShield: b._currentBreakShield,
         row: b._row
     };
+    // Сохраняем навыки для акторов
+    if (b.isActor && b.isActor()) {
+        snap.skills = b._skills ? b._skills.slice() : [];
+    }
+    return snap;
 };
 
 BattleManager.exBtnApplyBattlerSnapshot = function(b, snap) {
@@ -84,6 +89,10 @@ BattleManager.exBtnApplyBattlerSnapshot = function(b, snap) {
     if (snap.result) b._result = JsonEx.makeDeepCopy(snap.result);
     if (snap.breakShield !== undefined) b._currentBreakShield = snap.breakShield;
     if (snap.row !== undefined) b._row = snap.row;
+    // Восстанавливаем навыки для акторов
+    if (snap.skills && b.isActor && b.isActor()) {
+        b._skills = snap.skills.slice();
+    }
     b.refresh();
 };
 
