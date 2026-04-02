@@ -125,5 +125,6 @@ var $plugins =
 {"name":"MOG_OugiAnimation","status":false,"description":"(v1.3) Ativa uma animação antes de executar a ação. Suporte a GIF.","parameters":{"For Enemies":"false","File Extension":"gif"}},
 {"name":"A_fix_throw","status":true,"description":"Fixes z-order for UI elements when using VE Throwable Objects and BattleZoom","parameters":{}},
 {"name":"A_fix_throw2","status":true,"description":"","parameters":{}},
-{"name":"A_fix_throw3","status":true,"description":"","parameters":{}}
+{"name":"A_fix_throw3","status":true,"description":"","parameters":{}},
+{"name":"A_fix_sv_actors","status":true,"description":"","parameters":{}}
 ];
