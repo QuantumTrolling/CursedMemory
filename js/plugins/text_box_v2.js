@@ -10,7 +10,7 @@
             scene instanceof Scene_Equip || // Добавлено для экипировки
             (scene instanceof Scene_Battle && this instanceof Window_BattleItem)
         ) {
-            var height = this.fittingHeight(3); // 3 строки для предметов (меню, магазин, бой, экипировка)
+            var height = this.fittingHeight(5); // 3 строки для предметов (меню, магазин, бой, экипировка)
         } else {
             var height = this.fittingHeight(numLines || 2); // По умолчанию
         }
