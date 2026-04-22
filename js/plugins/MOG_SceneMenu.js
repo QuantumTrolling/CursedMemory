@@ -142,7 +142,7 @@
  * @desc Posição Y-Axis da localização.
  * @default 575
  *
- * @param Time FontSize
+ * @param Location FontSize
  * @desc Definição do tamanho da fonte da localização.
  * @default 26
  *
@@ -161,6 +161,38 @@
  * @param Magic Circle Rotation
  * @desc Velocidade de rotação do círculo mágico.
  * @default 0.001
+ *
+ * @param Name X-Axis
+ * @desc Posição X-Axis do nome do personagem.
+ * @default 20
+ *
+ * @param Name Y-Axis
+ * @desc Posição Y-Axis do nome do personagem.
+ * @default 0
+ *
+ * @param Name FontSize
+ * @desc Definição do tamanho da fonte do nome.
+ * @default 20
+ *
+ * @param LV Number X-Axis
+ * @desc Posição X-Axis do número de level.
+ * @default 95
+ *
+ * @param LV Number Y-Axis
+ * @desc Posição Y-Axis do número de level.
+ * @default 33
+ *
+ * @param Equip Icons X-Axis
+ * @desc Posição X-Axis dos ícones de equipamento.
+ * @default 20
+ *
+ * @param Equip Icons Y-Axis
+ * @desc Posição Y-Axis dos ícones de equipamento.
+ * @default 120
+ *
+ * @param Equip Icons Spacing
+ * @desc Espaçamento entre os ícones.
+ * @default 36
  *
  * @help  
  * =============================================================================
@@ -239,6 +271,9 @@
     Moghunter.scMenu_MagicCircleX = Number(Moghunter.parameters['Magic Circle X-Axis'] || 700);
 	Moghunter.scMenu_MagicCircleY = Number(Moghunter.parameters['Magic Circle Y-Axis'] || 140);
     Moghunter.scMenu_MagicCircleR = Number(Moghunter.parameters['Magic Circle Rotation'] || 0.001);
+	Moghunter.scMenu_EquipIconX = Number(Moghunter.parameters['Equip Icons X-Axis'] || 20);
+	Moghunter.scMenu_EquipIconY = Number(Moghunter.parameters['Equip Icons Y-Axis'] || 120);
+	Moghunter.scMenu_EquipIconSpacing = Number(Moghunter.parameters['Equip Icons Spacing'] || 36);
 		
 		
 //=============================================================================
@@ -1057,6 +1092,7 @@ MCharStatus.prototype.createSprites = function() {
 	this.createLVNumber();
 	this.createStates();
 	this.createName();
+	this.createEquipIcons();
 };	
 
 //==============================
@@ -1127,13 +1163,11 @@ MCharStatus.prototype.need_refresh_states = function() {
 //==============================
 MCharStatus.prototype.createHPMeter = function() {
     this._hpMeter = new Sprite(this._HPMeterImg);
-	this._hpMeterData = [this._HPMeterImg.width / 3,this._HPMeterImg.height,0,0];
-	this._hpMeterData[2] = this._hpMeterData[0] * 2;
-	this._hpMeterData[3] = Math.randomInt(this._hpMeterData[2])
-	this._hpMeter.x = this._layout.x + Moghunter.scMenu_HPMeterX;
-	this._hpMeter.y = this._layout.y + Moghunter.scMenu_HPMeterY;
-	this.updateMeter(this._hpMeter,this._hpMeterData,this._actor.hp,this._actor.mhp);
-	this.addChild(this._hpMeter);
+    this._hpMeterData = [this._HPMeterImg.width, this._HPMeterImg.height];
+    this._hpMeter.x = this._layout.x + Moghunter.scMenu_HPMeterX;
+    this._hpMeter.y = this._layout.y + Moghunter.scMenu_HPMeterY;
+    this.updateMeter(this._hpMeter, this._hpMeterData, this._actor.hp, this._actor.mhp);
+    this.addChild(this._hpMeter);
 };
   
 //==============================
@@ -1141,25 +1175,21 @@ MCharStatus.prototype.createHPMeter = function() {
 //==============================
 MCharStatus.prototype.createMPMeter = function() {
     this._mpMeter = new Sprite(this._MPMeterImg);
-	this._mpMeterData = [this._MPMeterImg.width / 3,this._MPMeterImg.height,0,0];
-	this._mpMeterData[2] = this._mpMeterData[0] * 2;
-	this._mpMeterData[3] = Math.randomInt(this._mpMeterData[2])
-	this._mpMeter.x = this._layout.x + Moghunter.scMenu_MPMeterX;
-	this._mpMeter.y = this._layout.y + Moghunter.scMenu_MPMeterY;
-	this.updateMeter(this._mpMeter,this._mpMeterData,this._actor.mp,this._actor.mmp);
-	this.addChild(this._mpMeter);
+    this._mpMeterData = [this._MPMeterImg.width, this._MPMeterImg.height];
+    this._mpMeter.x = this._layout.x + Moghunter.scMenu_MPMeterX;
+    this._mpMeter.y = this._layout.y + Moghunter.scMenu_MPMeterY;
+    this.updateMeter(this._mpMeter, this._mpMeterData, this._actor.mp, this._actor.mmp);
+    this.addChild(this._mpMeter);
 };  
   
 //==============================
 // * update Meter
 //==============================
-MCharStatus.prototype.updateMeter = function(sprite,data,v1,v2) {
-	 var cw = data[0] * v1 / v2;
-     sprite.setFrame(data[3],0,cw,data[1]);
-	 data[3] += 4;
-	 if (data[3] > data[2]) {data[3] = 0};
-};		
-	
+MCharStatus.prototype.updateMeter = function(sprite, data, v1, v2) {
+    var cw = data[0] * v1 / v2;
+    sprite.setFrame(0, 0, cw, data[1]);
+};
+
 //==============================
 // * create HP Number
 //==============================
@@ -1285,6 +1315,34 @@ MCharStatus.prototype.createLayoutStatus = function() {
 	 this._layout.y = Graphics.boxHeight - 280 + Moghunter.scMenu_layoutStatusY;
 	 this.addChild(this._layout);
 };	
+
+//==============================
+// * Create Equip Icons
+//==============================
+MCharStatus.prototype.createEquipIcons = function() {
+    if (this._equipIcons) {
+        for (var i = 0; i < this._equipIcons.length; i++) {
+            this.removeChild(this._equipIcons[i]);
+        }
+    }
+    this._equipIcons = [];
+    var equips = this._actor.equips();
+    var iconIndex = 0;
+    for (var i = 0; i < equips.length; i++) {
+        var item = equips[i];
+        if (item) {
+            var icon = new Sprite(this._state_img);
+            var sx = (item.iconIndex % 16) * 32;
+            var sy = Math.floor(item.iconIndex / 16) * 32;
+            icon.setFrame(sx, sy, 32, 32);
+            icon.x = this._layout.x + Moghunter.scMenu_EquipIconX + (iconIndex * Moghunter.scMenu_EquipIconSpacing);
+            icon.y = this._layout.y + Moghunter.scMenu_EquipIconY;
+            this.addChild(icon);
+            this._equipIcons.push(icon);
+            iconIndex++;
+        }
+    }
+};
 
 //==============================
 // * Update
