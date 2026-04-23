@@ -215,6 +215,8 @@
  * (1.2) - Correção do crash caso não usar o plugin do Menu Cursor. 
  * (1.1) - Correção do plugin parameter da posição do nome do comando.
  *
+ * Modificação (2026): Removida a animação de entrada das icones de comando,
+ * mantendo a animação de seleção (aumento da icone selecionada).
  */
 
 //=============================================================================
@@ -536,38 +538,40 @@ Scene_Menu.prototype.createLayout = function() {
 };
 	
 //==============================
-// * create Commands
+// * create Commands (sem animação de entrada)
 //==============================	
 Scene_Menu.prototype.createCommands = function() {
      this._commands = [];
 	 this._compos = [];
 	 this._comzoom = [];
-	 var h = 0
 	 this._comField = new Sprite();
 	 this._field.addChild(this._comField);
 	 for (var i = 0; i < this._comList.length; i++) {
 		 this._commands[i] = new Sprite(this._comBitmaps[i]);
 		 this._commands[i].anchor.x = 0.5;
 		 this._commands[i].anchor.y = 0.5;
-		 this._commands[i].y = -64;
+		 // Posição inicial já é a final (sem animação de entrada)
+		 this._commands[i].x = Moghunter.scMenu_ComX + (52 * i);
+		 this._commands[i].y = Moghunter.scMenu_ComY + 48;
 		 this._commands[i].opacity = 255;
-		 this._compos[i] = [Moghunter.scMenu_ComX + (48 * i),Moghunter.scMenu_ComY + (48 * h)];
+		 this._commands[i].scale.x = 1;
+		 this._commands[i].scale.y = 1;
+		 this._compos[i] = [Moghunter.scMenu_ComX + (52 * i), Moghunter.scMenu_ComY + 48];
 		 this._comzoom[i] = 0;
 	     this._comField.addChild(this._commands[i]);
-		 h = h === 0 ? 1 : 0;
-	};	 
+	 };	 
 };
 
 //==============================
-// * update Commands
+// * update Commands (apenas animação da seleção)
 //==============================
 Scene_Menu.prototype.updateCommands = function() {
-	// this.updateComField();
      for (var i = 0; i < this._commands.length; i++) {
 		  if (this.isComEnabled(i)) {
 		       var nx = this._statusWindow.active ? Moghunter.scMenu_ComWX : this._compos[i][0];
 			   var ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];			  
 			   if (this._commandWindow.isCurrentItemEnabled()) {this._commands[i].opacity += 20};
+			   // Animação de escala (pulsação) para a tecla selecionada
 			   if (this._comzoom[i] === 0 && !this._statusWindow.active) {
 				   this._commands[i].scale.x += 0.01;
 				   if (this._commands[i].scale.x >= 1.30) {
@@ -581,43 +585,40 @@ Scene_Menu.prototype.updateCommands = function() {
 				       this._comzoom[i] = 0;
 				   };			   
 		       };
+			   // Movimento suave para a posição de destaque (se necessário)
+			   this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
+			   this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
+			   this._commands[i].scale.y = this._commands[i].scale.x;
 		  } else { 
+		       // Para ícones não selecionados: fixar posição final, opacidade constante e escala 1
 		       var nx = this._compos[i][0];
 			   var ny = this._compos[i][1];
-  			   if (this._commands[i].opacity > 180 || this._statusWindow.active) {
-				   this._commands[i].opacity -= 10
-				   if (this._commands[i].opacity < 180 && !this._statusWindow.active) {this._commands[i].opacity = 180}  
-			    };
-			   if (!this._statusWindow.active && this._commands[i].opacity < 180) {
+			   // Mantém opacidade normal
+			   if (this._commands[i].opacity < 255 && !this._statusWindow.active) {
 				   this._commands[i].opacity += 10;
-				   if (this._commands[i].opacity > 180) {this._commands[i].opacity = 180}  
-			   };
-			   if (this._commands[i].scale.x > 1.00) {this._commands[i].scale.x -= 0.01};
+				   if (this._commands[i].opacity > 255) this._commands[i].opacity = 255;
+			   } else if (this._commands[i].opacity > 255) {
+				   this._commands[i].opacity = 255;
+			   }
+			   // Garante escala 1
+			   if (this._commands[i].scale.x > 1.00) {
+				   this._commands[i].scale.x -= 0.01;
+				   if (this._commands[i].scale.x < 1.00) this._commands[i].scale.x = 1.00;
+			   }
+			   this._commands[i].scale.y = this._commands[i].scale.x;
+			   // Posiciona exatamente na posição final (sem movimento)
+			   this._commands[i].x = nx;
+			   this._commands[i].y = ny;
 			   this._comzoom[i] = 0;
 		  };
-		  this._commands[i].x = this.commandMoveTo(this._commands[i].x,nx);
-		  this._commands[i].y = this.commandMoveTo(this._commands[i].y,ny); 		  
-		  this._commands[i].scale.y = this._commands[i].scale.x;
 	 };
 };
  
  //==============================
-// * update Com Field
+// * update Com Field (desativado para evitar movimento extra)
 //==============================
 Scene_Menu.prototype.updateComField = function() {
-   if (!this._statusWindow.active) {
-        this._comField.opacity += 15
-	    if (this._comField.y < 0) {
-		    this._comField.y += 3;
-			if (this._comField.y > 0 ) {this._comField.y = 0}  
-	    }
-   } else {
-	   this._comField.opacity -= 15
-	   if (this._comField.y > -50) {
-		    this._comField.y -= 3;
-			if (this._comField.y < -50 ) {this._comField.y = -50}  
-	   };
-   };
+	 // Função vazia – não interferimos no campo de comandos
 };
 	  
 //==============================
@@ -1512,7 +1513,6 @@ Scene_Party.prototype.create = function() {
 Scene_Party.prototype.createLayout = function() {
  
 };
-
 
 //==============================
 // * Create Status Window
