@@ -215,8 +215,11 @@
  * (1.2) - Correção do crash caso não usar o plugin do Menu Cursor. 
  * (1.1) - Correção do plugin parameter da posição do nome do comando.
  *
- * Modificação (2026): Removida a animação de entrada das icones de comando,
- * mantendo a animação de seleção (aumento da icone selecionada).
+ * Modificação (2026): 
+ * - Removida a animação de entrada das icones de comando,
+ * - Mantida a animação de seleção (aumento da icone selecionada),
+ * - Corrigida a interação com o mouse (cliques e hover),
+ * - Hover agora altera o índice selecionado (a seleção segue o mouse).
  */
 
 //=============================================================================
@@ -546,32 +549,55 @@ Scene_Menu.prototype.createCommands = function() {
 	 this._comzoom = [];
 	 this._comField = new Sprite();
 	 this._field.addChild(this._comField);
+	 
 	 for (var i = 0; i < this._comList.length; i++) {
 		 this._commands[i] = new Sprite(this._comBitmaps[i]);
 		 this._commands[i].anchor.x = 0.5;
 		 this._commands[i].anchor.y = 0.5;
-		 // Posição inicial já é a final (sem animação de entrada)
+		 // Posição final (sem animação de entrada)
 		 this._commands[i].x = Moghunter.scMenu_ComX + (52 * i);
 		 this._commands[i].y = Moghunter.scMenu_ComY + 48;
 		 this._commands[i].opacity = 255;
 		 this._commands[i].scale.x = 1;
 		 this._commands[i].scale.y = 1;
-		 this._compos[i] = [Moghunter.scMenu_ComX + (52 * i), Moghunter.scMenu_ComY + 48];
+		 this._compos[i] = [Moghunter.scMenu_ComX + (80 * i), Moghunter.scMenu_ComY + 48];
 		 this._comzoom[i] = 0;
 	     this._comField.addChild(this._commands[i]);
 	 };	 
 };
 
 //==============================
-// * update Commands (apenas animação da seleção)
+// * update Commands (hover altera o índice selecionado)
 //==============================
 Scene_Menu.prototype.updateCommands = function() {
-     for (var i = 0; i < this._commands.length; i++) {
-		  if (this.isComEnabled(i)) {
+	 // Se o menu não está ativo (status active), não interferimos
+	 if (!this._statusWindow.active && this._commandWindow.active) {
+		 // Определяем, на какую иконку наведена мышь
+		 var hoverIndex = -1;
+		 for (var i = 0; i < this._commands.length; i++) {
+			 if (this.isOnSprite(this._commands[i])) {
+				 hoverIndex = i;
+				 break;
+			 }
+		 }
+		 // Если мышь над иконкой, меняем реальное выделение
+		 if (hoverIndex !== -1 && this._commandWindow._index !== hoverIndex) {
+			 this._commandWindow.select(hoverIndex);
+		 }
+	 }
+	 
+	 // Обычное обновление анимации масштаба для ВСЕХ иконок
+	 for (var i = 0; i < this._commands.length; i++) {
+		  // Определяем, является ли иконка выбранной (индекс совпадает)
+		  var isSelected = (i === this._commandWindow._index);
+		  
+		  if (isSelected) {
+		       // Для выбранной иконки: позиция может смещаться к активной позиции
 		       var nx = this._statusWindow.active ? Moghunter.scMenu_ComWX : this._compos[i][0];
 			   var ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];			  
 			   if (this._commandWindow.isCurrentItemEnabled()) {this._commands[i].opacity += 20};
-			   // Animação de escala (pulsação) para a tecla selecionada
+			   
+			   // Анимация пульсации масштаба
 			   if (this._comzoom[i] === 0 && !this._statusWindow.active) {
 				   this._commands[i].scale.x += 0.01;
 				   if (this._commands[i].scale.x >= 1.30) {
@@ -585,40 +611,48 @@ Scene_Menu.prototype.updateCommands = function() {
 				       this._comzoom[i] = 0;
 				   };			   
 		       };
-			   // Movimento suave para a posição de destaque (se necessário)
+			   // Плавное движение
 			   this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
 			   this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
 			   this._commands[i].scale.y = this._commands[i].scale.x;
+			   
 		  } else { 
-		       // Para ícones não selecionados: fixar posição final, opacidade constante e escala 1
+		       // Невыбранные иконки: возвращаем на исходную позицию, масштаб 1
 		       var nx = this._compos[i][0];
 			   var ny = this._compos[i][1];
-			   // Mantém opacidade normal
-			   if (this._commands[i].opacity < 255 && !this._statusWindow.active) {
+			   this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
+			   this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
+			   if (this._commands[i].opacity < 255) {
 				   this._commands[i].opacity += 10;
 				   if (this._commands[i].opacity > 255) this._commands[i].opacity = 255;
-			   } else if (this._commands[i].opacity > 255) {
-				   this._commands[i].opacity = 255;
 			   }
-			   // Garante escala 1
 			   if (this._commands[i].scale.x > 1.00) {
 				   this._commands[i].scale.x -= 0.01;
 				   if (this._commands[i].scale.x < 1.00) this._commands[i].scale.x = 1.00;
 			   }
 			   this._commands[i].scale.y = this._commands[i].scale.x;
-			   // Posiciona exatamente na posição final (sem movimento)
-			   this._commands[i].x = nx;
-			   this._commands[i].y = ny;
 			   this._comzoom[i] = 0;
 		  };
 	 };
 };
  
- //==============================
-// * update Com Field (desativado para evitar movimento extra)
+//==============================
+// * update Com Field (movimento do campo de comandos - necessário para o mouse)
 //==============================
 Scene_Menu.prototype.updateComField = function() {
-	 // Função vazia – não interferimos no campo de comandos
+   if (!this._statusWindow.active) {
+        this._comField.opacity += 15
+	    if (this._comField.y < 0) {
+		    this._comField.y += 3;
+			if (this._comField.y > 0 ) {this._comField.y = 0}  
+	    }
+   } else {
+	   this._comField.opacity -= 15
+	   if (this._comField.y > -50) {
+		    this._comField.y -= 3;
+			if (this._comField.y < -50 ) {this._comField.y = -50}  
+	   };
+   };
 };
 	  
 //==============================
@@ -677,7 +711,7 @@ Scene_Menu.prototype.refreshCommandName = function() {
 	this._commandNameIndex2 = -2;
 	this._commandName.bitmap.clear();
 	this._commandName.bitmap.drawText(this._comList[this._commandNameIndex].name,0,0,100,32,"center")
-	this._commandName.x = Moghunter.scMenu_ComNameX - 100;
+	this._commandName.x = Moghunter.scMenu_ComNameX - 50;
 	this._commandName.y = Moghunter.scMenu_ComNameY;
 	this._commandName.opacity = 0;
 };
@@ -917,16 +951,19 @@ Scene_Menu.prototype.setTouchSelection = function(index) {
 //==============================
 Scene_Menu.prototype.checkTouchCommand = function() {
     for (var i = 0; i < this._commands.length; i++) {
-		if (this.isOnSprite(this._commands[i])) {this.setTouchCommand(i)};
+		if (this.isOnSprite(this._commands[i])) {
+			this.setTouchCommand(i);
+			break;
+		}
 	};
 };
 
 //==============================
-// * set Touch Command
+// * set Touch Command (клик мышью)
 //==============================
 Scene_Menu.prototype.setTouchCommand = function(index) {
     this._commandWindow.select(index);
-	this._commandWindow.processOk();
+    this._commandWindow.processOk();
 };
 
 //==============================
@@ -972,6 +1009,7 @@ Scene_Menu.prototype.update = function() {
 	if (this._selection) {this.updateSelection()};
 	if (this._playTime) {this.updateTime()};
 	if (this._magicCircle) {this.updateMagicCircle()};
+	this.updateComField();
 	this.updateWindowStatus();
 	this.updateTouchScreen();
 };
