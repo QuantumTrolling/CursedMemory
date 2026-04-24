@@ -219,7 +219,7 @@
  * - Removida a animação de entrada das icones de comando,
  * - Mantida a animação de seleção (aumento da icone selecionada),
  * - Corrigida a interação com o mouse (cliques e hover),
- * - Hover agora altera o índice selecionado (a seleção segue o mouse).
+ * - Hover agora altera o índice selecionado (a seleção segue o mouse) para comandos e faces.
  */
 
 //=============================================================================
@@ -757,9 +757,23 @@ Scene_Menu.prototype.createSelection = function() {
 };	
 	
 //==============================
-// * update Selection
+// * update Selection (com hover para faces)
 //==============================
 Scene_Menu.prototype.updateSelection = function() {
+	// Hover para os retratos (Face sel)
+	if (this._statusWindow.active && this._selection) {
+		var hoverFaceIndex = -1;
+		for (var i = 0; i < this._selection.length; i++) {
+			if (this.isOnSprite(this._selection[i])) {
+				hoverFaceIndex = i;
+				break;
+			}
+		}
+		if (hoverFaceIndex !== -1 && this._statusWindow._index !== hoverFaceIndex) {
+			this._statusWindow.select(hoverFaceIndex);
+		}
+	}
+	
 	if (this._statusWindow.active) {
 		this._selField.opacity += 15;
 		if (this._selField.x > 0) {this._selField.x -= 4
