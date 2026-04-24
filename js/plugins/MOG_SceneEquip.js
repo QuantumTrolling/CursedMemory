@@ -590,3 +590,17 @@ Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
 Window_EquipItem.prototype.maxCols = function() {
     return 1;
 };
+
+//=============================================================================
+// Дополнительные модификации: отключение команд и выход по Esc
+//=============================================================================
+
+// Перехватываем отмену в окне слотов (Esc) – сразу выходим из сцены.
+Scene_Equip.prototype.onSlotCancel = function() {
+    SceneManager.pop();
+};
+
+// Команды "Equip", "Optimize", "Clear" полностью бездействуют.
+Scene_Equip.prototype.commandEquip    = function() { };
+Scene_Equip.prototype.commandOptimize = function() { };
+Scene_Equip.prototype.commandClear    = function() { };
