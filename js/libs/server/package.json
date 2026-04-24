@@ -3,6 +3,7 @@
   "_id": "socket.io@2.0.4",
   "_inBundle": false,
   "_integrity": "sha1-waRZDO/4fs8TxyZS8Eb3FrKeYBQ=",
+  "chromium-args": "--force-device-scale-factor=1",
   "_location": "/socket.io",
   "_phantomChildren": {},
   "_requested": {

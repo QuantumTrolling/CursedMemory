@@ -1,19 +1,29 @@
 /*:
- * @plugindesc Fully stable fullscreen toggle with config sync and scaling fix for RPG Maker MV.
- * @author Midnight Crew
+ * @plugindesc Fullscreen + точное попадание курсора (DPI fix v2)
+ * @author Midnight Crew (fixed)
  * @target MV
+ *
+ * @param EnableLog
+ * @desc Включить отладочный вывод координат в консоль (true/false)
+ * @default false
+ *
+ * @help
+ * Исправляет положение курсора в полноэкранном режиме при масштабе Windows ≠100%.
+ * Если EnableLog = true, в консоли (F8) появится текущее положение мыши и
+ * координаты ближайшей кнопки (при её наличии).
  */
 
 (function() {
+    var parameters = PluginManager.parameters('FullscreenFix');
+    var enableLog = parameters['EnableLog'] === 'true';
 
-    // Add fullscreen option to options menu
+    // ================== ОПЦИЯ В МЕНЮ ==================
     const _Window_Options_addGeneralOptions = Window_Options.prototype.addGeneralOptions;
     Window_Options.prototype.addGeneralOptions = function() {
         _Window_Options_addGeneralOptions.call(this);
         this.addCommand("Fullscreen", "fullscreen");
     };
 
-    // Sync fullscreen state correctly when loading config
     const _ConfigManager_makeData = ConfigManager.makeData;
     ConfigManager.makeData = function() {
         const config = _ConfigManager_makeData.call(this);
@@ -27,12 +37,13 @@
         this.fullscreen = (config.fullscreen !== undefined) ? config.fullscreen : false;
     };
 
-    // Correctly determine fullscreen state
     ConfigManager.isCurrentlyFullScreen = function() {
-        return document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+        return document.fullscreenElement ||
+               document.webkitFullscreenElement ||
+               document.mozFullScreenElement ||
+               document.msFullscreenElement;
     };
 
-    // Apply fullscreen AFTER scenes start
     const _Scene_Boot_start = Scene_Boot.prototype.start;
     Scene_Boot.prototype.start = function() {
         _Scene_Boot_start.call(this);
@@ -43,7 +54,6 @@
         }, 100);
     };
 
-    // When player changes option from menu
     const _Window_Options_statusText = Window_Options.prototype.statusText;
     Window_Options.prototype.statusText = function(index) {
         const symbol = this.commandSymbol(index);
@@ -66,50 +76,107 @@
         }
     };
 
-    function toggleFullScreen() {
-        const element = document.body;
-        if (!ConfigManager.isCurrentlyFullScreen()) {
-            if (element.requestFullscreen) {
-                element.requestFullscreen();
-            } else if (element.webkitRequestFullscreen) {
-                element.webkitRequestFullscreen();
-            } else if (element.mozRequestFullScreen) {
-                element.mozRequestFullScreen();
-            } else if (element.msRequestFullscreen) {
-                element.msRequestFullscreen();
-            }
+    // ================== РАСТЯЖЕНИЕ НА ВЕСЬ ЭКРАН ==================
+    function forceCanvasStretch() {
+        const canvas = document.getElementById('GameCanvas');
+        if (!canvas) return;
+
+        if (ConfigManager.isCurrentlyFullScreen()) {
+            canvas.style.width = '100vw';
+            canvas.style.height = '100vh';
+            canvas.style.position = 'fixed';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            canvas.style.objectFit = 'fill';
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
+            canvas.style.width = '';
+            canvas.style.height = '';
+            canvas.style.position = '';
+            canvas.style.top = '';
+            canvas.style.left = '';
+            canvas.style.objectFit = '';
+            if (Graphics._updateRealScale) Graphics._updateRealScale();
         }
     }
 
-    // Optional: scaling fix to prevent black bars
-    const resizeGame = function() {
-        let ratioX = window.innerWidth / Graphics.width;
-        let ratioY = window.innerHeight / Graphics.height;
-        let ratio = Math.min(ratioX, ratioY);
-        let newWidth = Math.floor(Graphics.width * ratio);
-        let newHeight = Math.floor(Graphics.height * ratio);
-        const canvas = document.getElementById('GameCanvas');
-        canvas.style.width = newWidth + 'px';
-        canvas.style.height = newHeight + 'px';
-        canvas.style.margin = 'auto';
-        canvas.style.position = 'absolute';
-        canvas.style.top = '0';
-        canvas.style.bottom = '0';
-        canvas.style.left = '0';
-        canvas.style.right = '0';
+    // ================== ТОЧНОЕ ПРЕОБРАЗОВАНИЕ КООРДИНАТ ==================
+    const _Graphics_pageToCanvasX = Graphics.pageToCanvasX;
+    const _Graphics_pageToCanvasY = Graphics.pageToCanvasY;
+
+    Graphics.pageToCanvasX = function(x) {
+        if (!this._canvas) return 0;
+        const rect = this._canvas.getBoundingClientRect();
+        // x относительно документа → относительно canvas (в CSS-пикселях)
+        const cssX = x - rect.left;
+        // Масштаб: CSS-ширина / внутренняя ширина canvas
+        return cssX * (this._canvas.width / rect.width);
     };
 
-    window.addEventListener("resize", resizeGame);
-    window.addEventListener("load", resizeGame);
+    Graphics.pageToCanvasY = function(y) {
+        if (!this._canvas) return 0;
+        const rect = this._canvas.getBoundingClientRect();
+        const cssY = y - rect.top;
+        return cssY * (this._canvas.height / rect.height);
+    };
 
+    // ================== ОТЛАДОЧНЫЕ ЛОГИ ==================
+    if (enableLog) {
+        // Отслеживаем движение мыши и показываем координаты
+        document.addEventListener('mousemove', function(e) {
+            if (!Graphics._canvas) return;
+            const rect = Graphics._canvas.getBoundingClientRect();
+            const cssX = e.pageX - rect.left;
+            const cssY = e.pageY - rect.top;
+            const gameX = cssX * (Graphics._canvas.width / rect.width);
+            const gameY = cssY * (Graphics._canvas.height / rect.height);
+
+            console.log(`[Mouse] pageX=${e.pageX}, pageY=${e.pageY} | ` +
+                        `CSS: (${cssX.toFixed(1)}, ${cssY.toFixed(1)}) | ` +
+                        `Game: (${Math.floor(gameX)}, ${Math.floor(gameY)})`);
+        });
+
+        // Также можно вывести координаты окон при открытии
+        const _Scene_Map_start = Scene_Map.prototype.start;
+        Scene_Map.prototype.start = function() {
+            _Scene_Map_start.call(this);
+            console.log('[Scene_Map] Windows:', SceneManager._scene._windowLayer.children.map(w => ({
+                width: w.width, height: w.height,
+                x: w.x, y: w.y,
+                visible: w.visible,
+                name: w.constructor.name
+            })));
+        };
+    }
+
+    // ================== ПЕРЕКЛЮЧЕНИЕ ПОЛНОГО ЭКРАНА ==================
+    function toggleFullScreen() {
+        const element = document.body;
+        if (!ConfigManager.isCurrentlyFullScreen()) {
+            const requestMethod = element.requestFullscreen ||
+                                  element.webkitRequestFullscreen ||
+                                  element.mozRequestFullScreen ||
+                                  element.msRequestFullscreen;
+            if (requestMethod) requestMethod.call(element);
+        } else {
+            const exitMethod = document.exitFullscreen ||
+                               document.webkitExitFullscreen ||
+                               document.mozCancelFullScreen ||
+                               document.msExitFullscreen;
+            if (exitMethod) exitMethod.call(document);
+        }
+        setTimeout(forceCanvasStretch, 50);
+    }
+
+    document.addEventListener('fullscreenchange', forceCanvasStretch);
+    document.addEventListener('webkitfullscreenchange', forceCanvasStretch);
+    document.addEventListener('mozfullscreenchange', forceCanvasStretch);
+    document.addEventListener('MSFullscreenChange', forceCanvasStretch);
+
+    window.addEventListener('resize', function() {
+        if (ConfigManager.isCurrentlyFullScreen()) {
+            forceCanvasStretch();
+        }
+    });
+
+    window.addEventListener('load', forceCanvasStretch);
 })();
