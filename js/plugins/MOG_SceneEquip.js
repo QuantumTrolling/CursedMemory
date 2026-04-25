@@ -3,10 +3,12 @@
 //=============================================================================
 
 /*:
- * @plugindesc (v1.4) Modifica a cena de equipamento.
+ * @plugindesc (v1.5.3) Modifica a cena de equipamento.
  * (Иконки/текст ×2, окна подогнаны, навигация восстановлена,
  *  5-й слот отображается, параметры подписаны, фокус сразу на слотах,
- *  иконка оружия зависит от типа, стандартные рамки MV)
+ *  иконка оружия зависит от типа, стандартные рамки MV,
+ *  увеличенные иконки без размытия, заголовок "Equipment",
+ *  настройки позиции лица и имени в статусе)
  * @author Moghunter (модифицировано)
  *
  * @param FontSize
@@ -153,9 +155,41 @@
  * @desc Иконка для типа оружия 20.
  * @default 0
  *
+ * @param Equip Title Text
+ * @desc Текст заголовка в правом верхнем углу.
+ * @default Equipment
+ *
+ * @param Equip Title Font Size
+ * @desc Размер шрифта заголовка.
+ * @default 28
+ *
+ * @param Equip Title X
+ * @desc Положение заголовка по X.
+ * @default 400
+ *
+ * @param Equip Title Y
+ * @desc Положение заголовка по Y.
+ * @default 20
+ *
+ * @param Face X
+ * @desc Положение лица персонажа по X.
+ * @default 150
+ *
+ * @param Face Y
+ * @desc Положение лица персонажа по Y.
+ * @default 0
+ *
+ * @param Actor Name X
+ * @desc Смещение имени персонажа по X (от левого края + textPadding).
+ * @default 120
+ *
+ * @param Actor Name Y
+ * @desc Смещение имени персонажа по Y.
+ * @default 0
+ *
  * @help
  * =============================================================================
- * +++ MOG - Scene Equip (v1.4) +++
+ * +++ MOG - Scene Equip (v1.5.3) +++
  * By Moghunter
  * https://mogplugins.com
  * =============================================================================
@@ -176,13 +210,14 @@
  * - Ширина окон слотов/предметов уменьшена вдвое, высота на 5 строк.
  * - 5-й слот отображается корректно.
  * - Параметры подписаны (названия из базы).
- * - Иконка первого слота теперь зависит от типа оружия (настраивается для каждого ID типа).
+ * - Иконка первого слота зависит от типа оружия.
  * - Окна используют стандартные рамки MV.
+ * - Увеличенные иконки без размытия (context.imageSmoothingEnabled).
+ * - Исправлен цвет названий предметов в слотах (белый).
+ * - Настраиваемый заголовок "Equipment" (текст, размер, позиция).
+ * - Настройки позиции лица и имени персонажа в окне статуса.
  */
 
-//=============================================================================
-// ** PLUGIN PARAMETERS
-//=============================================================================
 var Imported = Imported || {};
 Imported.MOG_SceneEquip = true;
 var Moghunter = Moghunter || {};
@@ -208,15 +243,23 @@ Moghunter.scEquip_SlotIcons = [
     Number(Moghunter.parameters['Slot4_Icon'] || 0)
 ];
 
-// Иконки типов оружия (индексы 1..20)
 Moghunter.scEquip_WeaponTypeIcons = [];
 for (var i = 1; i <= 20; i++) {
     Moghunter.scEquip_WeaponTypeIcons[i] = Number(Moghunter.parameters['Weapon Type ' + i + ' Icon'] || 0);
 }
 
-//=============================================================================
-// ** ImageManager
-//=============================================================================
+// Заголовок
+Moghunter.scEquip_TitleText = String(Moghunter.parameters['Equip Title Text'] || 'Equipment');
+Moghunter.scEquip_TitleFontSize = Number(Moghunter.parameters['Equip Title Font Size'] || 28);
+Moghunter.scEquip_TitleX = Number(Moghunter.parameters['Equip Title X'] || 400);
+Moghunter.scEquip_TitleY = Number(Moghunter.parameters['Equip Title Y'] || 20);
+
+// Лицо и имя персонажа в статусе
+Moghunter.scEquip_FaceX = Number(Moghunter.parameters['Face X'] || 150);
+Moghunter.scEquip_FaceY = Number(Moghunter.parameters['Face Y'] || 0);
+Moghunter.scEquip_ActorNameX = Number(Moghunter.parameters['Actor Name X'] || 120);
+Moghunter.scEquip_ActorNameY = Number(Moghunter.parameters['Actor Name Y'] || 0);
+
 ImageManager.loadMenusequip = function(filename) {
     return this.loadBitmap('img/menus/equip/', filename, 0, true);
 };
@@ -264,11 +307,29 @@ Scene_Equip.prototype.create = function() {
     this._statusWindow.y = Moghunter.scEquip_StatusWindowY;
     this._statusWindowOrg = [this._statusWindow.x, this._statusWindow.y];
 
-    // Общий фон Layout (по желанию)
     this._layout = new Sprite(ImageManager.loadMenusequip("Layout"));
     this._field.addChild(this._layout);
 
+    this.createTitleSprite();
     this.resetPosition();
+};
+
+Scene_Equip.prototype.createTitleSprite = function() {
+    this._titleSprite = new Sprite();
+    var text = Moghunter.scEquip_TitleText;
+    var fontSize = Moghunter.scEquip_TitleFontSize;
+    var x = Moghunter.scEquip_TitleX;
+    var y = Moghunter.scEquip_TitleY;
+
+    var bitmap = new Bitmap(200, 60);
+    bitmap.fontSize = fontSize;
+    bitmap.textColor = '#ffffff';
+    bitmap.drawText(text, 0, 0, 200, 60, 'right');
+
+    this._titleSprite.bitmap = bitmap;
+    this._titleSprite.x = x;
+    this._titleSprite.y = y;
+    this._field.addChild(this._titleSprite);
 };
 
 var _mog_scEquipM_start = Scene_Equip.prototype.start;
@@ -359,7 +420,7 @@ Window_EquipSlot.prototype.drawItem = function(index) {
     if (this._actor) {
         var rect = this.itemRectForText(index);
         var iconWh = Window_Base._iconWidth * 2;
-        var slotIconId = this.slotIconId(index);  // новый метод
+        var slotIconId = this.slotIconId(index);
 
         if (slotIconId > 0) {
             var bitmap = ImageManager.loadSystem('IconSet');
@@ -367,13 +428,18 @@ Window_EquipSlot.prototype.drawItem = function(index) {
             var sy = Math.floor(slotIconId / 16) * Window_Base._iconHeight;
             var dx = rect.x;
             var dy = rect.y + (this.itemHeight() - iconWh) / 2;
+
+            var ctx = this.contents.context;
+            var smooth = ctx.imageSmoothingEnabled;
+            ctx.imageSmoothingEnabled = false;
             this.contents.blt(bitmap, sx, sy, Window_Base._iconWidth, Window_Base._iconHeight, dx, dy, iconWh, iconWh);
+            ctx.imageSmoothingEnabled = smooth;
         }
 
         var itemX = rect.x + (slotIconId > 0 ? iconWh + 8 : 0);
         var itemWidth = rect.width - (slotIconId > 0 ? iconWh + 8 : 0);
 
-        this.changeTextColor(this.systemColor());
+        this.changeTextColor(this.normalColor());
         this.changePaintOpacity(this.isEnabled(index));
         var item = this._actor.equips()[index];
         this.drawItemName(item, itemX, rect.y, itemWidth);
@@ -381,23 +447,20 @@ Window_EquipSlot.prototype.drawItem = function(index) {
     }
 };
 
-// Новая функция: определяет ID иконки слота с учётом типа оружия
 Window_EquipSlot.prototype.slotIconId = function(index) {
     if (index !== 0) return Moghunter.scEquip_SlotIcons[index] || 0;
 
-    // Слот оружия (index 0)
     var item = this._actor.equips()[0];
     if (item && DataManager.isWeapon(item)) {
         var wtypeId = item.wtypeId;
         return Moghunter.scEquip_WeaponTypeIcons[wtypeId] || Moghunter.scEquip_SlotIcons[0];
     } else {
-        // Оружие не надето – ищем первый доступный тип
         var types = this._actor.equippableWeaponTypes();
         for (var i = 0; i < types.length; i++) {
             var icon = Moghunter.scEquip_WeaponTypeIcons[types[i]];
             if (icon > 0) return icon;
         }
-        return Moghunter.scEquip_SlotIcons[0]; // fallback
+        return Moghunter.scEquip_SlotIcons[0];
     }
 };
 
@@ -409,7 +472,13 @@ Window_EquipSlot.prototype.drawItemName = function(item, x, y, width) {
         var ph = Window_Base._iconHeight * 2;
         var sx = iconIndex % 16 * Window_Base._iconWidth;
         var sy = Math.floor(iconIndex / 16) * Window_Base._iconHeight;
+
+        var ctx = this.contents.context;
+        var smooth = ctx.imageSmoothingEnabled;
+        ctx.imageSmoothingEnabled = false;
         this.contents.blt(bitmap, sx, sy, Window_Base._iconWidth, Window_Base._iconHeight, x, y, pw, ph);
+        ctx.imageSmoothingEnabled = smooth;
+
         this.drawText(item.name, x + pw + 8, y, width - pw - 8);
     } else {
         this.drawText("", x, y, width);
@@ -443,8 +512,8 @@ Window_EquipStatus.prototype.initialize = function(x, y) {
 
 Window_EquipStatus.prototype.createFaceSprite = function() {
     this._faceSprite = new Sprite();
-    this._faceSprite.x = 150;
-    this._faceSprite.y = 0;
+    this._faceSprite.x = Moghunter.scEquip_FaceX;
+    this._faceSprite.y = Moghunter.scEquip_FaceY;
     this.addChild(this._faceSprite);
 };
 
@@ -456,7 +525,10 @@ Window_EquipStatus.prototype.refresh = function() {
         this._parData[1] = this._parImg.height;
         if (!this._faceSprite) this.createFaceSprite();
         this.refreshFaceSprite();
-        this.drawActorName(this._actor, this.textPadding(), 0);
+        // Имя теперь рисуется с настраиваемым смещением
+        var nameX = this.textPadding() + Moghunter.scEquip_ActorNameX;
+        var nameY = Moghunter.scEquip_ActorNameY;
+        this.drawActorName(this._actor, nameX, nameY);
         for (var i = 0; i < 8; i++) {
             this.drawItem(0, 53 + this.lineHeight() * i, i);
         }
@@ -491,7 +563,12 @@ Window_EquipStatus.prototype.drawRightArrowM = function(x, y, paramId) {
     } else {
         sx = 0;
     }
+
+    var ctx = this.contents.context;
+    var smooth = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;
     this.contents.blt(this._parImg, sx, 0, this._parData[0], this._parData[1], x, y);
+    ctx.imageSmoothingEnabled = smooth;
 };
 
 Window_EquipStatus.prototype.drawItem = function(x, y, paramId) {
@@ -533,7 +610,13 @@ Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
         var ph = Window_Base._iconHeight * 2;
         var sx = iconIndex % 16 * Window_Base._iconWidth;
         var sy = Math.floor(iconIndex / 16) * Window_Base._iconHeight;
+
+        var ctx = this.contents.context;
+        var smooth = ctx.imageSmoothingEnabled;
+        ctx.imageSmoothingEnabled = false;
         this.contents.blt(bitmap, sx, sy, Window_Base._iconWidth, Window_Base._iconHeight, x, y, pw, ph);
+        ctx.imageSmoothingEnabled = smooth;
+
         this.drawText(item.name, x + pw + 8, y, width - pw - 8);
     } else {
         this.drawText("", x, y, width);

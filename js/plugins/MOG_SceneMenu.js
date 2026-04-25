@@ -3,7 +3,7 @@
 //=============================================================================
 
 /*:
- * @plugindesc (v1.2) Modifica a cena de menu principal.
+ * @plugindesc (v1.3) Modifica a cena de menu principal.
  * @author Moghunter
  *
  * @param Actor Hud X-Axis
@@ -194,10 +194,30 @@
  * @desc Espaçamento entre os ícones.
  * @default 36
  *
- * @help  
+ * @param Playtime Visible
+ * @desc Mostrar o tempo de jogo. (true/false)
+ * @default false
+ *
+ * @param Menu Label
+ * @desc Texto do título do menu.
+ * @default Menu
+ *
+ * @param Menu Label X-Axis
+ * @desc Posição X-Axis do título do menu.
+ * @default 20
+ *
+ * @param Menu Label Y-Axis
+ * @desc Posição Y-Axis do título do menu.
+ * @default 20
+ *
+ * @param Menu Label FontSize
+ * @desc Tamanho da fonte do título do menu.
+ * @default 28
+ *
+ * @help
  * =============================================================================
- * +++ MOG - Scene Menu (v1.2) +++
- * By Moghunter 
+ * +++ MOG - Scene Menu (v1.3) +++
+ * By Moghunter
  * https://mogplugins.com
  * =============================================================================
  * Modifica a cena de menu principal.
@@ -210,12 +230,13 @@
  * /img/menus/main/
  *
  * =============================================================================
- * HISTÓRICO 
+ * HISTÓRICO
  * =============================================================================
- * (1.2) - Correção do crash caso não usar o plugin do Menu Cursor. 
+ * (1.3) - Adicionado título "Menu" customizável e opção de esconder o playtime.
+ * (1.2) - Correção do crash caso não usar o plugin do Menu Cursor.
  * (1.1) - Correção do plugin parameter da posição do nome do comando.
  *
- * Modificação (2026): 
+ * Modificação (2026):
  * - Removida a animação de entrada das icones de comando,
  * - Mantida a animação de seleção (aumento da icone selecionada),
  * - Corrigida a interação com o mouse (cliques e hover),
@@ -227,17 +248,17 @@
 //=============================================================================
 　　var Imported = Imported || {};
 　　Imported.MMOG_SceneMenu = true;
-　　var Moghunter = Moghunter || {}; 
+　　var Moghunter = Moghunter || {};
 
   　Moghunter.parameters = PluginManager.parameters('MOG_SceneMenu');
 	Moghunter.scMenu_layoutStatusX = Number(Moghunter.parameters['Actor Hud X-Axis'] || 0);
-	Moghunter.scMenu_layoutStatusY = Number(Moghunter.parameters['Actor Hud Y-Axis'] || 0);  
-    Moghunter.scMenu_CharX = Number(Moghunter.parameters['Char X-Axis'] || 20);
+	Moghunter.scMenu_layoutStatusY = Number(Moghunter.parameters['Actor Hud Y-Axis'] || 0);
+	Moghunter.scMenu_CharX = Number(Moghunter.parameters['Char X-Axis'] || 20);
 	Moghunter.scMenu_CharY = Number(Moghunter.parameters['Char Y-Axis'] || 0);
 	Moghunter.scMenu_HPMeterX = Number(Moghunter.parameters['HP Meter X-Axis'] || 17);
 	Moghunter.scMenu_HPMeterY = Number(Moghunter.parameters['HP Meter Y-Axis'] || 93);
 	Moghunter.scMenu_MPMeterX = Number(Moghunter.parameters['MP Meter X-Axis'] || 17);
-	Moghunter.scMenu_MPMeterY = Number(Moghunter.parameters['MP Meter Y-Axis'] || 144);	
+	Moghunter.scMenu_MPMeterY = Number(Moghunter.parameters['MP Meter Y-Axis'] || 144);
 	Moghunter.scMenu_HPNumberX = Number(Moghunter.parameters['HP Number X-Axis'] || 100);
 	Moghunter.scMenu_HPNumberY = Number(Moghunter.parameters['HP Number Y-Axis'] || 73);
 	Moghunter.scMenu_HPNumber2X = Number(Moghunter.parameters['HPMax Number X-Axis'] || 140);
@@ -254,9 +275,9 @@
 	Moghunter.scMenu_NameY = Number(Moghunter.parameters['Name Y-Axis'] || 0);
 	Moghunter.scMenu_NameFontSize = Number(Moghunter.parameters['Name FontSize'] || 20);
 	Moghunter.scMenu_ComX = Number(Moghunter.parameters['Commands X-Axis'] || 180);
-	Moghunter.scMenu_ComY = Number(Moghunter.parameters['Commands Y-Axis'] || 50);	
+	Moghunter.scMenu_ComY = Number(Moghunter.parameters['Commands Y-Axis'] || 50);
 	Moghunter.scMenu_ComWX = Number(Moghunter.parameters['Command Active X-Axis'] || 40);
-	Moghunter.scMenu_ComWY = Number(Moghunter.parameters['Command Active Y-Axis'] || 148);	
+	Moghunter.scMenu_ComWY = Number(Moghunter.parameters['Command Active Y-Axis'] || 148);
 	Moghunter.scMenu_ComNameVisible = String(Moghunter.parameters['Com Name Visible'] || "true");
 	Moghunter.scMenu_ComNameX = Number(Moghunter.parameters['Com Name X-Axis'] || 40);
 	Moghunter.scMenu_ComNameY = Number(Moghunter.parameters['Com Name Y-Axis'] || 96);
@@ -264,23 +285,30 @@
 	Moghunter.scMenu_maxVisibleFaces = Number(Moghunter.parameters['Max Visible Faces'] || 5);
 	Moghunter.scMenu_FaceSelX = Number(Moghunter.parameters['Face Sel X-Axis'] || 240);
 	Moghunter.scMenu_FaceSelY = Number(Moghunter.parameters['Face Sel Y-Axis'] || 128);
-    Moghunter.scMenu_GoldNumberX = Number(Moghunter.parameters['Gold X-Axis'] || 260);
+	Moghunter.scMenu_GoldNumberX = Number(Moghunter.parameters['Gold X-Axis'] || 260);
 	Moghunter.scMenu_GoldNumberY = Number(Moghunter.parameters['Gold Y-Axis'] || 580);
-    Moghunter.scMenu_playTimeNumberX = Number(Moghunter.parameters['Time X-Axis'] || 565);
+	Moghunter.scMenu_playTimeNumberX = Number(Moghunter.parameters['Time X-Axis'] || 565);
 	Moghunter.scMenu_playTimeNumberY = Number(Moghunter.parameters['Time Y-Axis'] || 60);
-	Moghunter.scMenu_playTimeNumberFontSize = Number(Moghunter.parameters['Time FontSize'] || 24);	
-    Moghunter.scMenu_locationX = Number(Moghunter.parameters['Location X-Axis'] || 450);
+	Moghunter.scMenu_playTimeNumberFontSize = Number(Moghunter.parameters['Time FontSize'] || 24);
+	Moghunter.scMenu_locationX = Number(Moghunter.parameters['Location X-Axis'] || 450);
 	Moghunter.scMenu_locationY = Number(Moghunter.parameters['Location Y-Axis'] || 575);
-	Moghunter.scMenu_locationFontSize = Number(Moghunter.parameters['Location FontSize'] || 26);			
-	Moghunter.scMenu_MagicCircleV = String(Moghunter.parameters['Magic Circle Visible'] || "true");	
-    Moghunter.scMenu_MagicCircleX = Number(Moghunter.parameters['Magic Circle X-Axis'] || 700);
+	Moghunter.scMenu_locationFontSize = Number(Moghunter.parameters['Location FontSize'] || 26);
+	Moghunter.scMenu_MagicCircleV = String(Moghunter.parameters['Magic Circle Visible'] || "true");
+	Moghunter.scMenu_MagicCircleX = Number(Moghunter.parameters['Magic Circle X-Axis'] || 700);
 	Moghunter.scMenu_MagicCircleY = Number(Moghunter.parameters['Magic Circle Y-Axis'] || 140);
-    Moghunter.scMenu_MagicCircleR = Number(Moghunter.parameters['Magic Circle Rotation'] || 0.001);
+	Moghunter.scMenu_MagicCircleR = Number(Moghunter.parameters['Magic Circle Rotation'] || 0.001);
 	Moghunter.scMenu_EquipIconX = Number(Moghunter.parameters['Equip Icons X-Axis'] || 20);
 	Moghunter.scMenu_EquipIconY = Number(Moghunter.parameters['Equip Icons Y-Axis'] || 120);
 	Moghunter.scMenu_EquipIconSpacing = Number(Moghunter.parameters['Equip Icons Spacing'] || 36);
-		
-		
+
+	// Novos parâmetros adicionados (v1.3)
+	Moghunter.scMenu_playtimeVisible = String(Moghunter.parameters['Playtime Visible'] || "false");
+	Moghunter.scMenu_menuLabel = String(Moghunter.parameters['Menu Label'] || "Menu");
+	Moghunter.scMenu_menuLabelX = Number(Moghunter.parameters['Menu Label X-Axis'] || 20);
+	Moghunter.scMenu_menuLabelY = Number(Moghunter.parameters['Menu Label Y-Axis'] || 20);
+	Moghunter.scMenu_menuLabelFontSize = Number(Moghunter.parameters['Menu Label FontSize'] || 28);
+
+
 //=============================================================================
 // ** ImageManager
 //=============================================================================
@@ -291,42 +319,42 @@
 ImageManager.loadMenusMain = function(filename) {
     return this.loadBitmap('img/menus/main/', filename, 0, true);
 };
-	
+
 //==============================
 // * Main Faces1
 //==============================
 ImageManager.loadMenusFaces1 = function(filename) {
     return this.loadBitmap('img/menus/faces/faces1/', filename, 0, true);
-};	
+};
 
 //==============================
 // * Main Faces2
 //==============================
 ImageManager.loadMenusFaces2 = function(filename) {
     return this.loadBitmap('img/menus/faces/faces2/', filename, 0, true);
-};			
-	
+};
+
 //==============================
 // * Main Faces3
 //==============================
 ImageManager.loadMenusFaces3 = function(filename) {
     return this.loadBitmap('img/menus/faces/faces3/', filename, 0, true);
-};			
-	
+};
+
 //==============================
 // * Main Faces4
 //==============================
 ImageManager.loadMenusFaces4 = function(filename) {
     return this.loadBitmap('img/menus/faces/faces4/', filename, 0, true);
-};	
-	
+};
+
 //==============================
 // * Main Commands
 //==============================
 ImageManager.loadMenusMainCommands = function(filename) {
     return this.loadBitmap('img/menus/main/commands/', filename, 0, true);
-};		
-		
+};
+
 //=============================================================================
 // ** Scene Menu
 //=============================================================================
@@ -335,12 +363,12 @@ Scene_Menu.prototype.create = function() {
 	_mog_scmenu_create.call(this);
 	this.loadBitmapsMain();
 	this.createField();
-	this.createMonogatari(); 
+	this.createMonogatari();
 };
 
 //==============================
 // * loadBitmapsMain
-//==============================	
+//==============================
 Scene_Menu.prototype.loadBitmapsMain = function() {
 	this._facesBitmaps = []
 	for (var i = 0; i < $gameParty.members().length; i++) {
@@ -357,7 +385,7 @@ Scene_Menu.prototype.loadBitmapsMain = function() {
 
 //==============================
 // * Create Field
-//==============================	
+//==============================
 Scene_Menu.prototype.createField = function() {
      this._field = new Sprite();
 	 this.addChild(this._field);
@@ -365,7 +393,7 @@ Scene_Menu.prototype.createField = function() {
 
 //==============================
 // * Create Monogatari
-//==============================	
+//==============================
 Scene_Menu.prototype.createMonogatari = function() {
 	 if (String(Moghunter.scMenu_MagicCircleV) === "true") {this.createMagicCircle()};
 	 this.createCharacters();
@@ -373,12 +401,14 @@ Scene_Menu.prototype.createMonogatari = function() {
      this.createCharStatus();
 	 this.createCommands();
 	 this.createCommandName();
-	 this.createPlayTime();
+	 // Playtime condicional
+	 if (String(Moghunter.scMenu_playtimeVisible) === "true") { this.createPlayTime(); }
 	 this.createLocation();
+	 this.createMenuLabel(); // Novo título do menu
 };
 //==============================
 // * Create After
-//==============================	
+//==============================
 Scene_Menu.prototype.createAfter = function() {
 	 this.createSelection();
 	 this.createFaceArrow();
@@ -399,8 +429,8 @@ Scene_Menu.prototype.createGold = function() {
 		 this._gold_number[i].opacity = 255;
 		 this._gold_number[i].x = x ;
 		 this._gold_number[i].y = y ;
-		 this._field.addChild(this._gold_number[i]);		 
-	};	
+		 this._field.addChild(this._gold_number[i]);
+	};
 	this.refresh_number(this._gold_number,$gameParty.gold(),this._GoldData,x)
 };
 
@@ -458,7 +488,7 @@ Scene_Menu.prototype.refreshTime = function() {
 Scene_Menu.prototype.updateTime = function() {
 	if (this._playTimeSec != this.playTimeSec()) {this.refreshTime()};
 };
-   
+
 //==============================
 // * create Location
 //==============================
@@ -470,13 +500,25 @@ Scene_Menu.prototype.createLocation = function() {
 	var mapName = $gameMap.displayName();
 	this._location.bitmap.drawText(mapName,0,0,260,32,"center");
 	this._field.addChild(this._location);
-};   
-   
+};
+
+//==============================
+// * create Menu Label (NOVO v1.3)
+//==============================
+Scene_Menu.prototype.createMenuLabel = function() {
+    this._menuLabel = new Sprite(new Bitmap(200, 50));
+    this._menuLabel.x = Moghunter.scMenu_menuLabelX;
+    this._menuLabel.y = Moghunter.scMenu_menuLabelY;
+    this._menuLabel.bitmap.fontSize = Moghunter.scMenu_menuLabelFontSize;
+    this._menuLabel.bitmap.drawText(Moghunter.scMenu_menuLabel, 0, 0, 200, 50, "left");
+    this._field.addChild(this._menuLabel);
+};
+
 //==============================
 // * Refresh Number
 //==============================
 Scene_Menu.prototype.refresh_number = function(sprites,value,img_data,x) {
-    numbers = Math.abs(value).toString().split("");  
+    numbers = Math.abs(value).toString().split("");
    	for (var i = 0; i < sprites.length ; i++) {
 	   sprites[i].visible = false;
 	   if (i < numbers.length) {
@@ -495,17 +537,17 @@ Scene_Menu.prototype.refresh_number = function(sprites,value,img_data,x) {
 };
 //==============================
 // * maxMembers
-//==============================	
+//==============================
 Scene_Menu.prototype.maxMembers = function() {
      return Math.min(Math.max($gameParty.members().length,0),$gameParty.maxBattleMembers());
 };
 
 //==============================
 // * Create Characters
-//==============================	
+//==============================
 Scene_Menu.prototype.createCharacters = function() {
 	 this._characters = [];
-	 for (var i = 0; i < this.maxMembers(); i++) {	   
+	 for (var i = 0; i < this.maxMembers(); i++) {
            this._characters[i] = new MBustMenu(i,$gameParty.members()[i],this.maxMembers());
 		   this._field.addChild(this._characters[i]);
 	 };
@@ -513,10 +555,10 @@ Scene_Menu.prototype.createCharacters = function() {
 
 //==============================
 // * Create Char Status
-//==============================	
+//==============================
 Scene_Menu.prototype.createCharStatus = function() {
 	 this._charStatus = [];
-	 for (var i = 0; i < this.maxMembers(); i++) {	   
+	 for (var i = 0; i < this.maxMembers(); i++) {
            this._charStatus[i] = new MCharStatus(i,$gameParty.members()[i],this.maxMembers());
 		   this._field.addChild(this._charStatus[i]);
 	 };
@@ -524,14 +566,14 @@ Scene_Menu.prototype.createCharStatus = function() {
 
 //==============================
 // * Update
-//==============================	
+//==============================
 var _mog_smenu_update = Scene_Menu.prototype.createGoldWindow;
 Scene_Menu.prototype.createGoldWindow = function() {
 	_mog_smenu_update.call(this);
     if (this._goldWindow) {this._goldWindow.visible = false};
-};	
-	
-	
+};
+
+
 //==============================
 // * create Layout
 //==============================
@@ -539,17 +581,17 @@ Scene_Menu.prototype.createLayout = function() {
      this._layout = new Sprite(ImageManager.loadMenusMain("Layout"));
 	 this._field.addChild(this._layout);
 };
-	
+
 //==============================
 // * create Commands (sem animação de entrada)
-//==============================	
+//==============================
 Scene_Menu.prototype.createCommands = function() {
      this._commands = [];
 	 this._compos = [];
 	 this._comzoom = [];
 	 this._comField = new Sprite();
 	 this._field.addChild(this._comField);
-	 
+
 	 for (var i = 0; i < this._comList.length; i++) {
 		 this._commands[i] = new Sprite(this._comBitmaps[i]);
 		 this._commands[i].anchor.x = 0.5;
@@ -563,7 +605,7 @@ Scene_Menu.prototype.createCommands = function() {
 		 this._compos[i] = [Moghunter.scMenu_ComX + (80 * i), Moghunter.scMenu_ComY + 48];
 		 this._comzoom[i] = 0;
 	     this._comField.addChild(this._commands[i]);
-	 };	 
+	 };
 };
 
 //==============================
@@ -585,18 +627,18 @@ Scene_Menu.prototype.updateCommands = function() {
 			 this._commandWindow.select(hoverIndex);
 		 }
 	 }
-	 
+
 	 // Обычное обновление анимации масштаба для ВСЕХ иконок
 	 for (var i = 0; i < this._commands.length; i++) {
 		  // Определяем, является ли иконка выбранной (индекс совпадает)
 		  var isSelected = (i === this._commandWindow._index);
-		  
+
 		  if (isSelected) {
 		       // Для выбранной иконки: позиция может смещаться к активной позиции
 		       var nx = this._statusWindow.active ? Moghunter.scMenu_ComWX : this._compos[i][0];
-			   var ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];			  
+			   var ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];
 			   if (this._commandWindow.isCurrentItemEnabled()) {this._commands[i].opacity += 20};
-			   
+
 			   // Анимация пульсации масштаба
 			   if (this._comzoom[i] === 0 && !this._statusWindow.active) {
 				   this._commands[i].scale.x += 0.01;
@@ -609,14 +651,14 @@ Scene_Menu.prototype.updateCommands = function() {
 				   if (this._commands[i].scale.x <= 1.00) {
 					   this._commands[i].scale.x = 1.00;
 				       this._comzoom[i] = 0;
-				   };			   
+				   };
 		       };
 			   // Плавное движение
 			   this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
 			   this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
 			   this._commands[i].scale.y = this._commands[i].scale.x;
-			   
-		  } else { 
+
+		  } else {
 		       // Невыбранные иконки: возвращаем на исходную позицию, масштаб 1
 		       var nx = this._compos[i][0];
 			   var ny = this._compos[i][1];
@@ -635,7 +677,7 @@ Scene_Menu.prototype.updateCommands = function() {
 		  };
 	 };
 };
- 
+
 //==============================
 // * update Com Field (movimento do campo de comandos - necessário para o mouse)
 //==============================
@@ -644,17 +686,17 @@ Scene_Menu.prototype.updateComField = function() {
         this._comField.opacity += 15
 	    if (this._comField.y < 0) {
 		    this._comField.y += 3;
-			if (this._comField.y > 0 ) {this._comField.y = 0}  
+			if (this._comField.y > 0 ) {this._comField.y = 0}
 	    }
    } else {
 	   this._comField.opacity -= 15
 	   if (this._comField.y > -50) {
 		    this._comField.y -= 3;
-			if (this._comField.y < -50 ) {this._comField.y = -50}  
+			if (this._comField.y < -50 ) {this._comField.y = -50}
 	   };
    };
 };
-	  
+
 //==============================
 // * is Com Enabled
 //==============================
@@ -662,7 +704,7 @@ Scene_Menu.prototype.isComEnabled = function(index) {
 	  if (index != this._commandWindow._index) {return false};
 	  return true;
 };
-	
+
 //==============================
 // * Command Move To
 //==============================
@@ -672,10 +714,10 @@ Scene_Menu.prototype.commandMoveTo = function(value,real_value) {
 	if (value > real_value) {value -= dnspeed;
 	    if (value < real_value) {value = real_value};}
     else if (value < real_value) {value  += dnspeed;
-    	if (value  > real_value) {value  = real_value};		
+    	if (value  > real_value) {value  = real_value};
     };
 	return Math.floor(value);
-};	
+};
 
 //==============================
 // * create Command Name
@@ -699,10 +741,10 @@ Scene_Menu.prototype.updateCommandName = function() {
         if (this._commandNameIndex != this._commandWindow._index) {this.refreshCommandName()};
 	};
 	this._commandName.x = this.commandMoveTo(this._commandName.x,Moghunter.scMenu_ComNameX);
-	this._commandName.y = this.commandMoveTo(this._commandName.y,Moghunter.scMenu_ComNameY);	
+	this._commandName.y = this.commandMoveTo(this._commandName.y,Moghunter.scMenu_ComNameY);
 	this._commandName.opacity += 10;
 };
-	
+
 //==============================
 // * refresh Command Name
 //==============================
@@ -740,7 +782,7 @@ Scene_Menu.prototype.createSelection = function() {
 	this._selzoom = [];
 	this._selMax = Math.min(Math.max(Moghunter.scMenu_maxVisibleFaces,2),999);
 	this._selField = new Sprite();
-	this._field.addChild(this._selField);	
+	this._field.addChild(this._selField);
 	this._selField.opacity = 0;
 	this._selField.x = 50;
 	for (var i = 0; i < $gameParty.members().length; i++) {
@@ -754,8 +796,8 @@ Scene_Menu.prototype.createSelection = function() {
 		 this._selection[i].y = this._selectionPos[i][1];
 		 this._selField .addChild(this._selection[i]);
 	};
-};	
-	
+};
+
 //==============================
 // * update Selection (com hover para faces)
 //==============================
@@ -773,7 +815,7 @@ Scene_Menu.prototype.updateSelection = function() {
 			this._statusWindow.select(hoverFaceIndex);
 		}
 	}
-	
+
 	if (this._statusWindow.active) {
 		this._selField.opacity += 15;
 		if (this._selField.x > 0) {this._selField.x -= 4
@@ -782,7 +824,7 @@ Scene_Menu.prototype.updateSelection = function() {
 	} else {
 		if (this._selField.x < 50) {this._selField.x += 4
 		    if (this._selField.x > 50) {this._selField.x = 50};
-		};		
+		};
 		this._selField.opacity -= 15;
 	}
 	for (var i = 0; i < this._selection.length; i++) {
@@ -814,18 +856,18 @@ Scene_Menu.prototype.updateSelection = function() {
 				 if (this._selection[i].scale.x < 1.00) {
 					 this._selection[i].scale.x = 1.00;
 				     this._selzoom[i] = 0;
-				 };				 
+				 };
 			 };
 		 } else {
-			if (!this._selection[i].vsb) { 
+			if (!this._selection[i].vsb) {
 			   this._selection[i].opacity -= 15;
-			} else if (this._selection[i].vsb) { 
+			} else if (this._selection[i].vsb) {
 			   if (this._selection[i].opacity < 160) {this._selection[i].opacity += 15;
 			       if (this._selection[i].opacity > 160) {this._selection[i].opacity = 160};
 			   };
 			   if (this._selection[i].opacity > 160) {this._selection[i].opacity -= 15;
 			       if (this._selection[i].opacity < 160) {this._selection[i].opacity = 160};
-			   };			   
+			   };
 		    } else {
 				if (this._selection[i].opacity > 160) {this._selection[i].opacity -= 10
 				if (this._selection[i].opacity < 160) {this._selection[i].opacity = 160};
@@ -833,17 +875,17 @@ Scene_Menu.prototype.updateSelection = function() {
 		    };
 			this._selzoom[i] = 0;
 			this._selection[i].scale.x -= 0.01;
-			if (this._selection[i].scale.x < 1.00) {this._selection[i].scale.x = 1.00}			         
+			if (this._selection[i].scale.x < 1.00) {this._selection[i].scale.x = 1.00}
 		 }
          var nx = this._selectionPos[i][0] - nindex;
          var ny = this._selectionPos[i][1];
 		 this._selection[i].x = this.commandMoveTo(this._selection[i].x,nx);
-		 this._selection[i].y = this.commandMoveTo(this._selection[i].y,ny); 		  
+		 this._selection[i].y = this.commandMoveTo(this._selection[i].y,ny);
 		 this._selection[i].scale.y = this._selection[i].scale.x;
 	};
 	this.updateArrow();
-};	
-	
+};
+
 //==============================
 // * create Face Arrow
 //==============================
@@ -856,7 +898,7 @@ Scene_Menu.prototype.createFaceArrow = function() {
 		   if (i === 1) {this._arrow[i].scale.x = -1.00
 		       this._arrowPos[i] = [this._selection[0].x + (4 + (this._arrowImg.width * 2)) + ((4 + this._facesBitmaps[0].width) * this._selMax),Moghunter.scMenu_FaceSelY]
 		   } else {
-			   this._arrowPos[i] = [this._selection[0].x - (4 + (this._arrowImg.width * 2)),Moghunter.scMenu_FaceSelY] 
+			   this._arrowPos[i] = [this._selection[0].x - (4 + (this._arrowImg.width * 2)),Moghunter.scMenu_FaceSelY]
 		   };
 		   this._arrow[i].anchor.x = 0.5;
 		   this._arrow[i].anchor.y = 0.5;
@@ -876,12 +918,12 @@ Scene_Menu.prototype.updateArrow = function() {
 		    var nx = this._arrowPos[i][0] - this._arrowAni[1];
 			this._arrow[i].visible = this.isArrow1Visible();
 		 } else {
-			var nx = this._arrowPos[i][0] + this._arrowAni[1]; 
+			var nx = this._arrowPos[i][0] + this._arrowAni[1];
 			this._arrow[i].visible = this.isArrow2Visible();
 		 };
-		 var ny = this._arrowPos[i][1]; 
+		 var ny = this._arrowPos[i][1];
 		 this._arrow[i].x = this.commandMoveTo(this._arrow[i].x,nx);
-		 this._arrow[i].y = this.commandMoveTo(this._arrow[i].y,ny);		
+		 this._arrow[i].y = this.commandMoveTo(this._arrow[i].y,ny);
 	};
 };
 
@@ -992,7 +1034,7 @@ Scene_Menu.prototype.isOnSprite = function(sprite) {
 	 if (TouchInput.x > sprite.x + cw) {return false};
 	 if (TouchInput.y < sprite.y - ch) {return false};
 	 if (TouchInput.y > sprite.y + ch) {return false};
-	 return true;	
+	 return true;
 };
 
 //==============================
@@ -1010,7 +1052,7 @@ Scene_Menu.prototype.updateWindowStatus = function() {
 	 this._statusWindow.x = - this._statusWindow.width;
 	 this._statusWindow.updateScrollRoll();
 };
-	
+
 //==============================
 // * update
 //==============================
@@ -1021,13 +1063,14 @@ Scene_Menu.prototype.update = function() {
 	if (this._commandName) {this.updateCommandName()};
 	if (!this._selection && this._facesBitmaps && this._facesBitmaps[0].isReady()) {this.createAfter()};
 	if (this._selection) {this.updateSelection()};
+	// Playtime atualizado somente se existir
 	if (this._playTime) {this.updateTime()};
 	if (this._magicCircle) {this.updateMagicCircle()};
 	this.updateComField();
 	this.updateWindowStatus();
 	this.updateTouchScreen();
 };
-	
+
 //=============================================================================
 // * MBustMenu
 //=============================================================================
@@ -1042,13 +1085,13 @@ MBustMenu.prototype.constructor = MBustMenu;
 // * Initialize
 //==============================
 MBustMenu.prototype.initialize = function(index,actor,maxmembers) {
-    Sprite.prototype.initialize.call(this);	
+    Sprite.prototype.initialize.call(this);
     this._index = index;
 	this._actor = actor;
 	this._maxMembers = maxmembers
 	this.createCharaters();
 };
-	
+
 //==============================
 // * Pos X
 //==============================
@@ -1071,13 +1114,13 @@ MBustMenu.prototype.createCharaters = function() {
 	 this._wait = 5 + 10 * this._index;
 	 this._char.opacity = 0;
 	 this.addChild(this._char);
-};	
+};
 
 //==============================
 // * Update
 //==============================
 MBustMenu.prototype.update = function() {
-    Sprite.prototype.update.call(this);	
+    Sprite.prototype.update.call(this);
     if (this._wait > 0) {this._wait--; return};
 	this._char.opacity += 10;
 	if (this._char.x < this._orgX) {
@@ -1085,7 +1128,7 @@ MBustMenu.prototype.update = function() {
 		if (this._char.x > this._orgX) {this._char.x = this._orgX};
 	};
 };
-	
+
 //=============================================================================
 // * MCharStatus
 //=============================================================================
@@ -1100,7 +1143,7 @@ MCharStatus.prototype.constructor = MCharStatus;
 // * Initialize
 //==============================
 MCharStatus.prototype.initialize = function(index,actor,maxmembers) {
-    Sprite.prototype.initialize.call(this);	
+    Sprite.prototype.initialize.call(this);
     this._index = index;
 	this._actor = actor;
 	this._maxMembers = maxmembers;
@@ -1109,7 +1152,7 @@ MCharStatus.prototype.initialize = function(index,actor,maxmembers) {
 	this.opacity = 0;
 	this.loadBitmaps();
 };
-	
+
 //==============================
 // * loadBitmaps
 //==============================
@@ -1121,8 +1164,8 @@ MCharStatus.prototype.loadBitmaps = function() {
    this._HPMeterImg = ImageManager.loadMenusMain("HPMeter");
    this._MPMeterImg = ImageManager.loadMenusMain("MPMeter");
    this._state_img = ImageManager.loadSystem("IconSet");
-};	
-		
+};
+
 //==============================
 // * Pos X
 //==============================
@@ -1141,12 +1184,12 @@ MCharStatus.prototype.createSprites = function() {
 	this.createHPNumber();
     // this.createHPNumber2();
 	this.createMPNumber();
-    this.createMPNumber2();	
+    this.createMPNumber2();
 	this.createLVNumber();
 	this.createStates();
 	this.createName();
 	this.createEquipIcons();
-};	
+};
 
 //==============================
 // * Create Name
@@ -1158,9 +1201,9 @@ MCharStatus.prototype.createName = function() {
 	this._name.bitmap.fontSize = Moghunter.scMenu_NameFontSize;
 	this._name.bitmap.drawText(this._actor.name(),0,0,120,32,"center");
 	this.addChild(this._name);
-	
+
 };
-	
+
 //==============================
 // * Create States
 //==============================
@@ -1171,9 +1214,9 @@ MCharStatus.prototype.createStates = function() {
 	this._state_icon.y = this._layout.y + Moghunter.scMenu_statesY;
 	this._state_icon.visible = false;
 	this.addChild(this._state_icon);
-	this.refresh_states();	
+	this.refresh_states();
 };
-	
+
 //==============================
 // * Create States
 //==============================
@@ -1182,7 +1225,7 @@ MCharStatus.prototype.refresh_states = function() {
 	this._states_data[2] = 0;
 	this._state_icon.visible = false;
 	if (this._actor.allIcons().length == 0) {this._states_data[1] = 0;return};
-       if (this._actor.allIcons()[this._states_data[1]]) {	
+       if (this._actor.allIcons()[this._states_data[1]]) {
 		this._states_data[0] = this._actor.allIcons()[this._states_data[1]];
 		this._state_icon.visible = true;
 		var sx = this._states_data[0] % 16 * 32;
@@ -1201,16 +1244,16 @@ MCharStatus.prototype.refresh_states = function() {
 MCharStatus.prototype.update_states = function() {
 	this._states_data[2] += 1;
 	if (this.need_refresh_states()) {this.refresh_states();};
-};	
-	
+};
+
 //==============================
 // * Need Refresh States
 //==============================
 MCharStatus.prototype.need_refresh_states = function() {
 	if (this._states_data[2] > 60) {return true};
 	return false;
-};	
-	
+};
+
 //==============================
 // * create HP Meter
 //==============================
@@ -1222,7 +1265,7 @@ MCharStatus.prototype.createHPMeter = function() {
     this.updateMeter(this._hpMeter, this._hpMeterData, this._actor.hp, this._actor.mhp);
     this.addChild(this._hpMeter);
 };
-  
+
 //==============================
 // * create MP Meter
 //==============================
@@ -1233,8 +1276,8 @@ MCharStatus.prototype.createMPMeter = function() {
     this._mpMeter.y = this._layout.y + Moghunter.scMenu_MPMeterY;
     this.updateMeter(this._mpMeter, this._mpMeterData, this._actor.mp, this._actor.mmp);
     this.addChild(this._mpMeter);
-};  
-  
+};
+
 //==============================
 // * update Meter
 //==============================
@@ -1257,11 +1300,11 @@ MCharStatus.prototype.createHPNumber = function() {
 		 this._hp_number[i].opacity = 255;
 		 this._hp_number[i].x = x ;
 		 this._hp_number[i].y = y ;
-		 this.addChild(this._hp_number[i]);		 
-	};	
+		 this.addChild(this._hp_number[i]);
+	};
 	this.refresh_number(this._hp_number,this._actor.hp,this._NumberData,x)
-};	
-	
+};
+
 //==============================
 // * create HP Number2
 //==============================
@@ -1275,11 +1318,11 @@ MCharStatus.prototype.createHPNumber2 = function() {
 		 this._hp_number2[i].opacity = 255;
 		 this._hp_number2[i].x = x ;
 		 this._hp_number2[i].y = y ;
-		 this.addChild(this._hp_number2[i]);		 
-	};	
+		 this.addChild(this._hp_number2[i]);
+	};
 	this.refresh_number(this._hp_number2,this._actor.mhp,this._NumberData,x)
-};	
-	
+};
+
 //==============================
 // * create MP Number
 //==============================
@@ -1294,11 +1337,11 @@ MCharStatus.prototype.createMPNumber = function() {
 		 this._mp_number[i].opacity = 255;
 		 this._mp_number[i].x = x ;
 		 this._mp_number[i].y = y ;
-		 this.addChild(this._mp_number[i]);		 
-	};	
+		 this.addChild(this._mp_number[i]);
+	};
 	this.refresh_number(this._mp_number,this._actor.mp,this._NumberData2,x)
-};	
-	
+};
+
 //==============================
 // * create MP Number2
 //==============================
@@ -1312,8 +1355,8 @@ MCharStatus.prototype.createMPNumber2 = function() {
 		 this._mp_number2[i].opacity = 255;
 		 this._mp_number2[i].x = x ;
 		 this._mp_number2[i].y = y ;
-		 this.addChild(this._mp_number2[i]);		 
-	};	
+		 this.addChild(this._mp_number2[i]);
+	};
 	this.refresh_number(this._mp_number2,this._actor.mmp,this._NumberData2,x)
 };
 
@@ -1331,17 +1374,17 @@ MCharStatus.prototype.createLVNumber = function() {
 		 this._lv_number[i].opacity = 255;
 		 this._lv_number[i].x = x ;
 		 this._lv_number[i].y = y ;
-		 this.addChild(this._lv_number[i]);		 
-	};	
+		 this.addChild(this._lv_number[i]);
+	};
 	this.refresh_number(this._lv_number,this._actor.level,this._NumberData3,x)
-};	
+};
 
 //==============================
 // * Refresh Number
 //==============================
 MCharStatus.prototype.refresh_number = function(sprites,value,img_data,x) {
 	if (value > 99999) {value = 99999};
-    numbers = Math.abs(value).toString().split("");  
+    numbers = Math.abs(value).toString().split("");
    	for (var i = 0; i < sprites.length ; i++) {
 	   sprites[i].visible = false;
 	   if (i < numbers.length) {
@@ -1367,7 +1410,7 @@ MCharStatus.prototype.createLayoutStatus = function() {
 	 this._layout.x = this.posX() - 70 + Moghunter.scMenu_layoutStatusX;
 	 this._layout.y = Graphics.boxHeight - 280 + Moghunter.scMenu_layoutStatusY;
 	 this.addChild(this._layout);
-};	
+};
 
 //==============================
 // * Create Equip Icons
@@ -1401,7 +1444,7 @@ MCharStatus.prototype.createEquipIcons = function() {
 // * Update
 //==============================
 MCharStatus.prototype.update = function() {
-    Sprite.prototype.update.call(this);	
+    Sprite.prototype.update.call(this);
 	if (!this._actor) {return}
     if (!this._hp_number) {
         if (this._numberImg.isReady()) {this.createSprites();
@@ -1418,7 +1461,7 @@ MCharStatus.prototype.update = function() {
 	   if (this.x < 0) {this.x = 0};
 	}
 };
-	
+
 //=============================================================================
 // ** Window Menu Command
 //=============================================================================
@@ -1451,7 +1494,7 @@ Window_MenuCommand.prototype.processCursorMove = function() {
         };
     };
 };
-	
+
 //==============================
 // * update SCroll Roll
 //==============================
@@ -1473,8 +1516,8 @@ Window_MenuCommand.prototype.updateScrollRoll = function() {
 			if (idx != this._index) {SoundManager.playCursor()};
         };
     };
-};	
-	
+};
+
 //=============================================================================
 // ** Window MenuStatus
 //=============================================================================
@@ -1563,7 +1606,7 @@ Scene_Party.prototype.create = function() {
 // * Create Layout
 //==============================
 Scene_Party.prototype.createLayout = function() {
- 
+
 };
 
 //==============================
@@ -1740,15 +1783,15 @@ Window_MenuStatusM.prototype.drawItemStatus = function(index) {
 	this.drawText("Luk",x + 260,y + 32 * 3,80)
 	this.changeTextColor(this.normalColor());
 	this.drawText(actor.name(),x,y)
-	this.drawText(actor.level,x,y + 32 * 1,80,"right")	
+	this.drawText(actor.level,x,y + 32 * 1,80,"right")
 	this.drawText(actor.mhp,x,y + 32 * 2,80,"right")
 	this.drawText(actor.mmp,x,y + 32 * 3,80,"right")
-	this.drawText(actor.atk ,x + 130,y + 32 * 1,80,"right")	
+	this.drawText(actor.atk ,x + 130,y + 32 * 1,80,"right")
 	this.drawText(actor.def,x+ 130,y + 32 * 2,80,"right")
-	this.drawText(actor.mat,x + 130,y + 32 * 3,80,"right")	
-	this.drawText(actor.mdf ,x + 260,y + 32 * 1,80,"right")	
+	this.drawText(actor.mat,x + 130,y + 32 * 3,80,"right")
+	this.drawText(actor.mdf ,x + 260,y + 32 * 1,80,"right")
 	this.drawText(actor.agi,x+ 260,y + 32 * 2,80,"right")
-	this.drawText(actor.luk,x + 260,y + 32 * 3,80,"right")		
+	this.drawText(actor.luk,x + 260,y + 32 * 3,80,"right")
 };
 
 //==============================
@@ -1814,6 +1857,6 @@ if (Imported.MOG_TimeSystem) {
 	// * create Time Status
 	//==============================
 	Scene_Menu.prototype.createTimeStatus = function() {
-	   $gameSystem._refresh_window_time = false;	
+	   $gameSystem._refresh_window_time = false;
 	};
 }
