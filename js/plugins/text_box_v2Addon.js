@@ -24,20 +24,41 @@
  * \col[2]Сила: 10|Магия: 15
  * Ловкость: 20|Удача: 5
  * \col[0]Дополнительное описание.
+ *
+ * Примечание: в бою плагин автоматически отключается.
  */
 (function() {
-    var parameters = PluginManager.parameters('HelpColumnsAlign');
+    // Укажите точное имя вашего файла (без расширения)
+    var pluginName = 'HelpColumnsAlign'; // ← Если файл называется HelpColumnsAlign.js
+    // Если файл называется text_box_v2Addon.js, замените на 'text_box_v2Addon'
+    var parameters = PluginManager.parameters(pluginName);
     var textAlign = String(parameters['textAlign'] || 'left').toLowerCase();
 
-    // Применяем выравнивание через refresh
+    // Сохраняем оригинальные методы
     var _Window_Help_refresh = Window_Help.prototype.refresh;
+    var _processEscape = Window_Help.prototype.processEscapeCharacter;
+    var _processNormal = Window_Help.prototype.processNormalCharacter;
+    var _processNewLine = Window_Help.prototype.processNewLine;
+
+    function isInBattle() {
+        return $gameParty && $gameParty.inBattle();
+    }
+
     Window_Help.prototype.refresh = function() {
+        // В бою — стандартный показ, плагин не вмешивается
+        if (isInBattle()) {
+            _Window_Help_refresh.call(this);
+            return;
+        }
+
+        // Сбрасываем многоколоночное состояние для нового текста
+        this._multiCol = false;
+
         this.contents.clear();
         var text = this._text;
         var x = this.textPadding();
 
         if (textAlign !== 'left' && text) {
-            // Измеряем ширину всего текста (с учётом команд колонок)
             var textWidth = this.textSizeEx(text).width;
             var totalWidth = this.contentsWidth();
             if (textAlign === 'center') {
@@ -46,20 +67,17 @@
                 x = Math.max(0, totalWidth - textWidth - this.textPadding());
             }
         }
-        // Рисуем текст с нужного отступа, многоколоночность подхватит startX автоматически
         this.drawTextEx(text, x, 0);
     };
 
-    // Многоколоночность: перехват команды \col[N]
-    var _processEscape = Window_Help.prototype.processEscapeCharacter;
     Window_Help.prototype.processEscapeCharacter = function(code, textState) {
-        if (code.toUpperCase() === 'COL') {
+        if (!isInBattle() && code.toUpperCase() === 'COL') {
             var param = this.obtainEscapeParam(textState);
             if (param > 1) {
                 this._multiCol = true;
                 this._colCount = param;
                 this._colIndex = 0;
-                this._colBaseX = textState.x;          // запоминаем начало блока колонок
+                this._colBaseX = textState.x;
                 this._colWidth = Math.floor((this.contentsWidth() - this.textPadding() * 2) / param);
                 textState.x = this._colBaseX;
             } else {
@@ -70,10 +88,8 @@
         _processEscape.call(this, code, textState);
     };
 
-    // Разделитель колонок '|'
-    var _processNormal = Window_Help.prototype.processNormalCharacter;
     Window_Help.prototype.processNormalCharacter = function(textState) {
-        if (this._multiCol && textState.text[textState.index] === '|') {
+        if (!isInBattle() && this._multiCol && textState.text[textState.index] === '|') {
             if (this._colIndex < this._colCount - 1) {
                 this._colIndex++;
                 textState.x = this._colBaseX + this._colIndex * this._colWidth;
@@ -84,11 +100,9 @@
         _processNormal.call(this, textState);
     };
 
-    // При переносе строки сбрасываем счётчик колонок и выравниваем x по базе
-    var _processNewLine = Window_Help.prototype.processNewLine;
     Window_Help.prototype.processNewLine = function(textState) {
         _processNewLine.call(this, textState);
-        if (this._multiCol) {
+        if (!isInBattle() && this._multiCol) {
             this._colIndex = 0;
             textState.x = this._colBaseX;
         }
