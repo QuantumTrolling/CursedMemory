@@ -75,6 +75,10 @@
  * @desc ID иконки для слота 4 (Аксессуар). 0 - не показывать.
  * @default 124
  *
+ * @param Slot5_Icon
+ * @desc ID иконки для слота 5. 0 - не показывать.
+ * @default 0
+ *
  * @param Weapon Type 1 Icon
  * @desc Иконка для типа оружия 1.
  * @default 0
@@ -240,7 +244,8 @@ Moghunter.scEquip_SlotIcons = [
     Number(Moghunter.parameters['Slot1_Icon'] || 0),
     Number(Moghunter.parameters['Slot2_Icon'] || 0),
     Number(Moghunter.parameters['Slot3_Icon'] || 0),
-    Number(Moghunter.parameters['Slot4_Icon'] || 0)
+    Number(Moghunter.parameters['Slot4_Icon'] || 0),
+	Number(Moghunter.parameters['Slot5_Icon'] || 0)
 ];
 
 Moghunter.scEquip_WeaponTypeIcons = [];
@@ -290,7 +295,7 @@ Scene_Equip.prototype.create = function() {
     this._slotWindow.x = Moghunter.scEquip_SlotWindowX;
     this._slotWindow.y = Moghunter.scEquip_SlotWindowY;
     this._slotWindow.width = Math.floor(this._slotWindow.width / 2);
-    this._slotWindow.height = this._slotWindow.fittingHeight(5);
+    this._slotWindow.height = this._slotWindow.fittingHeight(6);
     this._slotWindow.createContents();
     this._slotWindow.refresh();
     this._slotWindowOrg = [this._slotWindow.x, this._slotWindow.y];
@@ -298,7 +303,7 @@ Scene_Equip.prototype.create = function() {
     this._itemWindow.x = Moghunter.scEquip_ItemWindowX;
     this._itemWindow.y = Moghunter.scEquip_ItemWindowY;
     this._itemWindow.width = this._slotWindow.width;
-    this._itemWindow.height = this._itemWindow.fittingHeight(5);
+    this._itemWindow.height = this._itemWindow.fittingHeight(6);
     this._itemWindow.createContents();
     this._itemWindow.refresh();
     this._itemWindowOrg = [this._itemWindow.x, this._itemWindow.y];
