@@ -320,10 +320,11 @@ DataManager.processElementNotetags2 = function(group) {
   var noteA1 = /<(?:ELEMENT ABSORB):[ ](\d+)[ ](?:THROUGH|to)[ ](\d+)>/i;
   var noteB1 = /<(?:ELEMENT REFLECT)[ ](\d+):[ ]([\+\-]\d+)([%％])>/i;
   var noteB2 = /<(?:ELEMENT REFLECT)[ ](.*):[ ]([\+\-]\d+)([%％])>/i;
-  var noteC1 = /<(?:ELEMENT AMPLIFY)[ ](\d+):[ ]([\+\-]\d+)([%％])>/i;
-  var noteC2 = /<(?:ELEMENT AMPLIFY)[ ](.*):[ ]([\+\-]\d+)([%％])>/i;
-  var noteC3 = /<(?:ELEMENT MAGNIFY)[ ](\d+):[ ]([\+\-]\d+)([%％])>/i;
-  var noteC4 = /<(?:ELEMENT MAGNIFY)[ ](.*):[ ]([\+\-]\d+)([%％])>/i;
+  // Изменённые регулярки для Amplify и Magnify: теперь захватывают любое выражение до %
+  var noteC1 = /<(?:ELEMENT AMPLIFY)[ ](\d+):[ ](.+?)([%％])>/i;
+  var noteC2 = /<(?:ELEMENT AMPLIFY)[ ](.*):[ ](.+?)([%％])>/i;
+  var noteC3 = /<(?:ELEMENT MAGNIFY)[ ](\d+):[ ](.+?)([%％])>/i;
+  var noteC4 = /<(?:ELEMENT MAGNIFY)[ ](.*):[ ](.+?)([%％])>/i;
   // Для <Force Element Rate> с поддержкой выражений
   var noteD1 = /<FORCE ELEMENT[ ](\d+)[ ]RATE:[ ](.+?)%>/i;
   var noteD2 = /<FORCE ELEMENT[ ](.*)[ ]RATE:[ ](.+?)%>/i;
@@ -341,7 +342,7 @@ DataManager.processElementNotetags2 = function(group) {
     obj.elementMagnify = {};
     obj.elementNull = false;
     obj.elementForcedRate = {};
-    obj.elementRateMod = {}; // новый объект для дополнительных множителей
+    obj.elementRateMod = {};
 
     for (var i = 0; i < notedata.length; i++) {
       var line = notedata[i];
@@ -376,25 +377,42 @@ DataManager.processElementNotetags2 = function(group) {
         }
       } else if (line.match(noteC1)) {
         var elementId = parseInt(RegExp.$1);
-        var rate = parseFloat(RegExp.$2 * 0.01);
-        obj.elementAmplify[elementId] = rate;
+        var expr = RegExp.$2.trim();
+        // Проверяем, является ли значение числом (возможно с + или -)
+        if (/^[+-]?\d+(\.\d+)?$/.test(expr)) {
+          obj.elementAmplify[elementId] = parseFloat(expr) * 0.01;
+        } else {
+          obj.elementAmplify[elementId] = expr; // выражение
+        }
       } else if (line.match(noteC2)) {
         var name = String(RegExp.$1).toUpperCase().trim();
-        var rate = parseFloat(RegExp.$2 * 0.01);
+        var expr = RegExp.$2.trim();
         if (Yanfly.ElementIdRef[name]) {
           var id = Yanfly.ElementIdRef[name];
-          obj.elementAmplify[id] = rate;
+          if (/^[+-]?\d+(\.\d+)?$/.test(expr)) {
+            obj.elementAmplify[id] = parseFloat(expr) * 0.01;
+          } else {
+            obj.elementAmplify[id] = expr;
+          }
         }
       } else if (line.match(noteC3)) {
         var elementId = parseInt(RegExp.$1);
-        var rate = parseFloat(RegExp.$2 * 0.01);
-        obj.elementMagnify[elementId] = rate;
+        var expr = RegExp.$2.trim();
+        if (/^[+-]?\d+(\.\d+)?$/.test(expr)) {
+          obj.elementMagnify[elementId] = parseFloat(expr) * 0.01;
+        } else {
+          obj.elementMagnify[elementId] = expr;
+        }
       } else if (line.match(noteC4)) {
         var name = String(RegExp.$1).toUpperCase().trim();
-        var rate = parseFloat(RegExp.$2 * 0.01);
+        var expr = RegExp.$2.trim();
         if (Yanfly.ElementIdRef[name]) {
           var id = Yanfly.ElementIdRef[name];
-          obj.elementMagnify[id] = rate;
+          if (/^[+-]?\d+(\.\d+)?$/.test(expr)) {
+            obj.elementMagnify[id] = parseFloat(expr) * 0.01;
+          } else {
+            obj.elementMagnify[id] = expr;
+          }
         }
       } else if (line.match(/<(?:ELEMENT NULL)>/i)) {
         obj.elementNull = true;
@@ -543,16 +561,24 @@ Game_BattlerBase.prototype.getObjElementReflectRate = function(obj, elementId) {
   return obj.elementReflect[elementId] || 0;
 };
 
+// Методы Amplify и Magnify теперь поддерживают выражения
 Game_BattlerBase.prototype.getObjElementAmplifyRate = function(obj, elementId) {
   if (!obj) return 0;
   if (!obj.elementAmplify) return 0;
-  return obj.elementAmplify[elementId] || 0;
+  var value = obj.elementAmplify[elementId];
+  if (value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  // Вычисляем выражение, результат интерпретируется как процент
+  return this.evalForcedExpr(value);
 };
 
 Game_BattlerBase.prototype.getObjElementMagnifyRate = function(obj, elementId) {
   if (!obj) return 0;
   if (!obj.elementMagnify) return 0;
-  return obj.elementMagnify[elementId] || 0;
+  var value = obj.elementMagnify[elementId];
+  if (value === undefined) return 0;
+  if (typeof value === 'number') return value;
+  return this.evalForcedExpr(value);
 };
 
 // Изменённый метод для forced rate (поддержка выражений)
@@ -665,7 +691,6 @@ Game_Battler.prototype.forcedElementRate = function(elementId) {
   return undefined;
 };
 
-// Множитель из состояний (перемножается)
 Game_Battler.prototype.elementRateMod = function(elementId) {
   var rate = 1;
   var length = this.states().length;
@@ -756,7 +781,6 @@ Game_Actor.prototype.forcedElementRate = function(elementId) {
   return undefined;
 };
 
-// Множитель для актора (перемножается)
 Game_Actor.prototype.elementRateMod = function(elementId) {
   var rate = Game_Battler.prototype.elementRateMod.call(this, elementId);
   var length = this.equips().length;
@@ -809,7 +833,6 @@ Game_Enemy.prototype.forcedElementRate = function(elementId) {
   return undefined;
 };
 
-// Множитель для врага (перемножается)
 Game_Enemy.prototype.elementRateMod = function(elementId) {
   var rate = Game_Battler.prototype.elementRateMod.call(this, elementId);
   rate *= this.getObjElementRateMod(this.enemy(), elementId);
