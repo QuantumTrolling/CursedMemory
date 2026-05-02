@@ -2746,7 +2746,7 @@ Battle_Hud.prototype.set_hud_position = function() {
 			this._pos_y = Moghunter.bhud_pos_y + py + ps[1];
 		};
      };
-	 $gameTemp._bhud_position[this._hud_id] = [this._pos_x,this._pos_y];     
+	 $gameTemp._bhud_position[this._hud_id] = [this._pos_x,this._pos_y];      
 };
 
 //==============================
@@ -4229,4 +4229,15 @@ Window_BattleEnemy.prototype.update = function() {
             }
         }
     }
+};
+
+// ==============================
+// * Auto-skip target selection for All Enemies
+// ==============================
+var _mog_bhud_needsSelection = Game_Action.prototype.needsSelection;
+Game_Action.prototype.needsSelection = function() {
+    if (this.isForOpponent() && this.isForAll()) {
+        return false; // действие на всех противников — не требует выбора цели
+    }
+    return _mog_bhud_needsSelection.call(this);
 };
