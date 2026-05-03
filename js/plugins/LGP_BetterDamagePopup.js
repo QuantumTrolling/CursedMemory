@@ -499,19 +499,48 @@ Game_Action.prototype.clear = function() {
 
 LGP.BDP.Game_Action_calcElementRate = Game_Action.prototype.calcElementRate;
 Game_Action.prototype.calcElementRate = function(target) {
-    var result = LGP.BDP.Game_Action_calcElementRate.call(this, target);
-    if (result > 1) {
+    // Вызываем оригинальный метод для получения реального урона (с учётом баффов)
+    var originalResult = LGP.BDP.Game_Action_calcElementRate.call(this, target);
+
+    // Вычисляем "чистую" сопротивляемость врага, игнорируя бонусы атакующего
+    var elements = [];
+    if (Imported.YEP_ElementCore) {
+        elements = this.getItemElements();
+    } else {
+        var elId = this.item().damage.elementId;
+        if (elId < 0) {
+            elements = this.subject().attackElements();
+        } else {
+            elements = [elId];
+        }
+    }
+    if (elements.length === 0) elements = [0];
+
+    var maxRate = 1.0;
+    for (var i = 0; i < elements.length; i++) {
+        var elId = elements[i];
+        if (elId <= 0) continue;
+        var rate = target.elementRate(elId);   // только собственная уязвимость цели
+        if (rate > maxRate) maxRate = rate;
+        if (rate < 0 && maxRate < 0) maxRate = rate; // поглощение
+    }
+    var pureResult = maxRate;
+
+    // Определяем тип сопротивления на основе ЧИСТОЙ уязвимости цели
+    if (pureResult > 1) {
         this._resist = 'weak';
-    } else if (result > 0 && result < 1) {
+    } else if (pureResult > 0 && pureResult < 1) {
         this._resist = 'resist';
-    } else if (result === 0) {
+    } else if (pureResult === 0) {
         this._resist = 'immune';
-    } else if (result < 0) {
+    } else if (pureResult < 0) {
         this._resist = 'absorb';
     } else {
-        this._resist = ''
+        this._resist = '';
     }
-    return result;
+
+    // Возвращаем оригинальный результат, чтобы реальный урон не изменился
+    return originalResult;
 };
 
 
