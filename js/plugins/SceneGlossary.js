@@ -2334,9 +2334,9 @@ function Window_GlossaryComplete() {
         this.setFramelessDesign();
     };
 
-    Window_Glossary.prototype.standardFontSize = function() {
-        return param.FontSize ? param.FontSize : Window_Base.prototype.standardFontFace();
-    };
+	Window_Glossary.prototype.standardFontSize = function() {
+		return param.FontSize ? param.FontSize : Window_Base.prototype.standardFontSize();
+	};
 
     Window_Glossary.prototype.calcMaxPages = function(index) {
         var exist = this.isViewablePage(index) && (!!this.getPictureName(index) || !!this.getDescription(index));
@@ -2794,5 +2794,38 @@ function Window_GlossaryComplete() {
         this._upArrowSprite.rotation = 90 * Math.PI / 180;
         this._upArrowSprite.move(w - q, h / 2);
     };
-	
+
+// =========================================================================
+// ДОПОЛНЕНИЕ: \EQP_NAME, \EQP_DESC, \EQP_ICON (с поддержкой переносов)
+// =========================================================================
+
+var _glossary_Window_Glossary_getDescription = Window_Glossary.prototype.getDescription;
+Window_Glossary.prototype.getDescription = function(index) {
+    var text = _glossary_Window_Glossary_getDescription.call(this, index);
+    // \EQP_NAME[actorId, slotId]
+    text = text.replace(/\x1bEQP_NAME\[(\d+),\s*(\d+)\]/gi, function(match, actorId, slotId) {
+        var actor = $gameActors.actor(parseInt(actorId));
+        if (!actor) return '???';
+        var equip = actor.equips()[parseInt(slotId)];
+        return equip ? equip.name : '---';
+    });
+    // \EQP_DESC[actorId, slotId] — поддержка \n
+    text = text.replace(/\x1bEQP_DESC\[(\d+),\s*(\d+)\]/gi, function(match, actorId, slotId) {
+        var actor = $gameActors.actor(parseInt(actorId));
+        if (!actor) return '';
+        var equip = actor.equips()[parseInt(slotId)];
+        if (!equip) return '';
+        // Заменяем литерал \n на настоящий перевод строки
+        return equip.description.replace(/\\n/g, '\n');
+    });
+    // \EQP_ICON[actorId, slotId]
+    text = text.replace(/\x1bEQP_ICON\[(\d+),\s*(\d+)\]/gi, function(match, actorId, slotId) {
+        var actor = $gameActors.actor(parseInt(actorId));
+        if (!actor) return '';
+        var equip = actor.equips()[parseInt(slotId)];
+        return equip ? `\x1bi[${equip.iconIndex}]` : '';
+    });
+    return text;
+};
+
 })();

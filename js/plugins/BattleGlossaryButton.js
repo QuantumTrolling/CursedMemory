@@ -483,4 +483,5 @@
             _Window_BattleSkill_processOk.call(this);
         };
     }
+	
 })();
