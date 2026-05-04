@@ -1,6 +1,7 @@
 //=============================================================================
 // MOG_BattleHud_StateTurns.js
 // Добавляет отображение оставшихся ходов состояний на иконках в HUD
+// + Автообновление иконок для пассивных состояний (исправлено)
 //=============================================================================
 
 var Imported = Imported || {};
@@ -8,7 +9,6 @@ Imported.MOG_BattleHud_StateTurns = true;
 
 //-----------------------------------------------------------------------------
 // Battle_Hud :: getStateDataList
-// Возвращает массив объектов { stateId, iconIndex, turns } для всех состояний
 //-----------------------------------------------------------------------------
 Battle_Hud.prototype.getStateDataList = function() {
     if (!this._battler) return [];
@@ -29,13 +29,11 @@ Battle_Hud.prototype.getStateDataList = function() {
 };
 
 //-----------------------------------------------------------------------------
-// Режим 0 – Timing Mode (показывает одно состояние, циклически)
+// Режим 0 – Timing Mode
 //-----------------------------------------------------------------------------
-
 var _mog_bhud_create_states = Battle_Hud.prototype.create_states;
 Battle_Hud.prototype.create_states = function() {
     _mog_bhud_create_states.call(this);
-    // Дочерний текст для количества ходов
     if (this._state_icon && !this._stateTurnText) {
         this._stateTurnText = new Sprite(new Bitmap(32, 32));
         this._stateTurnText.bitmap.fontSize = 14;
@@ -48,8 +46,26 @@ Battle_Hud.prototype.create_states = function() {
 
 var _mog_bhud_refresh_states = Battle_Hud.prototype.refresh_states;
 Battle_Hud.prototype.refresh_states = function() {
+    // Сохраняем предыдущий список данных, чтобы не сбрасывать индекс, если состав не изменился
+    var prevDataList = this._stateDataList ? this._stateDataList.slice() : [];
     this._stateDataList = this.getStateDataList();
-    this._states_data[1] = 0;
+    var changed = false;
+    if (prevDataList.length !== this._stateDataList.length) {
+        changed = true;
+    } else {
+        for (var i = 0; i < this._stateDataList.length; i++) {
+            if (prevDataList[i].stateId !== this._stateDataList[i].stateId) {
+                changed = true;
+                break;
+            }
+        }
+    }
+
+    if (changed) {
+        // Если список состояний изменился, сбрасываем индекс
+        this._states_data[1] = 0;
+    }
+
     if (this._stateDataList.length === 0) {
         this._state_icon.visible = false;
         if (this._stateTurnText) this._stateTurnText.visible = false;
@@ -61,6 +77,7 @@ Battle_Hud.prototype.refresh_states = function() {
 };
 
 Battle_Hud.prototype._updateStateIconAndTurns = function() {
+    if (!this._stateDataList || this._stateDataList.length === 0) return;
     var data = this._stateDataList[this._states_data[1] % this._stateDataList.length];
     var iconIndex = data.iconIndex;
     var sx = iconIndex % 16 * 32;
@@ -85,8 +102,8 @@ var _mog_bhud_update_states = Battle_Hud.prototype.update_states;
 Battle_Hud.prototype.update_states = function() {
     if (!this._state_icon || !this._battler) return;
     if (this._battler.need_refresh_bhud_states) {
+        this._battler.need_refresh_bhud_states = false; // сбрасываем флаг
         this.refresh_states();
-        return;
     }
     if (!this._stateDataList || this._stateDataList.length === 0) return;
 
@@ -96,14 +113,12 @@ Battle_Hud.prototype.update_states = function() {
         this._states_data[1] = (this._states_data[1] + 1) % this._stateDataList.length;
         this._updateStateIconAndTurns();
     }
-    // Обновляем текст каждый кадр (на случай изменения turns)
     this._updateStateIconAndTurns();
 };
 
 //-----------------------------------------------------------------------------
-// Режим 1 – Line Mode (показывает несколько состояний)
+// Режим 1 – Line Mode (без изменений, но с фиксом флага)
 //-----------------------------------------------------------------------------
-
 var _mog_bhud_create_states2 = Battle_Hud.prototype.create_states2;
 Battle_Hud.prototype.create_states2 = function() {
     _mog_bhud_create_states2.call(this);
@@ -114,7 +129,6 @@ var _mog_bhud_refresh_states2 = Battle_Hud.prototype.refresh_states2;
 Battle_Hud.prototype.refresh_states2 = function() {
     this._battler.need_refresh_bhud_states = false;
     this._state_icon.visible = false;
-    // Удаляем старые текстовые спрайты
     if (this._stateTurnTexts) {
         for (var i = 0; i < this._stateTurnTexts.length; i++) {
             this._state_icon.removeChild(this._stateTurnTexts[i]);
@@ -144,7 +158,6 @@ Battle_Hud.prototype.refresh_states2 = function() {
         else if (align === 3) sprIcon.y = -((w + 4) * i);
         else sprIcon.x = (w + 4) * i;
 
-        // Текстовый спрайт для числа ходов
         var txtSprite = new Sprite(new Bitmap(w, w));
         txtSprite.bitmap.fontSize = 14;
         txtSprite.bitmap.textColor = '#ffffff';
@@ -180,7 +193,33 @@ Battle_Hud.prototype._updateStateTurnsLine = function() {
 var _mog_bhud_update_states2 = Battle_Hud.prototype.update_states2;
 Battle_Hud.prototype.update_states2 = function() {
     if (this._battler.need_refresh_bhud_states) {
+        this._battler.need_refresh_bhud_states = false;
         this.refresh_states2();
     }
     this._updateStateTurnsLine();
+};
+
+// =============================================================================
+// ФИКС: умное обновление иконок при изменении пассивных состояний
+// =============================================================================
+var _mog_bhud_fix_refresh = Game_BattlerBase.prototype.refresh;
+Game_BattlerBase.prototype.refresh = function() {
+    // Кешируем предыдущий список состояний
+    var prevStates = this._prevStates ? this._prevStates.slice() : [];
+    _mog_bhud_fix_refresh.call(this);
+    var newStates = this.states().slice();
+    // Сравниваем – изменился ли состав?
+    if (!this._prevStates || this._arrayDiff(prevStates, newStates)) {
+        this.need_refresh_bhud_states = true;
+    }
+    this._prevStates = newStates;
+};
+
+// Вспомогательная функция сравнения массивов состояний
+Game_BattlerBase.prototype._arrayDiff = function(a, b) {
+    if (a.length !== b.length) return true;
+    for (var i = 0; i < a.length; i++) {
+        if (a[i] !== b[i]) return true;
+    }
+    return false;
 };
