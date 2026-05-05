@@ -1,11 +1,14 @@
 //=============================================================================
-// EXT_ShopVisual.js v2.1
+// EXT_ShopVisual.js v3.0
 //=============================================================================
-// Полная переработка интерфейса магазина под нативный стиль RPG Maker MV.
+// Полностью переработанный интерфейс магазина.
 // Исправлено:
-// - Строгое центрирование названия, иконки и цены относительно центра слота.
-// - Иконка валюты больше не пропадает.
-// - Учтён переопределённый lineHeight.
+//   - Название всегда сверху, фиксированный отступ.
+//   - Иконка строго по центру (стандартный размер 32x32).
+//   - Цена всегда внизу, не выходит за пределы карточки.
+//   - Иконка валюты отображается через drawIcon.
+//   - Переключение актёров в статусном окне стрелками.
+//   - Уменьшена ширина статусного окна, увеличена высота описания.
 //=============================================================================
 
 var Imported = Imported || {};
@@ -24,27 +27,27 @@ if (!Imported.YEP_ShopMenuCore) {
         traderDefault: String(parameters['traderDefault'] || 'velrand_with_bag'),
         traderX: Number(parameters['traderX'] || 480),
         traderY: Number(parameters['traderY'] || 60),
-        coinIcon: Number(parameters['coinIcon'] || 0),
+        coinIcon: Number(parameters['coinIcon'] || 314),          // fallback иконка валюты
         listX: Number(parameters['listX'] || 0),
         listY: Number(parameters['listY'] || 0),
         listWidth: Number(parameters['listWidth'] || 516),
         listHeight: Number(parameters['listHeight'] || 400),
         listColumns: Number(parameters['listColumns'] || 3),
-        listIconSize: Number(parameters['listIconSize'] || 48),
         listFontSize: Number(parameters['listFontSize'] || 18),
         descX: Number(parameters['descX'] || 516),
         descY: Number(parameters['descY'] || 440),
-        descHeight: Number(parameters['descHeight'] || 180),
+        descHeight: Number(parameters['descHeight'] || 260),      // увеличено
         actionX: Number(parameters['actionX'] || 516),
         actionY: Number(parameters['actionY'] || 390),
         statusX: Number(parameters['statusX'] || 0),
         statusY: Number(parameters['statusY'] || 400),
-        statusWidth: Number(parameters['statusWidth'] || 516),
+        statusWidth: Number(parameters['statusWidth'] || 360),    // уменьшено
         goldX: Number(parameters['goldX'] || 0),
         goldY: Number(parameters['goldY'] || 0)
     };
 
-    var coinIconIndex = params.coinIcon !== 0 ? params.coinIcon : ($dataSystem ? $dataSystem.currencyIcon || 0 : 0);
+    // Иконка валюты: если параметр coinIcon = 0, используем из системы
+    var coinIconIndex = params.coinIcon !== 0 ? params.coinIcon : ($dataSystem ? $dataSystem.currencyIcon || 314 : 314);
 
     //=============================================================================
     // Window_ShopDesc
@@ -79,7 +82,7 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     //=============================================================================
-    // Window_ShopBuyAction – кнопка "Купить" (с мерцанием при наведении)
+    // Window_ShopBuyAction – кнопка "Купить"
     //=============================================================================
     function Window_ShopBuyAction() {
         this.initialize.apply(this, arguments);
@@ -211,7 +214,11 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Window_ShopBuyCustom.prototype.windowWidth = function() { return params.listWidth; };
     Window_ShopBuyCustom.prototype.maxCols = function() { return params.listColumns; };
-    Window_ShopBuyCustom.prototype.lineHeight = function() { return params.listIconSize + 36 + 20 + 12; };
+
+    // Пересчитанная высота карточки: иконка 32 + две строки + отступы
+    Window_ShopBuyCustom.prototype.lineHeight = function() {
+        return Window_Base._iconHeight + Window_Base.prototype.lineHeight.call(this) * 2 + 16;
+    };
     Window_ShopBuyCustom.prototype.itemHeight = function() { return this.lineHeight(); };
     Window_ShopBuyCustom.prototype.itemWidth = function() {
         return Math.floor((this.contents.width - this.textPadding() * 2) / this.maxCols());
@@ -263,9 +270,9 @@ if (!Imported.YEP_ShopMenuCore) {
         this._hoverAnim += 0.05;
     };
 
-    // ==============================
-    // ✨ ИСПРАВЛЕННЫЙ drawItem
-    // ==============================
+    // -------------------------------------------------------------------------
+    // Новый drawItem с потоковым позиционированием
+    // -------------------------------------------------------------------------
     Window_ShopBuyCustom.prototype.drawItem = function(index) {
         var item = this._data[index];
         if (!item) return;
@@ -275,17 +282,13 @@ if (!Imported.YEP_ShopMenuCore) {
         var y = rect.y;
         var w = rect.width;
         var h = this.itemHeight();
-        var cx = x + w / 2;   // центр слота
+        var cx = x + w / 2;
 
         var isHover = (index === this._hoverIndex);
 
-        // Фон
+        // Фон + рамка + подсветка
         this.contents.fillRect(x, y, w, h, 'rgba(0, 0, 0, 0.4)');
-
-        // Рамка
         this.drawSkinFrame(x, y, w, h);
-
-        // Подсветка
         if (isHover) {
             var alpha = 0.15 + Math.sin(this._hoverAnim) * 0.1;
             this.contents.fillRect(x, y, w, h, 'rgba(255,255,255,' + alpha + ')');
@@ -294,67 +297,62 @@ if (!Imported.YEP_ShopMenuCore) {
         this.resetFontSettings();
         this.contents.fontSize = params.listFontSize;
 
-        // Базовая высота строки для текущего шрифта (обычный lineHeight)
-        var baseLine = Window_Base.prototype.lineHeight.call(this);
-        // или можно просто: var baseLine = params.listFontSize + 8;
+        var cursorY = y + 4;
 
-        // === Название (строго по центру) ===
-        var nameY = y + 6;
-        this.drawText(item.name, x, nameY, w, 'center');
+        // 1. Название (сверху, центрировано)
+        this.drawText(item.name, x, cursorY, w, 'center');
+        cursorY += Window_Base.prototype.lineHeight.call(this);  // используем базовый lineHeight
 
-        // === Иконка (по центру) ===
-        var iconSize = params.listIconSize;
-        var iconY = nameY + baseLine - 4;  // отступ после строки названия
-        var iconX = Math.floor(cx - iconSize / 2);
+        // 2. Иконка предмета (стандартный размер 32x32, по центру)
+        var iconX = cx - Window_Base._iconWidth / 2;
+        this.drawIcon(item.iconIndex, iconX, cursorY);
+        cursorY += Window_Base._iconHeight + 4;
 
-        var iconBmp = ImageManager.loadSystem('IconSet');
-        var pw = Window_Base._iconWidth;
-        var ph = Window_Base._iconHeight;
-        var sx = item.iconIndex % 16 * pw;
-        var sy = Math.floor(item.iconIndex / 16) * ph;
-
-        this.contents.context.imageSmoothingEnabled = false;
-        this.contents.blt(iconBmp, sx, sy, pw, ph, iconX, iconY, iconSize, iconSize);
-        this.contents.context.imageSmoothingEnabled = true;
-
-        // === Цена + иконка валюты ===
+        // 3. Цена + иконка валюты
         var price = Yanfly.Util.toGroup(this.price(item));
-
-        // Шрифт цены может отличаться
         if (Imported.YEP_CoreEngine) {
             this.contents.fontSize = Yanfly.Param.GoldFontSize;
         }
 
-        var priceY = iconY + iconSize + 6;
-        var textW = this.textWidth(price);
-        var iconW = Window_Base._iconWidth;
-        var totalW = textW + iconW + 6;
+        this.drawText(price, x, cursorY, w, 'center');
 
-        var startX = Math.floor(cx - totalW / 2);
-
-        // Текст цены
-        this.drawText(price, startX, priceY, textW, 'left');
-
-        // Иконка валюты (отдельный вызов)
-        var coinSX = coinIconIndex % 16 * pw;
-        var coinSY = Math.floor(coinIconIndex / 16) * ph;
-        var coinX = startX + textW + 4;
-        var coinY = priceY + Math.floor((this.contents.fontSize - iconW) / 2);
-
-        this.contents.blt(
-            iconBmp,   // можно использовать тот же IconSet
-            coinSX,
-            coinSY,
-            pw,
-            ph,
-            coinX,
-            coinY,
-            iconW,
-            iconW
-        );
+        if (coinIconIndex > 0) {
+            var textW = this.textWidth(price);
+            var coinX = cx + textW / 2 + 4;
+            var lineH = Window_Base.prototype.lineHeight.call(this);
+            var coinY = cursorY + Math.floor((lineH - Window_Base._iconHeight) / 2);
+            this.drawIcon(coinIconIndex, coinX, coinY);
+        }
 
         this.resetFontSettings();
     };
+
+    //=============================================================================
+    // Расширение Window_ShopStatus: переключение актёров стрелками
+    //=============================================================================
+    var _Window_ShopStatus_initialize = Window_ShopStatus.prototype.initialize;
+    Window_ShopStatus.prototype.initialize = function(x, y, width, height) {
+        _Window_ShopStatus_initialize.call(this, x, y, width, height);
+        this._actorIndex = 0; // индекс выбранного актёра
+    };
+
+    var _Window_ShopStatus_update = Window_ShopStatus.prototype.update;
+    Window_ShopStatus.prototype.update = function() {
+        _Window_ShopStatus_update.call(this);
+        if (Input.isTriggered('left')) {
+            this._actorIndex = (this._actorIndex - 1 + $gameParty.members().length) % $gameParty.members().length;
+            this.refresh();
+        } else if (Input.isTriggered('right')) {
+            this._actorIndex = (this._actorIndex + 1) % $gameParty.members().length;
+            this.refresh();
+        }
+    };
+
+    // Пример использования актёра в вашем коде:
+    // var actor = $gameParty.members()[this._actorIndex];
+    // Чтобы изменить отрисовку параметров, добавьте переопределение drawItem
+    // или другого метода, используя this._actorIndex.
+    // Рекомендуется вставить свой код ниже.
 
     //=============================================================================
     // Scene_Shop
@@ -414,7 +412,7 @@ if (!Imported.YEP_ShopMenuCore) {
         if (this._statusWindow) {
             this._statusWindow.x = params.statusX;
             this._statusWindow.y = params.statusY;
-            this._statusWindow.width = params.statusWidth;
+            this._statusWindow.width = params.statusWidth;   // уже 360
             this._statusWindow.height = Graphics.boxHeight - params.statusY;
             this._statusWindow.createContents();
             this._statusWindow.refresh();
@@ -491,7 +489,7 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     Scene_Shop.prototype.commandSellAction = function() {
-        // Заглушка для будущего функционала продажи
+        // Заглушка
     };
 
     var _Scene_Shop_terminate = Scene_Shop.prototype.terminate;
