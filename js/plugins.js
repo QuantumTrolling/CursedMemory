@@ -84,6 +84,8 @@ var $plugins =
 {"name":"fix_for_picture_buttons","status":true,"description":"Hides pictures 10 and 11 the same way as Galv's Screen Buttons [v1.0]","parameters":{}},
 {"name":"Galv_ScreenButtons","status":false,"description":"(v.1.3) Show buttons on screen that can be touched or clicked.","parameters":{"Precache Buttons":"Button_Settings1,Button_Settings2","Disable Mouse Move":"true","Button Fade":"30"}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
+{"name":"YEP_ShopMenuCore","status":true,"description":"v1.05 Revamps the shop menu appearance and provides the\r\nframework for many new shop options.","parameters":{"---General---":"","Command Order":"Buy Sell Equip Custom Cancel","Shop List Width":"Graphics.boxWidth / 2 + Graphics.boxWidth / 10","Command Alignment":"center","---Status Window---":"","Default Mode":"actor","Stat Switching":"true","Cannot Equip":"Can't Equip","Stat Font Size":"20","Cannot Equip Font Size":"20","---Info Window---":"","Show Icon":"true","Icon Size":"128","Font Size":"20","Recovery Format":"%1 Heal","Add State":"+State","Add Buff":"+Buff","Remove State":"-State","Remove Buff":"-Buff","Maximum Icons":"4"}},
+{"name":"-------------------------------------","status":false,"description":"","parameters":{}},
 {"name":"text_box_v2","status":true,"description":"","parameters":{}},
 {"name":"text_box_v2Addon","status":true,"description":"Расширение окна помощи: колонки (\\col[N]) и выравнивание текста.","parameters":{"textAlign":"left"}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
@@ -148,5 +150,6 @@ var $plugins =
 {"name":"A_glossary_inbattle_fix","status":false,"description":"v2.0 Глоссарий поверх боя (исправление кнопки).","parameters":{}},
 {"name":"A_fix_state_tp_cost","status":true,"description":"Состояние-множитель стоимости TP","parameters":{}},
 {"name":"A_fix_dinamycal_scale_states","status":true,"description":"Состояние: бонус MAT от DEF","parameters":{}},
-{"name":"-------------------------------------","status":false,"description":"","parameters":{}}
+{"name":"-------------------------------------","status":false,"description":"","parameters":{}},
+{"name":"A_fix_shop","status":true,"description":"v1.00 Визуальная переработка магазина.","parameters":{"bgDefault":"","traderDefault":"","traderX":"516","traderY":"0\r","listX":"0","listY":"0","listWidth":"516","listHeight":"400","listColumns":"3","listIconSize":"64","listFontSize":"18","descX":"516","descY":"424","descWidth":"300","descHeight":"200","actionX":"516","actionY":"388","actionWidth":"300","statusX":"0","statusY":"400","statusWidth":"516","statusHeight":"224","goldX":"516","goldY":"0"}}
 ];
