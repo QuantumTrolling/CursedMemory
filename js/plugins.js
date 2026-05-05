@@ -148,6 +148,5 @@ var $plugins =
 {"name":"A_glossary_inbattle_fix","status":false,"description":"v2.0 Глоссарий поверх боя (исправление кнопки).","parameters":{}},
 {"name":"A_fix_state_tp_cost","status":true,"description":"Состояние-множитель стоимости TP","parameters":{}},
 {"name":"A_fix_dinamycal_scale_states","status":true,"description":"Состояние: бонус MAT от DEF","parameters":{}},
-{"name":"A_fix_ap_before_skill","status":true,"description":"","parameters":{}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}}
 ];
