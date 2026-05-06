@@ -2,6 +2,7 @@
 // MOG_BattleHud_StateTurns.js
 // Добавляет отображение оставшихся ходов состояний на иконках в HUD
 // + Автообновление иконок для пассивных состояний (исправлено)
+// + МГНОВЕННОЕ ОБНОВЛЕНИЕ ЦИФРЫ ХОДОВ (без задержки)
 //=============================================================================
 
 var Imported = Imported || {};
@@ -86,7 +87,12 @@ Battle_Hud.prototype._updateStateIconAndTurns = function() {
 
     if (this._stateTurnText) {
         this._stateTurnText.bitmap.clear();
-        var turns = data.turns;
+        // ИСПРАВЛЕНИЕ: берём актуальное значение ходов из баттлера, а не из кэша
+        var turns = null;
+        if (this._battler && this._battler._stateTurns) {
+            var raw = this._battler._stateTurns[data.stateId];
+            turns = (raw !== undefined && raw >= 0) ? raw : null;
+        }
         if (turns !== null && turns > 0) {
             var text = String(turns);
             var tw = this._stateTurnText.bitmap.measureTextWidth(text);
@@ -179,11 +185,21 @@ Battle_Hud.prototype._updateStateTurnsLine = function() {
         var txt = this._stateTurnTexts[i];
         var data = this._stateDataList[i];
         txt.bitmap.clear();
-        if (data && data.turns !== null && data.turns > 0) {
-            var text = String(data.turns);
-            var tw = txt.bitmap.measureTextWidth(text);
-            txt.bitmap.drawText(text, 32 - tw - 2, 32 - 20, tw + 4, 20, 'right');
-            txt.visible = true;
+        if (data) {
+            // ИСПРАВЛЕНИЕ: актуальное число ходов из баттлера
+            var turns = null;
+            if (this._battler && this._battler._stateTurns) {
+                var raw = this._battler._stateTurns[data.stateId];
+                turns = (raw !== undefined && raw >= 0) ? raw : null;
+            }
+            if (turns !== null && turns > 0) {
+                var text = String(turns);
+                var tw = txt.bitmap.measureTextWidth(text);
+                txt.bitmap.drawText(text, 32 - tw - 2, 32 - 20, tw + 4, 20, 'right');
+                txt.visible = true;
+            } else {
+                txt.visible = false;
+            }
         } else {
             txt.visible = false;
         }

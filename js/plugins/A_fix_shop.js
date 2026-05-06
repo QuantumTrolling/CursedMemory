@@ -227,10 +227,16 @@ if (!Imported.YEP_ShopMenuCore) {
         this._hoverAnim = 0;
         this._itemSelected = false;
 
+        // Обработчик 'ok' остаётся для подтверждения выбора (Enter/клик)
         this.setHandler('ok', function() {
             this._itemSelected = true;
             this.updateHelp();
         });
+    };
+
+    // Отключаем реакцию на cancel внутри окна, чтобы сцена могла перехватить отмену
+    Window_ShopBuyCustom.prototype.isCancelEnabled = function() {
+        return false;
     };
 
     // Блокировка касаний при выбранном предмете
@@ -240,7 +246,6 @@ if (!Imported.YEP_ShopMenuCore) {
 
     // Блокировка перемещения курсора при выбранном предмете
     Window_ShopBuyCustom.prototype.select = function(index) {
-        // Разрешаем снятие выделения (index === -1) при любом состоянии
         if (this._itemSelected && index !== -1) return;
         Window_ShopBuy.prototype.select.call(this, index);
     };
@@ -500,26 +505,8 @@ if (!Imported.YEP_ShopMenuCore) {
         newBuy.setInfoWindow(oldBuyWindow._infoWindow);
         newBuy.setStatusWindow(oldBuyWindow._statusWindow);
 
+        // Обработчик cancel больше не нужен – всю логику берёт на себя сцена
         var self = this;
-        newBuy.setHandler('cancel', function() {
-            if (newBuy._itemSelected) {
-                newBuy._itemSelected = false;
-                newBuy.select(-1);
-                newBuy.refresh();
-                if (self._descWindow) self._descWindow.hide();
-                if (self._nameWindow) self._nameWindow.hide();
-                if (self._statusWindow) self._statusWindow.hide();
-                self.updateActionEnabled();
-            } else {
-                // Закрываем магазин
-                self.popScene();
-            }
-        });
-
-        if (oldBuyWindow._category !== undefined) {
-            newBuy.setCategory(oldBuyWindow._category);
-        }
-
         newBuy.select(-1);
         newBuy._itemSelected = false;
         newBuy.activate();
@@ -586,6 +573,24 @@ if (!Imported.YEP_ShopMenuCore) {
             this._sellActionWindow.setEnabled(visible);
             this._buyActionWindow.visible = visible;
             this._sellActionWindow.visible = visible;
+        }
+    };
+
+    // *** Главное исправление: перехват отмены сцены ***
+    var _Scene_Shop_onCancel = Scene_Shop.prototype.onCancel;
+    Scene_Shop.prototype.onCancel = function() {
+        if (this._buyWindow && this._buyWindow._itemSelected) {
+            // Снимаем блокировку предмета
+            this._buyWindow._itemSelected = false;
+            this._buyWindow.select(-1);
+            this._buyWindow.refresh();
+            if (this._descWindow) this._descWindow.hide();
+            if (this._nameWindow) this._nameWindow.hide();
+            if (this._statusWindow) this._statusWindow.hide();
+            this.updateActionEnabled();
+            // НЕ закрываем магазин
+        } else {
+            _Scene_Shop_onCancel.call(this);
         }
     };
 
