@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v4.8 Глоссарий: табы + футер + подменю (железобетонный фикс наложения)
+ * @plugindesc v4.9 Глоссарий: табы + футер + подменю (поддержка простых иконок футера)
  * @author You
  *
  * @help
@@ -8,10 +8,8 @@
  * <SGTabs: 10,11,12, ROW=6, ...>               (ROW=6 задаёт кол-во иконок в ряду)
  *
  * НИЗ:
- * <SGFooterTabs: 6:45=7+8+9,46=10>
- *
- * Формат:
- * базовая_страница: иконка=страница  или  иконка=стр1+стр2+стр3
+ * <SGFooterTabs: 6:45=7+8+9,46=10>   (иконка=страница или иконка=стр1+стр2+стр3)
+ * <SGFooterTabs: 1:45,46>            (просто иконка = ведёт на страницу с тем же номером)
  */
 
 (function () {
@@ -87,7 +85,7 @@ Window_Glossary.prototype.hasSGTabs = function () {
 };
 
 //==============================================================
-// FOOTER ТАБЫ
+// FOOTER ТАБЫ (поддержка простого формата icon)
 //==============================================================
 Window_Glossary.prototype.sgFooterTabs = function () {
     var item = this._itemData;
@@ -109,11 +107,22 @@ Window_Glossary.prototype.sgFooterTabs = function () {
 
         parts[1].split(',').forEach(function (pair) {
             if (!pair) return;
+            pair = pair.trim();
             var p = pair.split('=');
-            if (!p[0] || !p[1]) return;
-            var icon = parseInt(p[0].trim());
-            var target = p[1].trim();
-            if (isNaN(icon)) return;
+            var icon, target;
+
+            if (p.length === 1) {
+                // Только иконка, без знака "="
+                icon = parseInt(p[0]);
+                if (isNaN(icon)) return;
+                target = String(icon);   // страница = номеру иконки
+            } else if (p.length === 2) {
+                icon = parseInt(p[0].trim());
+                if (isNaN(icon)) return;
+                target = p[1].trim();
+            } else {
+                return;
+            }
 
             if (target.includes('+')) {
                 var subPages = target.split('+').map(function (s) {
@@ -175,16 +184,12 @@ Window_Glossary.prototype.contentStartY = function () {
 //==============================================================
 const _drawItem = Window_Glossary.prototype.drawItem;
 Window_Glossary.prototype.drawItem = function (index) {
-    // Игнорируем вызовы, которые пытаются нарисовать не текущую страницу
-    // Кроме случаев, когда стоит флаг _forceDraw (из refreshPage) или pageIndex ещё не определён
     if (!this._forceDraw && this._pageIndex !== undefined && index !== this._pageIndex) {
         log('drawItem SKIP: unwanted index', index, 'current pageIndex', this._pageIndex);
         return;
     }
-    // Сбрасываем флаг после использования
     this._forceDraw = false;
 
-    // Сброс подменю, если базовая страница не поддерживает его
     if (this._subPages) {
         var base = this._footerBasePage;
         var data = this.sgFooterTabs();
@@ -211,11 +216,8 @@ Window_Glossary.prototype.drawItem = function (index) {
     }
 
     this._textYOffset = 0;
-
-    // Вызываем оригинальный drawItem, который установит _pageIndex = index и нарисует контент
     _drawItem.call(this, index);
 
-    // Рисуем наши табы и футер
     this.drawSGTabs();
     if (this._subPages) {
         this.drawFooterSubMenu();
@@ -233,10 +235,8 @@ Window_Glossary.prototype.hideAllArrows = function() {
     this.rightArrowVisible = false;
 };
 
-// Перехват drawItemSub (только для клиппинга, без дополнительных проверок – они теперь в drawItem)
 const _drawItemSub = Window_Glossary.prototype.drawItemSub;
 Window_Glossary.prototype.drawItemSub = function(bitmap, listIndex, pageIndex) {
-    // Дополнительная проверка актуальности (на всякий случай)
     if (this._listIndex !== listIndex || this._pageIndex !== pageIndex) {
         log('drawItemSub SKIP: index mismatch', 'listIdx', listIndex, 'pageIdx', pageIndex);
         return;
@@ -509,7 +509,6 @@ Window_Glossary.prototype.updateSGTabsTouch = function () {
 //==============================================================
 const _refreshPage = Window_Glossary.prototype.refreshPage;
 Window_Glossary.prototype.refreshPage = function(item, index) {
-    // Сбрасываем все фильтры, чтобы следующая отрисовка точно прошла
     this._forceDraw = true;
     this._subPages = null;
     this._subPageIndex = -1;
@@ -517,7 +516,6 @@ Window_Glossary.prototype.refreshPage = function(item, index) {
     this._forceDraw = false;
 };
 
-// Полное отключение стрелок
 const _updateArrows = Window_Glossary.prototype.updateArrows;
 Window_Glossary.prototype.updateArrows = function() {
     _updateArrows.call(this);
