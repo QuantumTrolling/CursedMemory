@@ -151,5 +151,6 @@ var $plugins =
 {"name":"A_fix_state_tp_cost","status":true,"description":"Состояние-множитель стоимости TP","parameters":{}},
 {"name":"A_fix_dinamycal_scale_states","status":true,"description":"Состояние: бонус MAT от DEF","parameters":{}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
-{"name":"A_fix_shop","status":true,"description":"v1.00 Визуальная переработка магазина.","parameters":{"bgDefault":"","traderDefault":"","traderX":"516","traderY":"0\r","listX":"0","listY":"0","listWidth":"516","listHeight":"400","listColumns":"3","listIconSize":"64","listFontSize":"18","descX":"516","descY":"424","descWidth":"300","descHeight":"200","actionX":"516","actionY":"388","actionWidth":"300","statusX":"0","statusY":"400","statusWidth":"516","statusHeight":"224","goldX":"516","goldY":"0"}}
+{"name":"A_fix_shop","status":true,"description":"v1.00 Визуальная переработка магазина.","parameters":{"bgDefault":"","traderDefault":"","traderX":"516","traderY":"0\r","listX":"0","listY":"0","listWidth":"516","listHeight":"400","listColumns":"3","listIconSize":"64","listFontSize":"18","descX":"516","descY":"424","descWidth":"300","descHeight":"200","actionX":"516","actionY":"388","actionWidth":"300","statusX":"0","statusY":"400","statusWidth":"516","statusHeight":"224","goldX":"516","goldY":"0"}},
+{"name":"A_fix_gloss_icons_tabs","status":true,"description":"","parameters":{}}
 ];
