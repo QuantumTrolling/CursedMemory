@@ -10,6 +10,7 @@
 //   - Цена выводится внизу карточки в системной рамке (windowskin).
 //   - Переключение актёров в статусном окне стрелками.
 //   - Стандартная рамка окна списка товаров убрана.
+//   - Правая кнопка мыши корректно снимает выбор, не закрывая магазин.
 //=============================================================================
 
 var Imported = Imported || {};
@@ -227,30 +228,23 @@ if (!Imported.YEP_ShopMenuCore) {
         this._hoverAnim = 0;
         this._itemSelected = false;
 
-        // Обработчик 'ok' остаётся для подтверждения выбора (Enter/клик)
         this.setHandler('ok', function() {
             this._itemSelected = true;
             this.updateHelp();
         });
     };
 
-    // Отключаем реакцию на cancel внутри окна, чтобы сцена могла перехватить отмену
-    Window_ShopBuyCustom.prototype.isCancelEnabled = function() {
-        return false;
-    };
+    // isCancelEnabled по умолчанию true, поэтому Esc работает через обработчик cancel
 
-    // Блокировка касаний при выбранном предмете
     Window_ShopBuyCustom.prototype.isTouchEnabled = function() {
         return !this._itemSelected && Window_ShopBuy.prototype.isTouchEnabled.call(this);
     };
 
-    // Блокировка перемещения курсора при выбранном предмете
     Window_ShopBuyCustom.prototype.select = function(index) {
         if (this._itemSelected && index !== -1) return;
         Window_ShopBuy.prototype.select.call(this, index);
     };
 
-    // Убираем стандартную рамку и фон окна
     Window_ShopBuyCustom.prototype._refreshFrame = function() {};
     Window_ShopBuyCustom.prototype._refreshBack = function() {};
 
@@ -289,7 +283,7 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Window_ShopBuyCustom.prototype.update = function() {
         Window_ShopBuy.prototype.update.call(this);
-        if (this._itemSelected) return;            // заблокировано – не обновляем наведение мыши
+        if (this._itemSelected) return;
         var x = this.canvasToLocalX(TouchInput.x);
         var y = this.canvasToLocalY(TouchInput.y);
         var newHover = -1;
@@ -309,14 +303,14 @@ if (!Imported.YEP_ShopMenuCore) {
 
         if (TouchInput.isTriggered() && newHover >= 0) {
             this.select(newHover);
-            this._itemSelected = true;             // блокируем предмет
+            this._itemSelected = true;
             this.updateHelp();
         }
     };
 
     var _custom_cursorDown = Window_ShopBuyCustom.prototype.cursorDown;
     Window_ShopBuyCustom.prototype.cursorDown = function(wrap) {
-        if (this._itemSelected) return;            // блокировка перемещения клавишами
+        if (this._itemSelected) return;
         _custom_cursorDown.call(this, wrap);
         this.updateHelp();
     };
@@ -327,9 +321,6 @@ if (!Imported.YEP_ShopMenuCore) {
         this.updateHelp();
     };
 
-    // -------------------------------------------------------------------------
-    // drawItem – иконка 64x64 + цена в системной рамке
-    // -------------------------------------------------------------------------
     Window_ShopBuyCustom.prototype.drawItem = function(index) {
         var item = this._data[index];
         if (!item) return;
@@ -343,7 +334,6 @@ if (!Imported.YEP_ShopMenuCore) {
 
         var isHover = (index === this._hoverIndex);
 
-        // Фон + рамка карточки
         this.contents.fillRect(x, y, w, h, 'rgba(0, 0, 0, 0.4)');
         this.drawSkinFrame(x, y, w, h);
         if (isHover) {
@@ -353,13 +343,12 @@ if (!Imported.YEP_ShopMenuCore) {
 
         this.resetFontSettings();
 
-        // Иконка предмета (64x64, без размытия)
         var iconWh = Window_Base._iconWidth * 2;
         var bitmap = ImageManager.loadSystem('IconSet');
         var sx = item.iconIndex % 16 * Window_Base._iconWidth;
         var sy = Math.floor(item.iconIndex / 16) * Window_Base._iconHeight;
         var dx = cx - iconWh / 2;
-        var dy = y + 12;   // прижато к верху, чтобы освободить низ для рамки цены
+        var dy = y + 12;
 
         var ctx = this.contents.context;
         var smooth = ctx.imageSmoothingEnabled;
@@ -368,7 +357,6 @@ if (!Imported.YEP_ShopMenuCore) {
                           dx, dy, iconWh, iconWh);
         ctx.imageSmoothingEnabled = smooth;
 
-        // Цена в системной рамке (drawSkinFrame, минимум 48x48 для корректных углов)
         var price = Yanfly.Util.toGroup(this.price(item));
         this.contents.fontSize = params.listFontSize;
         if (Imported.YEP_CoreEngine) {
@@ -377,23 +365,19 @@ if (!Imported.YEP_ShopMenuCore) {
 
         var textW = this.textWidth(price);
         var iconW = (coinIconIndex > 0) ? Window_Base._iconWidth + 4 : 0;
-        var totalW = textW + iconW + 24;          // отступы для рамки
+        var totalW = textW + iconW + 24;
         var boxW = Math.min(totalW, w - 10) + 6;
-        var boxH = 49;                            // минимальная высота для drawSkinFrame
+        var boxH = 49;
         var boxX = cx - boxW / 2;
-        var boxY = y + h - boxH;                  // прижато к низу карточки
+        var boxY = y + h - boxH;
 
-        // Системная рамка для цены
         this.drawSkinFrame(boxX, boxY, boxW, boxH);
 
-        // Цвет текста: серый, если недостаточно золота
         var canAfford = $gameParty.gold() >= this.price(item);
         this.changeTextColor(canAfford ? this.normalColor() : this.textColor(8));
 
-        // Текст цены (сдвинут влево, чтобы уместить иконку валюты)
         this.drawText(price, boxX + 24, boxY - 39, boxW - (coinIconIndex > 0 ? 24 : 0), boxH, 'right');
 
-        // Иконка валюты
         if (coinIconIndex > 0) {
             var iconX = boxX + boxW - Window_Base._iconWidth - 7;
             var iconY = boxY + (boxH - Window_Base._iconHeight) / 2;
@@ -437,6 +421,29 @@ if (!Imported.YEP_ShopMenuCore) {
         this.createShopBackground();
         this.createShopTrader();
         this.repositionStandardWindows();
+
+        // ~~~ ПРАВАЯ КНОПКА МЫШИ – прямая обработка с проверкой canvas ~~~
+        this._onContextMenu = function(e) {
+            e.preventDefault(); // убираем стандартное контекстное меню браузера
+            // Если предмет уже выбран – снимаем выделение и кнопки
+            if (this._buyWindow && this._buyWindow._itemSelected) {
+                this._buyWindow._itemSelected = false;
+                this._buyWindow.select(-1);
+                this._buyWindow.refresh();
+                if (this._descWindow) this._descWindow.hide();
+                if (this._nameWindow) this._nameWindow.hide();
+                if (this._statusWindow) this._statusWindow.hide();
+                this.updateActionEnabled();
+            } else {
+                // Ничего не выбрано – закрываем магазин, как по Esc
+                this.popScene();
+            }
+        }.bind(this);
+        if (Graphics.canvas) {
+            Graphics.canvas.addEventListener('contextmenu', this._onContextMenu);
+        } else {
+            console.warn('A_fix_shop: Graphics.canvas недоступен, слушатель ПКМ не добавлен.');
+        }
     };
 
     Scene_Shop.prototype.createShopBackground = function() {
@@ -505,7 +512,9 @@ if (!Imported.YEP_ShopMenuCore) {
         newBuy.setInfoWindow(oldBuyWindow._infoWindow);
         newBuy.setStatusWindow(oldBuyWindow._statusWindow);
 
-        // Обработчик cancel больше не нужен – всю логику берёт на себя сцена
+        // Обработчик cancel для Esc (работает через стандартное окно)
+        newBuy.setHandler('cancel', this.onCancel.bind(this));
+
         var self = this;
         newBuy.select(-1);
         newBuy._itemSelected = false;
@@ -576,11 +585,11 @@ if (!Imported.YEP_ShopMenuCore) {
         }
     };
 
-    // *** Главное исправление: перехват отмены сцены ***
+    // Обработчик Esc – остался без изменений в логике
     var _Scene_Shop_onCancel = Scene_Shop.prototype.onCancel;
     Scene_Shop.prototype.onCancel = function() {
         if (this._buyWindow && this._buyWindow._itemSelected) {
-            // Снимаем блокировку предмета
+            // Снимаем выделение
             this._buyWindow._itemSelected = false;
             this._buyWindow.select(-1);
             this._buyWindow.refresh();
@@ -590,39 +599,17 @@ if (!Imported.YEP_ShopMenuCore) {
             this.updateActionEnabled();
             // НЕ закрываем магазин
         } else {
-            _Scene_Shop_onCancel.call(this);
+            _Scene_Shop_onCancel.call(this); // стандартное закрытие
         }
     };
 
-    Scene_Shop.prototype.commandBuyAction = function() {
-        if (this._buyWindow && this._buyWindow.item()) {
-            var item = this._buyWindow.item();
-            var price = this._buyWindow.price(item);
-            if ($gameParty.gold() >= price) {
-                this._item = item;
-                this.doBuy(1);
-
-                this._buyWindow.refresh();
-                this._goldWindow.refresh();
-                this._statusWindow.refresh();
-
-                // Снимаем блокировку после покупки
-                this._buyWindow._itemSelected = false;
-                if (!this._buyWindow.item()) {
-                    this._buyWindow.select(-1);
-                }
-                this._buyWindow.updateHelp();
-                this.updateActionEnabled();
-            }
-        }
-    };
-
-    Scene_Shop.prototype.commandSellAction = function() {
-        // Заглушка
-    };
-
+    // Удаляем слушатель при закрытии
     var _Scene_Shop_terminate = Scene_Shop.prototype.terminate;
     Scene_Shop.prototype.terminate = function() {
+        if (this._onContextMenu && Graphics.canvas) {
+            Graphics.canvas.removeEventListener('contextmenu', this._onContextMenu);
+        }
+        this._onContextMenu = null;
         var vm = this._vwStorage ? this._vwStorage['shopTrader'] : null;
         if (vm) {
             vm._selfDestroy();
