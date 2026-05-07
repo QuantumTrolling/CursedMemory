@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v4.9 Глоссарий: табы + футер + подменю (поддержка простых иконок футера)
+ * @plugindesc v4.10 Глоссарий: табы + футер + подменю (фикс артефактов иконок)
  * @author You
  *
  * @help
@@ -9,7 +9,7 @@
  *
  * НИЗ:
  * <SGFooterTabs: 6:45=7+8+9,46=10>   (иконка=страница или иконка=стр1+стр2+стр3)
- * <SGFooterTabs: 1:45,46>            (просто иконка = ведёт на страницу с тем же номером)
+ * <SGFooterTabs: 1:45,46>             (просто иконка = ведёт на страницу с тем же номером)
  */
 
 (function () {
@@ -17,7 +17,7 @@
 
 const SG_TABS_HEIGHT = 170;
 const HITBOX_PADDING = 12;
-const DEBUG = true;  // false, когда всё заработает
+const DEBUG = false;  // false, когда всё заработает
 
 function log() { if (DEBUG) console.log.apply(console, arguments); }
 
@@ -28,6 +28,55 @@ function arrayEquals(a, b) {
     }
     return true;
 }
+
+//==============================================================
+// ФИКС АРТЕФАКТОВ ИКОНОК (отключение сглаживания + целые координаты)
+//==============================================================
+function drawIconFixed(contents, iconIndex, x, y, scale, alpha) {
+    if (alpha === undefined) alpha = 255;
+    var bitmap = ImageManager.loadSystem('IconSet');
+    var pw = Window_Base._iconWidth;
+    var ph = Window_Base._iconHeight;
+    var sx = (iconIndex % 16) * pw;
+    var sy = Math.floor(iconIndex / 16) * ph;
+    var dw = Math.floor(pw * scale);
+    var dh = Math.floor(ph * scale);
+    var dx = Math.floor(x + (pw - dw) / 2);
+    var dy = Math.floor(y + (ph - dh) / 2); // по вертикали тоже центрируем при необходимости
+
+    // Сохраняем состояние контекста
+    var ctx = contents._context;
+    var oldSmooth = ctx.imageSmoothingEnabled;
+    var oldAlpha = contents.paintOpacity;
+
+    ctx.imageSmoothingEnabled = false;
+    contents.paintOpacity = alpha;
+
+    contents.blt(bitmap, sx, sy, pw, ph, dx, dy, dw, dh);
+
+    contents.paintOpacity = oldAlpha;
+    ctx.imageSmoothingEnabled = oldSmooth;
+}
+
+//==============================================================
+// ПЕРЕОПРЕДЕЛЕНИЕ drawIcon В Window_GlossaryList (из оригинального плагина)
+//==============================================================
+var _Window_GlossaryList_drawIcon = Window_GlossaryList.prototype.drawIcon;
+Window_GlossaryList.prototype.drawIcon = function(iconIndex, x, y) {
+    var scale = PluginManager.parameters('SceneGlossary')['IconScale'] || '1.0';
+    scale = parseFloat(scale) || 1.0;
+    drawIconFixed(this.contents, iconIndex, x, y, scale, 255);
+};
+
+//==============================================================
+// ПЕРЕОПРЕДЕЛЕНИЕ drawIcon В Window_Glossary (из оригинального плагина)
+//==============================================================
+var _Window_Glossary_drawIcon = Window_Glossary.prototype.drawIcon;
+Window_Glossary.prototype.drawIcon = function(iconIndex, x, y) {
+    var scale = PluginManager.parameters('SceneGlossary')['IconScale'] || '1.0';
+    scale = parseFloat(scale) || 1.0;
+    drawIconFixed(this.contents, iconIndex, x, y, scale, 255);
+};
 
 //==============================================================
 // ВЕРХНИЕ ТАБЫ (ROW как разрыв строки)
@@ -112,10 +161,9 @@ Window_Glossary.prototype.sgFooterTabs = function () {
             var icon, target;
 
             if (p.length === 1) {
-                // Только иконка, без знака "="
                 icon = parseInt(p[0]);
                 if (isNaN(icon)) return;
-                target = String(icon);   // страница = номеру иконки
+                target = String(icon);
             } else if (p.length === 2) {
                 icon = parseInt(p[0].trim());
                 if (isNaN(icon)) return;
@@ -364,22 +412,40 @@ Window_Glossary.prototype.drawFooterSubMenu = function () {
 };
 
 //==============================================================
-// ИКОНКА
+// ИКОНКА ТАБА (фикс артефактов + отрисовка)
 //==============================================================
 Window_Glossary.prototype.drawSGTabIcon = function (iconIndex, x, y, active) {
+    var size = active ? 52 : 44;
+    var offset = active ? 0 : 4;
+    var alpha = active ? 255 : 180;
+
     var bitmap = ImageManager.loadSystem('IconSet');
     var pw = Window_Base._iconWidth;
     var ph = Window_Base._iconHeight;
     var sx = (iconIndex % 16) * pw;
     var sy = Math.floor(iconIndex / 16) * ph;
-    var size = active ? 52 : 44;
-    var offset = active ? 0 : 4;
-    this.contents.paintOpacity = active ? 255 : 180;
-    this.contents.blt(bitmap, sx, sy, pw, ph, x + offset, y + offset, size, size);
+
+    // Целочисленные координаты
+    var dx = Math.floor(x + offset);
+    var dy = Math.floor(y + offset);
+    var dw = Math.floor(size);
+    var dh = Math.floor(size);
+
+    var ctx = this.contents._context;
+    var oldSmooth = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = false;
+    var oldAlpha = this.contents.paintOpacity;
+    this.contents.paintOpacity = alpha;
+
+    this.contents.blt(bitmap, sx, sy, pw, ph, dx, dy, dw, dh);
+
+    // Подчёркивание активной иконки
     if (active) {
         this.contents.fillRect(x, y + 56, 52, 3, this.normalColor());
     }
-    this.contents.paintOpacity = 255;
+
+    this.contents.paintOpacity = oldAlpha;
+    ctx.imageSmoothingEnabled = oldSmooth;
 };
 
 //==============================================================
