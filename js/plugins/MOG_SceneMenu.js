@@ -370,17 +370,24 @@ Scene_Menu.prototype.create = function() {
 // * loadBitmapsMain
 //==============================
 Scene_Menu.prototype.loadBitmapsMain = function() {
-	this._facesBitmaps = []
-	for (var i = 0; i < $gameParty.members().length; i++) {
-		 this._facesBitmaps[i] = ImageManager.loadMenusFaces2("Actor_" + $gameParty.members()[i]._actorId);
-	};
-	this._comBitmaps = []
-	this._comList = this._commandWindow._list;
+    this._facesBitmaps = [];
+    for (var i = 0; i < $gameParty.members().length; i++) {
+         this._facesBitmaps[i] = ImageManager.loadMenusFaces2("Actor_" + $gameParty.members()[i]._actorId);
+    }
+    this._comBitmaps = [];
+    
+    // Удаляем команду "Навыки" (symbol: 'skill')
+    this._commandWindow._list = this._commandWindow._list.filter(function(cmd) {
+        return cmd.symbol !== 'skill';
+    });
+    // ВАЖНО: обновляем _comList после фильтрации
+    this._comList = this._commandWindow._list;
+    
     for (var i = 0; i < this._comList.length; i++) {
-		 this._comBitmaps[i] = ImageManager.loadMenusMainCommands(this._comList[i].name);
-    };
-	this._arrowImg = ImageManager.loadMenusMain("FaceArrow");
-	this._goldImg = ImageManager.loadMenusMain("GoldNumber");
+         this._comBitmaps[i] = ImageManager.loadMenusMainCommands(this._comList[i].name);
+    }
+    this._arrowImg = ImageManager.loadMenusMain("FaceArrow");
+    this._goldImg = ImageManager.loadMenusMain("GoldNumber");
 };
 
 //==============================
