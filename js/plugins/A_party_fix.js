@@ -1,7 +1,16 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene (FINAL FIXED)
- * @author ChatGPT
+ * @plugindesc Custom Party Scene v13 (reserve pagination, 4 faces per page)
+ * @author ChatGPT (improved)
+ *
+ * @help
+ * Меняет состав боевого отряда:
+ * - Верхняя панель: лица резервных героев (в группе, но не в бою), по 4 на странице
+ *   с навигационными стрелками.
+ * - Нижняя панель: большие портреты текущего боевого отряда (макс. 4)
+ * - Клик по герою → мигание, клик по другому → обмен местами.
+ * - Без визуальных эффектов при наведении.
+ * - Лица всегда поверх портретов, клик по лицу не перехватывается.
  */
 
 (function() {
@@ -20,10 +29,13 @@ Scene_PartyCustom.prototype.create = function() {
 
     this._selectedActor = null;
     this._selectedSprite = null;
+    this._clickableSprites = [];
+    this._reservePage = 0;               // текущая страница резерва
 
     this.createTitle();
-    this.createFaceBar();
-    this.createParty();
+    this.createParty();     // battle members (нижняя панель)
+    this.createFaceBar();   // резерв с пагинацией (верхняя панель)
+    this.updateClickableList();
 };
 
 // ================= EXIT =================
@@ -35,6 +47,10 @@ Scene_PartyCustom.prototype.update = function() {
         SoundManager.playCancel();
         SceneManager.pop();
     }
+
+    if (TouchInput.isTriggered()) {
+        this.handleClick();
+    }
 };
 
 // ================= TITLE =================
@@ -45,76 +61,170 @@ Scene_PartyCustom.prototype.createTitle = function() {
     this.addWindow(this._titleWindow);
 };
 
-// ================= FACE BAR =================
+// ================= RESERVE FACES (paginated) =================
 
 Scene_PartyCustom.prototype.createFaceBar = function() {
     this._faceContainer = new Sprite();
     this._faceContainer.y = 100;
     this.addChild(this._faceContainer);
 
+    // Загружаем системную иконку для стрелок
+    this._iconBitmap = ImageManager.loadSystem('IconSet');
     this.refreshFaces();
 };
 
-Scene_PartyCustom.prototype.allActors = function() {
-    return $gameActors._data.filter(a => a);
+// Все резервные ID (отсортированы)
+Scene_PartyCustom.prototype.allReserveIds = function() {
+    var battleIds = $gameParty._battleMembers.filter(function(id) {
+        return id > 0 && $gameActors.actor(id);
+    });
+    return $gameParty._actors.filter(function(actorId) {
+        return !battleIds.contains(actorId) && $gameActors.actor(actorId);
+    });
+};
+
+// Количество страниц (по 4 лица)
+Scene_PartyCustom.prototype.maxReservePages = function() {
+    return Math.ceil(this.allReserveIds().length / 4);
+};
+
+// Актёры для текущей страницы
+Scene_PartyCustom.prototype.reserveActorsForPage = function(page) {
+    var ids = this.allReserveIds();
+    var start = page * 4;
+    return ids.slice(start, start + 4).map(function(id) {
+        return $gameActors.actor(id);
+    });
 };
 
 Scene_PartyCustom.prototype.refreshFaces = function() {
     this._faceContainer.removeChildren();
 
-    let actors = this.allActors().slice(0, 6);
+    // Если страница вышла за границы, корректируем
+    if (this._reservePage >= this.maxReservePages()) {
+        this._reservePage = Math.max(0, this.maxReservePages() - 1);
+    }
 
-    actors.forEach((actor, i) => {
-        let sprite = new Sprite(ImageManager.loadFace(actor.faceName()));
+    var actors = this.reserveActorsForPage(this._reservePage);
 
+    actors.forEach(function(actor, i) {
+        var sprite = new Sprite(ImageManager.loadFace(actor.faceName()));
         sprite.setFrame(
             actor.faceIndex() % 4 * 144,
             Math.floor(actor.faceIndex() / 4) * 144,
             144, 144
         );
-
         sprite.x = 100 + i * 150;
         sprite._actor = actor;
-
         this.setupInteraction(sprite);
         this._faceContainer.addChild(sprite);
-    });
+    }, this);
+
+    // Добавляем стрелки, если страниц больше одной
+    if (this.maxReservePages() > 1) {
+        this.createArrow(-1, 100 - 50, 144 / 2 - 16);   // левая стрелка
+        this.createArrow(1, 100 + 3 * 150 + 50, 144 / 2 - 16); // правая
+    }
+
+    // Если выбранный актёр больше не на экране, сбрасываем выделение
+    if (this._selectedActor && !actors.contains(this._selectedActor)) {
+        this.clearSelection();
+    }
+
+    this.updateClickableList();
 };
 
-// ================= PARTY (CHAR SPRITES) =================
+// Создаёт спрайт стрелки (direction: -1 лево, 1 право)
+Scene_PartyCustom.prototype.createArrow = function(direction, x, y) {
+    var sprite = new Sprite(this._iconBitmap);
+    var iconIndex = direction === -1 ? 76 : 77; // стандартные иконки стрелок
+    var sx = (iconIndex % 16) * 32;
+    var sy = Math.floor(iconIndex / 16) * 32;
+    sprite.setFrame(sx, sy, 32, 32);
+    sprite.x = x;
+    sprite.y = y;
+    sprite._isArrow = true;
+    sprite._arrowDirection = direction;
+    this.setupInteraction(sprite); // базовая анимация (не нужна), но нужен isHovered
+    this._faceContainer.addChild(sprite);
+};
+
+// ================= BATTLE PARTY (MOG busts or faces) =================
 
 Scene_PartyCustom.prototype.createParty = function() {
     this._partyContainer = new Sprite();
-    this._partyContainer.y = 320;
+    var charY = (typeof Moghunter !== 'undefined' && Moghunter.scMenu_CharY != null) ? Moghunter.scMenu_CharY : 0;
+    this._partyContainer.y = Graphics.boxHeight + charY;
     this.addChild(this._partyContainer);
-
     this.refreshParty();
 };
 
 Scene_PartyCustom.prototype.refreshParty = function() {
     this._partyContainer.removeChildren();
 
-    $gameParty.members().forEach((actor, i) => {
-        let bitmap = ImageManager.loadCharacter(actor.characterName());
-        let sprite = new Sprite(bitmap);
-
-        let pw = bitmap.width / 12;
-        let ph = bitmap.height / 8;
-
-        let sx = (actor.characterIndex() % 4) * 3 * pw;
-        let sy = Math.floor(actor.characterIndex() / 4) * 4 * ph;
-
-        sprite.setFrame(sx, sy, pw, ph);
-
-        sprite.x = 120 + i * 120;
-        sprite.scale.x = 2;
-        sprite.scale.y = 2;
+    var battleMembers = $gameParty.battleMembers();
+    battleMembers.forEach(function(actor, i) {
+        var sprite;
+        if (typeof ImageManager.loadMenusFaces3 === 'function') {
+            sprite = new Sprite(ImageManager.loadMenusFaces3("actor_" + actor.actorId()));
+            sprite._isBust = true;
+            sprite.anchor.x = 0.5;
+            sprite.anchor.y = 1.0;
+            sprite.scale.x = 1;
+            sprite.scale.y = 1;
+        } else {
+            sprite = new Sprite(ImageManager.loadFace(actor.faceName()));
+            sprite.setFrame(
+                actor.faceIndex() % 4 * 144,
+                Math.floor(actor.faceIndex() / 4) * 144,
+                144, 144
+            );
+            sprite._isBust = false;
+        }
 
         sprite._actor = actor;
+        sprite._baseScaleX = 1;
+        sprite._baseScaleY = 1;
 
         this.setupInteraction(sprite);
         this._partyContainer.addChild(sprite);
+    }, this);
+
+    this.layoutParty();
+    this.updateClickableList();
+};
+
+Scene_PartyCustom.prototype.layoutParty = function() {
+    var children = this._partyContainer.children;
+    if (children.length === 0) return;
+
+    var maxSlots = $gameParty.maxBattleMembers();
+    var space = Math.floor((Graphics.boxWidth - 32) / maxSlots);
+    var charX = (typeof Moghunter !== 'undefined' && Moghunter.scMenu_CharX != null) ? Moghunter.scMenu_CharX : 0;
+
+    children.forEach(function(spr, i) {
+        var baseX = 16 + (space / 2) + (space * i) + charX;
+        spr.x = baseX;
+        spr.y = 0;
     });
+};
+
+// ================= CLICKABLE LIST =================
+
+Scene_PartyCustom.prototype.updateClickableList = function() {
+    this._clickableSprites = [];
+
+    if (this._partyContainer) {
+        for (var i = 0; i < this._partyContainer.children.length; i++) {
+            this._clickableSprites.push(this._partyContainer.children[i]);
+        }
+    }
+
+    if (this._faceContainer) {
+        for (var j = 0; j < this._faceContainer.children.length; j++) {
+            this._clickableSprites.push(this._faceContainer.children[j]);
+        }
+    }
 };
 
 // ================= INTERACTION =================
@@ -125,32 +235,30 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
     sprite.update = function() {
         Sprite.prototype.update.call(this);
 
-        let hovered = this.isHovered();
-
-        // Hover эффект
-        if (hovered && !this._blink) {
-            this.opacity = 200;
-            this.scale.x = this.scale.y = 1.1;
-        } else if (!this._blink) {
-            this.opacity = 255;
-            this.scale.x = this.scale.y = this.scale.x > 1.5 ? this.scale.x : 1;
-        }
-
-        // Мигание выбранного
         if (this._blink) {
             this.opacity = 150 + Math.sin(Graphics.frameCount * 0.3) * 100;
+        } else {
+            this.opacity = 255;
         }
-
-        if (TouchInput.isTriggered() && this.isHovered()) {
-            this._clickHandler();
-        }
+        this.scale.x = this._baseScaleX || 1;
+        this.scale.y = this._baseScaleY || 1;
     };
 
     sprite.isHovered = function() {
-        return TouchInput.x >= this.x &&
-               TouchInput.x <= this.x + this.width &&
-               TouchInput.y >= this.y + this.parent.y &&
-               TouchInput.y <= this.y + this.parent.y + this.height;
+        var w = this.width * (this.scale.x || 1);
+        var h = this.height * (this.scale.y || 1);
+        if (w <= 0 || h <= 0) return false;
+
+        var anchorX = this.anchor.x;
+        var anchorY = this.anchor.y;
+        var left = this.x - w * anchorX;
+        var top = this.y - h * anchorY;
+        var parentY = this.parent ? this.parent.y : 0;
+
+        return TouchInput.x >= left &&
+               TouchInput.x <= left + w &&
+               TouchInput.y >= top + parentY &&
+               TouchInput.y <= top + parentY + h;
     };
 
     sprite.startBlink = function() {
@@ -161,11 +269,41 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
         this._blink = false;
         this.opacity = 255;
     };
-
-    sprite._clickHandler = () => this.onActorClick(sprite._actor, sprite);
 };
 
-// ================= CLICK =================
+// ================= CENTRALIZED CLICK =================
+
+Scene_PartyCustom.prototype.handleClick = function() {
+    for (var i = this._clickableSprites.length - 1; i >= 0; i--) {
+        var spr = this._clickableSprites[i];
+        if (spr.isHovered && spr.isHovered()) {
+            // Если попали по стрелке – листаем страницу
+            if (spr._isArrow) {
+                this.changeReservePage(spr._arrowDirection);
+                return;
+            }
+            // Иначе обычный клик по актёру
+            if (spr._actor) {
+                this.onActorClick(spr._actor, spr);
+            }
+            break;
+        }
+    }
+};
+
+// Переключение страницы резерва
+Scene_PartyCustom.prototype.changeReservePage = function(direction) {
+    var newPage = this._reservePage + direction;
+    if (newPage < 0 || newPage >= this.maxReservePages()) {
+        SoundManager.playBuzzer();
+        return;
+    }
+    SoundManager.playCursor();
+    this._reservePage = newPage;
+    this.refreshFaces();
+};
+
+// ================= CLICK LOGIC =================
 
 Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
     if (!this._selectedActor) {
@@ -174,55 +312,74 @@ Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
         this._selectedSprite = sprite;
         sprite.startBlink();
     } else {
+        if (this._swapLock) return;
+        this._swapLock = true;
+
         this.swapActors(this._selectedActor, actor);
         this.clearSelection();
         this.refreshFaces();
         this.refreshParty();
+
+        var self = this;
+        setTimeout(function() { self._swapLock = false; }, 0);
     }
 };
 
 Scene_PartyCustom.prototype.clearSelection = function() {
-    if (this._selectedSprite) this._selectedSprite.stopBlink();
+    if (this._selectedSprite) {
+        this._selectedSprite.stopBlink();
+    }
     this._selectedActor = null;
     this._selectedSprite = null;
 };
 
-// ================= SWAP =================
+// ================= SWAP (YEP-compatible) =================
 
 Scene_PartyCustom.prototype.swapActors = function(a, b) {
-    let party = $gameParty._actors;
+    var idA = a.actorId();
+    var idB = b.actorId();
+    var battle = $gameParty._battleMembers;
+    var reserve = $gameParty._actors;
 
-    let idA = a.actorId();
-    let idB = b.actorId();
-
-    let indexA = party.indexOf(idA);
-    let indexB = party.indexOf(idB);
+    var indexA = battle.indexOf(idA);
+    var indexB = battle.indexOf(idB);
 
     if (indexA >= 0 && indexB >= 0) {
-        let temp = party[indexA];
-        party[indexA] = party[indexB];
-        party[indexB] = temp;
-    } else if (indexA >= 0) {
-        party[indexA] = idB;
-    } else if (indexB >= 0) {
-        party[indexB] = idA;
+        var tmp = battle[indexA];
+        battle[indexA] = battle[indexB];
+        battle[indexB] = tmp;
+    } else if (indexA >= 0 && indexB < 0) {
+        battle[indexA] = idB;
+        var posB = reserve.indexOf(idB);
+        if (posB >= 0) reserve.splice(posB, 1);
+        if (!reserve.contains(idA)) reserve.push(idA);
+    } else if (indexB >= 0 && indexA < 0) {
+        battle[indexB] = idA;
+        var posA = reserve.indexOf(idA);
+        if (posA >= 0) reserve.splice(posA, 1);
+        if (!reserve.contains(idB)) reserve.push(idB);
+    }
+
+    if (typeof $gameParty.rearrangeActors === 'function') {
+        $gameParty.rearrangeActors();
     }
 
     $gamePlayer.refresh();
+    $gameMap.requestRefresh();
 };
 
-// ================= MOG FIX =================
+// ================= MENU HOOK =================
 
 (function() {
-Scene_Menu.prototype.commandFormation = function() {
-    SceneManager.push(Scene_PartyCustom);
-};
+    Scene_Menu.prototype.commandFormation = function() {
+        SceneManager.push(Scene_PartyCustom);
+    };
 
-const _create = Scene_Menu.prototype.createCommandWindow;
-Scene_Menu.prototype.createCommandWindow = function() {
-    _create.call(this);
-    this._commandWindow.setHandler('formation', this.commandFormation.bind(this));
-};
+    var _create = Scene_Menu.prototype.createCommandWindow;
+    Scene_Menu.prototype.createCommandWindow = function() {
+        _create.call(this);
+        this._commandWindow.setHandler('formation', this.commandFormation.bind(this));
+    };
 })();
 
 })();
