@@ -1,14 +1,14 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v19 (fixed text arrows, stable pages)
+ * @plugindesc Custom Party Scene v22 (fixed text arrows, stable position)
  * @author ChatGPT (improved)
  *
  * @help
  * Меняет состав боевого отряда:
  * - Верхняя панель: лица резервных героев, по 6 на странице (по умолчанию),
  *   равномерно распределённые от края до края экрана.
- *   Размер лиц никогда не превышает 144px, но уменьшается при необходимости.
- * - Стрелки навигации: символы ◀ и ▶, всегда на одном и том же месте.
+ * - Стрелки навигации: символы ◀ и ▶, как в стандартных окнах выбора.
+ *   Всегда на одном и том же месте независимо от страницы.
  * - Нижняя панель: портреты текущего боевого отряда (макс. 4).
  * - Клик по герою → мигание, клик по другому → обмен местами.
  *
@@ -32,8 +32,7 @@ var facesPerPage = Number(parameters['facesPerPage'] || 6);
 var maxFaceSize = Number(parameters['maxFaceSize'] || 144);
 var faceSpacing = Number(parameters['faceSpacing'] || 10);
 
-// Размер битмапа под стрелку
-var ARROW_BITMAP_SIZE = 36;
+var ARROW_SIZE = 24; // размер спрайта под стрелку
 
 function Scene_PartyCustom() {
     this.initialize.apply(this, arguments);
@@ -44,12 +43,10 @@ Scene_PartyCustom.prototype.constructor = Scene_PartyCustom;
 
 Scene_PartyCustom.prototype.create = function() {
     Scene_MenuBase.prototype.create.call(this);
-
     this._selectedActor = null;
     this._selectedSprite = null;
     this._clickableSprites = [];
     this._reservePage = 0;
-
     this.createTitle();
     this.createParty();
     this.createFaceBar();
@@ -103,7 +100,6 @@ Scene_PartyCustom.prototype.reserveActorsForPage = function(page) {
 
 Scene_PartyCustom.prototype.refreshFaces = function() {
     this._faceContainer.removeChildren();
-
     if (this._reservePage >= this.maxReservePages()) {
         this._reservePage = Math.max(0, this.maxReservePages() - 1);
     }
@@ -115,12 +111,10 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
         return;
     }
 
-    // Определяем размер лиц: не больше maxFaceSize, но уменьшаем, если не влезают
     var availWidth = Graphics.boxWidth;
     var maxFaceDisplayWidth = Math.floor((availWidth - faceSpacing * (count + 1)) / count);
     var faceSize = Math.min(maxFaceSize, maxFaceDisplayWidth);
     var faceScale = faceSize / 144;
-
     var totalFacesWidth = count * faceSize;
     var actualSpacing = (availWidth - totalFacesWidth) / (count + 1);
 
@@ -139,11 +133,11 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
         this._faceContainer.addChild(sprite);
     }, this);
 
-    // Фиксированные позиции стрелок (не зависят от actualSpacing)
-    var arrowMargin = 10;                             // отступ от края
-    var arrowY = maxFaceSize / 2 - ARROW_BITMAP_SIZE / 2;   // центр по высоте стандартного лица
+    // Фиксированные позиции стрелок
+    var arrowMargin = 10;
+    var arrowY = maxFaceSize / 2 - ARROW_SIZE / 2;
     var leftArrowX = arrowMargin;
-    var rightArrowX = Graphics.boxWidth - ARROW_BITMAP_SIZE - arrowMargin;
+    var rightArrowX = Graphics.boxWidth - ARROW_SIZE - arrowMargin;
 
     if (this.maxReservePages() > 1) {
         this.createArrow(-1, leftArrowX, arrowY);
@@ -153,18 +147,16 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
     if (this._selectedActor && !actors.contains(this._selectedActor)) {
         this.clearSelection();
     }
-
     this.updateClickableList();
 };
 
-// Рисует стрелку текстовым символом ◀ или ▶
+// Рисует стрелку текстовым символом ◀ или ▶ (как в стандартных окнах выбора)
 Scene_PartyCustom.prototype.createArrow = function(direction, x, y) {
-    var bitmap = new Bitmap(ARROW_BITMAP_SIZE, ARROW_BITMAP_SIZE);
+    var bitmap = new Bitmap(ARROW_SIZE, ARROW_SIZE);
     bitmap.fontFace = 'GameFont, sans-serif';
-    bitmap.fontSize = 28;
-    bitmap.textColor = '#ffffff';
-    var symbol = direction === -1 ? '◀' : '▶';
-    bitmap.drawText(symbol, 0, 0, ARROW_BITMAP_SIZE, ARROW_BITMAP_SIZE, 'center');
+    bitmap.fontSize = 20;
+    bitmap.textColor = '#ffffff'; // стандартный цвет текста в окнах
+    bitmap.drawText(direction === -1 ? '◀' : '▶', 0, 0, ARROW_SIZE, ARROW_SIZE, 'center');
 
     var sprite = new Sprite(bitmap);
     sprite.x = x;
