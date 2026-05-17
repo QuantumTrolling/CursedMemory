@@ -1,6 +1,6 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v17 (fixed arrow position, text arrows)
+ * @plugindesc Custom Party Scene v19 (fixed text arrows, stable pages)
  * @author ChatGPT (improved)
  *
  * @help
@@ -8,7 +8,7 @@
  * - Верхняя панель: лица резервных героев, по 6 на странице (по умолчанию),
  *   равномерно распределённые от края до края экрана.
  *   Размер лиц никогда не превышает 144px, но уменьшается при необходимости.
- * - Стрелки навигации: символы ◀ и ▶, всегда на одном уровне по вертикали.
+ * - Стрелки навигации: символы ◀ и ▶, всегда на одном и том же месте.
  * - Нижняя панель: портреты текущего боевого отряда (макс. 4).
  * - Клик по герою → мигание, клик по другому → обмен местами.
  *
@@ -32,7 +32,7 @@ var facesPerPage = Number(parameters['facesPerPage'] || 6);
 var maxFaceSize = Number(parameters['maxFaceSize'] || 144);
 var faceSpacing = Number(parameters['faceSpacing'] || 10);
 
-// Размер битмапа для стрелок (подбирается под символ шрифта)
+// Размер битмапа под стрелку
 var ARROW_BITMAP_SIZE = 36;
 
 function Scene_PartyCustom() {
@@ -119,13 +119,10 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
     var availWidth = Graphics.boxWidth;
     var maxFaceDisplayWidth = Math.floor((availWidth - faceSpacing * (count + 1)) / count);
     var faceSize = Math.min(maxFaceSize, maxFaceDisplayWidth);
-    var faceScale = faceSize / 144;  // оригинальный размер лица
+    var faceScale = faceSize / 144;
 
     var totalFacesWidth = count * faceSize;
     var actualSpacing = (availWidth - totalFacesWidth) / (count + 1);
-
-    // Фиксированная вертикальная координата для стрелок (относительно контейнера)
-    var arrowY = maxFaceSize / 2 - ARROW_BITMAP_SIZE / 2;
 
     actors.forEach(function(actor, i) {
         var sprite = new Sprite(ImageManager.loadFace(actor.faceName()));
@@ -142,10 +139,15 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
         this._faceContainer.addChild(sprite);
     }, this);
 
-    // Стрелки (всегда, если больше одной страницы)
+    // Фиксированные позиции стрелок (не зависят от actualSpacing)
+    var arrowMargin = 10;                             // отступ от края
+    var arrowY = maxFaceSize / 2 - ARROW_BITMAP_SIZE / 2;   // центр по высоте стандартного лица
+    var leftArrowX = arrowMargin;
+    var rightArrowX = Graphics.boxWidth - ARROW_BITMAP_SIZE - arrowMargin;
+
     if (this.maxReservePages() > 1) {
-        this.createArrow(-1, actualSpacing / 2 - ARROW_BITMAP_SIZE / 2, arrowY);
-        this.createArrow(1, availWidth - actualSpacing / 2 - ARROW_BITMAP_SIZE / 2, arrowY);
+        this.createArrow(-1, leftArrowX, arrowY);
+        this.createArrow(1, rightArrowX, arrowY);
     }
 
     if (this._selectedActor && !actors.contains(this._selectedActor)) {
@@ -155,17 +157,13 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
     this.updateClickableList();
 };
 
-// Создаёт стрелку с использованием текстового символа ◀ или ▶
+// Рисует стрелку текстовым символом ◀ или ▶
 Scene_PartyCustom.prototype.createArrow = function(direction, x, y) {
     var bitmap = new Bitmap(ARROW_BITMAP_SIZE, ARROW_BITMAP_SIZE);
-    // Очищаем фон
-    bitmap.fillAll('rgba(0,0,0,0)');
-    // Устанавливаем цвет и размер шрифта (как в стандартных окнах)
     bitmap.fontFace = 'GameFont, sans-serif';
     bitmap.fontSize = 28;
-    bitmap.textColor = '#ffffff';  // белый, можно взять из системных цветов
-
-    var symbol = direction === -1 ? '◀' : '▶';  // \u25C0 и \u25B6
+    bitmap.textColor = '#ffffff';
+    var symbol = direction === -1 ? '◀' : '▶';
     bitmap.drawText(symbol, 0, 0, ARROW_BITMAP_SIZE, ARROW_BITMAP_SIZE, 'center');
 
     var sprite = new Sprite(bitmap);
