@@ -1188,7 +1188,7 @@ MCharStatus.prototype.createSprites = function() {
 	this.createLayoutStatus();
 	this.createHPMeter();
 	this.createMPMeter();
-	this.createHPNumber();
+	//this.createHPNumber();
     // this.createHPNumber2();
 	this.createMPNumber();
     this.createMPNumber2();

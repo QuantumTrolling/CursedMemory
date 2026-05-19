@@ -1,16 +1,17 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v22 (fixed text arrows, stable position)
+ * @plugindesc Custom Party Scene v33 (animate only on scene start)
  * @author ChatGPT (improved)
  *
  * @help
  * Меняет состав боевого отряда:
- * - Верхняя панель: лица резервных героев, по 6 на странице (по умолчанию),
- *   равномерно распределённые от края до края экрана.
- * - Стрелки навигации: символы ◀ и ▶, как в стандартных окнах выбора.
- *   Всегда на одном и том же месте независимо от страницы.
- * - Нижняя панель: портреты текущего боевого отряда (макс. 4).
+ * - Верхняя панель: лица резервных героев (в оконной рамке).
+ *   Анимация выезда — только при первом открытии.
+ * - Стрелки навигации: стандартные из system/Window.
+ * - Нижняя панель: портреты текущего боевого отряда.
+ *   Анимация выезда — только при первом открытии.
  * - Клик по герою → мигание, клик по другому → обмен местами.
+ * - Окна статуса (MCharStatus) с анимацией только при старте.
  *
  * @param facesPerPage
  * @desc Количество резервных лиц на странице (по умолчанию 6)
@@ -23,6 +24,98 @@
  * @param faceSpacing
  * @desc Минимальный промежуток между лицами в пикселях
  * @default 10
+ *
+ * @param statusBaseX
+ * @desc Смещение X базы статус-панели (относительно центра слота персонажа)
+ * @default 0
+ *
+ * @param statusBaseY
+ * @desc Смещение Y базы статус-панели (от нижнего края экрана вверх). Положительное — панель выше.
+ * @default -200
+ *
+ * @param statusHPmeterX
+ * @desc Смещение X полоски HP относительно базы статуса
+ * @default 0
+ *
+ * @param statusHPmeterY
+ * @desc Смещение Y полоски HP
+ * @default 0
+ *
+ * @param statusMPmeterX
+ * @desc Смещение X полоски MP
+ * @default 0
+ *
+ * @param statusMPmeterY
+ * @desc Смещение Y полоски MP
+ * @default 24
+ *
+ * @param statusHPnumX
+ * @desc Смещение X числа HP
+ * @default 110
+ *
+ * @param statusHPnumY
+ * @desc Смещение Y числа HP
+ * @default 0
+ *
+ * @param statusHPmaxX
+ * @desc Смещение X максимального HP
+ * @default 160
+ *
+ * @param statusHPmaxY
+ * @desc Смещение Y максимального HP
+ * @default 0
+ *
+ * @param statusMPnumX
+ * @desc Смещение X числа MP
+ * @default 110
+ *
+ * @param statusMPnumY
+ * @desc Смещение Y числа MP
+ * @default 24
+ *
+ * @param statusMPmaxX
+ * @desc Смещение X максимального MP
+ * @default 160
+ *
+ * @param statusMPmaxY
+ * @desc Смещение Y максимального MP
+ * @default 24
+ *
+ * @param statusLevelX
+ * @desc Смещение X уровня
+ * @default 230
+ *
+ * @param statusLevelY
+ * @desc Смещение Y уровня
+ * @default 0
+ *
+ * @param statusNameX
+ * @desc Смещение X имени
+ * @default 230
+ *
+ * @param statusNameY
+ * @desc Смещение Y имени
+ * @default 24
+ *
+ * @param statusNameSize
+ * @desc Размер шрифта имени (по умолчанию 20)
+ * @default 20
+ *
+ * @param statusEquipX
+ * @desc Смещение X иконок экипировки
+ * @default 280
+ *
+ * @param statusEquipY
+ * @desc Смещение Y иконок экипировки
+ * @default 0
+ *
+ * @param statusEquipSpace
+ * @desc Расстояние между иконками экипировки
+ * @default 36
+ *
+ * @param statusShowStates
+ * @desc Показывать состояния (true/false)
+ * @default false
  */
 
 (function() {
@@ -32,8 +125,279 @@ var facesPerPage = Number(parameters['facesPerPage'] || 6);
 var maxFaceSize = Number(parameters['maxFaceSize'] || 144);
 var faceSpacing = Number(parameters['faceSpacing'] || 10);
 
-var ARROW_SIZE = 24; // размер спрайта под стрелку
+var statusBaseX   = Number(parameters['statusBaseX'] || 0);
+var statusBaseY   = Number(parameters['statusBaseY'] || -150);
+var hpMeterX      = Number(parameters['statusHPmeterX'] || -110);
+var hpMeterY      = Number(parameters['statusHPmeterY'] || 0);
+var mpMeterX      = Number(parameters['statusMPmeterX'] || 0);
+var mpMeterY      = Number(parameters['statusMPmeterY'] || 24);
+var hpNumX        = Number(parameters['statusHPnumX'] || 27);
+var hpNumY        = Number(parameters['statusHPnumY'] || -15);
+var hpMaxX        = Number(parameters['statusHPmaxX'] || 160);
+var hpMaxY        = Number(parameters['statusHPmaxY'] || 0);
+var mpNumX        = Number(parameters['statusMPnumX'] || 110);
+var mpNumY        = Number(parameters['statusMPnumY'] || 24);
+var mpMaxX        = Number(parameters['statusMPmaxX'] || 160);
+var mpMaxY        = Number(parameters['statusMPmaxY'] || 24);
+var lvX           = Number(parameters['statusLevelX'] || -90);
+var lvY           = Number(parameters['statusLevelY'] || -65);
+var nameX         = Number(parameters['statusNameX'] || 0);
+var nameY         = Number(parameters['statusNameY'] || -67);
+var nameSize      = Number(parameters['statusNameSize'] || 25);
+var equipX        = Number(parameters['statusEquipX'] || -111);
+var equipY        = Number(parameters['statusEquipY'] || -15);
+var equipSpace    = Number(parameters['statusEquipSpace'] || 36);
+var showStates    = String(parameters['statusShowStates'] || 'false') === 'true';
 
+var ARROW_WIDTH  = 22;
+var ARROW_HEIGHT = 20;
+
+function loadMenuBitmap(filename, hue) {
+    if (typeof ImageManager.loadMenusMain === 'function') {
+        return ImageManager.loadMenusMain(filename);
+    } else {
+        return ImageManager.loadBitmap('img/menus/main/', filename, hue || 0, true);
+    }
+}
+
+function loadStatusBitmaps() {
+    if (this._statusBitmapsLoaded) return;
+    this._statusBitmapsLoaded = true;
+
+    this._layoutStatusBmp = loadMenuBitmap("LayoutStatus");
+    this._hpMeterBmp = loadMenuBitmap("HPMeter");
+    this._mpMeterBmp = loadMenuBitmap("MPMeter");
+    this._hpNumberBmp = loadMenuBitmap("HPNumber");
+    this._mpNumberBmp = loadMenuBitmap("MPNumber");
+    this._lvNumberBmp = loadMenuBitmap("LVNumber");
+    this._iconSet = ImageManager.loadSystem('IconSet');
+}
+
+// ----------- Класс окна статуса одного персонажа (без анимации при обмене) -----------
+function MCharStatusParty(actor, scene) {
+    this.initialize(actor, scene);
+}
+MCharStatusParty.prototype = Object.create(Sprite.prototype);
+MCharStatusParty.prototype.constructor = MCharStatusParty;
+
+MCharStatusParty.prototype.initialize = function(actor, scene) {
+    Sprite.prototype.initialize.call(this);
+    this._actor = actor;
+    this._scene = scene;
+    this._targetX = null;          // будет задано снаружи, если нужна анимация
+    this._slideWait = 0;
+    this.opacity = 255;            // по умолчанию полностью видим
+    this.createSprites();
+    this.refresh();
+};
+
+MCharStatusParty.prototype.createSprites = function() {
+    this._layout = new Sprite(this._scene._layoutStatusBmp);
+    this.addChild(this._layout);
+    this._hpMeter = new Sprite(this._scene._hpMeterBmp);
+    this.addChild(this._hpMeter);
+    this._mpMeter = new Sprite(this._scene._mpMeterBmp);
+    this.addChild(this._mpMeter);
+
+    this._hpNumbers = [];
+    for (var i = 0; i < 5; i++) {
+        var spr = new Sprite(this._scene._hpNumberBmp);
+        spr.visible = false;
+        this.addChild(spr);
+        this._hpNumbers.push(spr);
+    }
+    this._hpMaxNumbers = [];
+    for (var j = 0; j < 5; j++) {
+        var spr2 = new Sprite(this._scene._hpNumberBmp);
+        spr2.visible = false;
+        this.addChild(spr2);
+        this._hpMaxNumbers.push(spr2);
+    }
+    this._mpNumbers = [];
+    for (var k = 0; k < 5; k++) {
+        var spr3 = new Sprite(this._scene._mpNumberBmp);
+        spr3.visible = false;
+        this.addChild(spr3);
+        this._mpNumbers.push(spr3);
+    }
+    this._mpMaxNumbers = [];
+    for (var m = 0; m < 5; m++) {
+        var spr4 = new Sprite(this._scene._mpNumberBmp);
+        spr4.visible = false;
+        this.addChild(spr4);
+        this._mpMaxNumbers.push(spr4);
+    }
+    this._lvNumbers = [];
+    for (var n = 0; n < 3; n++) {
+        var spr5 = new Sprite(this._scene._lvNumberBmp);
+        spr5.visible = false;
+        this.addChild(spr5);
+        this._lvNumbers.push(spr5);
+    }
+
+    this._nameBitmap = new Bitmap(120, 32);
+    this._nameSprite = new Sprite(this._nameBitmap);
+    this.addChild(this._nameSprite);
+
+    this._equipIcons = [];
+    for (var e = 0; e < 5; e++) {
+        var icon = new Sprite(this._scene._iconSet);
+        icon.visible = false;
+        this.addChild(icon);
+        this._equipIcons.push(icon);
+    }
+
+    this._stateIcon = null;
+    if (showStates) {
+        this._stateIcon = new Sprite(this._scene._iconSet);
+        this._stateIcon.visible = false;
+        this.addChild(this._stateIcon);
+    }
+};
+
+MCharStatusParty.prototype.refresh = function() {
+    if (!this._actor || !this._scene._hpMeterBmp.isReady()) return;
+
+    var hpW = Math.floor(this._scene._hpMeterBmp.width * this._actor.hp / this._actor.mhp);
+    var mpW = Math.floor(this._scene._mpMeterBmp.width * this._actor.mp / this._actor.mmp);
+    this._hpMeter.setFrame(0, 0, hpW, this._scene._hpMeterBmp.height);
+    this._mpMeter.setFrame(0, 0, mpW, this._scene._mpMeterBmp.height);
+
+    this.refreshNumber(this._mpNumbers, this._actor.mp, this._scene._mpNumberBmp);
+    this.refreshNumber(this._mpMaxNumbers, this._actor.mmp, this._scene._mpNumberBmp);
+    this.refreshNumber(this._lvNumbers, this._actor.level, this._scene._lvNumberBmp);
+
+    this._nameBitmap.clear();
+    this._nameBitmap.fontSize = nameSize;
+    this._nameBitmap.drawText(this._actor.name(), 0, 0, 120, 32, 'left');
+
+    var equips = this._actor.equips();
+    for (var i = 0; i < this._equipIcons.length; i++) {
+        var item = i < equips.length ? equips[i] : null;
+        var icon = this._equipIcons[i];
+        if (item) {
+            icon.visible = true;
+            var sx = (item.iconIndex % 16) * 32;
+            var sy = Math.floor(item.iconIndex / 16) * 32;
+            icon.setFrame(sx, sy, 32, 32);
+            icon.x = equipX + i * equipSpace;
+            icon.y = equipY;
+        } else {
+            icon.visible = false;
+        }
+    }
+
+    if (this._stateIcon) {
+        var icons = this._actor.allIcons();
+        if (icons.length > 0) {
+            this._stateIcon.visible = true;
+            var iidx = icons[0];
+            var sx = (iidx % 16) * 32;
+            var sy = Math.floor(iidx / 16) * 32;
+            this._stateIcon.setFrame(sx, sy, 32, 32);
+            this._stateIcon.x = nameX + 130;
+            this._stateIcon.y = nameY;
+        } else {
+            this._stateIcon.visible = false;
+        }
+    }
+};
+
+MCharStatusParty.prototype.refreshNumber = function(sprites, value, bitmap) {
+    var maxDigits = sprites.length;
+    var str = Math.min(value, Math.pow(10, maxDigits) - 1).toString();
+    var digitW = bitmap.width / 10;
+    for (var i = 0; i < maxDigits; i++) {
+        if (i < str.length) {
+            var n = parseInt(str[i]);
+            sprites[i].setFrame(n * digitW, 0, digitW, bitmap.height);
+            sprites[i].visible = true;
+        } else {
+            sprites[i].visible = false;
+        }
+    }
+};
+
+MCharStatusParty.prototype.layout = function(posX, posY) {
+    var baseX = posX + statusBaseX;
+    var baseY = posY + statusBaseY;
+
+    this._layout.x = -127;
+    this._layout.y = -80;
+
+    this._hpMeter.x = hpMeterX;
+    this._hpMeter.y = hpMeterY;
+    this._mpMeter.x = mpMeterX;
+    this._mpMeter.y = mpMeterY;
+
+    var digitW = this._scene._hpNumberBmp.width / 10;
+    var lenHP = this._actor.hp.toString().length;
+    var startX = hpNumX - lenHP * digitW;
+    for (var i = 0; i < this._hpNumbers.length; i++) {
+        this._hpNumbers[i].x = startX + i * digitW;
+        this._hpNumbers[i].y = hpNumY;
+    }
+
+    var digitWmp = this._scene._mpNumberBmp.width / 10;
+    var lenMP = this._actor.mp.toString().length;
+    var startXMp = mpNumX - lenMP * digitWmp;
+    for (var k = 0; k < this._mpNumbers.length; k++) {
+        this._mpNumbers[k].x = startXMp + k * digitWmp;
+        this._mpNumbers[k].y = mpNumY;
+    }
+
+    var lenMaxMP = this._actor.mmp.toString().length;
+    var startXMaxMp = mpMaxX - lenMaxMP * digitWmp;
+    for (var m = 0; m < this._mpMaxNumbers.length; m++) {
+        this._mpMaxNumbers[m].x = startXMaxMp + m * digitWmp;
+        this._mpMaxNumbers[m].y = mpMaxY;
+    }
+
+    var lvDigitW = this._scene._lvNumberBmp.width / 10;
+    var lenLV = this._actor.level.toString().length;
+    var startLv = lvX - lenLV * lvDigitW;
+    for (var n = 0; n < this._lvNumbers.length; n++) {
+        this._lvNumbers[n].x = startLv + n * lvDigitW;
+        this._lvNumbers[n].y = lvY;
+    }
+
+    this._nameSprite.x = nameX;
+    this._nameSprite.y = nameY;
+
+    for (var e = 0; e < this._equipIcons.length; e++) {
+        if (this._equipIcons[e].visible) {
+            this._equipIcons[e].x = equipX + e * equipSpace;
+            this._equipIcons[e].y = equipY;
+        }
+    }
+
+    if (this._stateIcon && this._stateIcon.visible) {
+        this._stateIcon.x = nameX + 130;
+        this._stateIcon.y = nameY;
+    }
+};
+
+MCharStatusParty.prototype.update = function() {
+    Sprite.prototype.update.call(this);
+    if (this._slideWait > 0) {
+        this._slideWait--;
+    } else if (this._targetX != null) {
+        if (this.x < this._targetX) {
+            this.x += 2;
+            if (this.x > this._targetX) this.x = this._targetX;
+        }
+        this.opacity += 10;
+        if (this.opacity > 255) this.opacity = 255;
+        if (this.x >= this._targetX && this.opacity >= 255) {
+            this._targetX = null; // анимация завершена
+        }
+    }
+    if (this._actor && Graphics.frameCount % 5 === 0) {
+        this.refresh();
+    }
+};
+
+// ----------- Основная сцена -----------
 function Scene_PartyCustom() {
     this.initialize.apply(this, arguments);
 }
@@ -43,13 +407,16 @@ Scene_PartyCustom.prototype.constructor = Scene_PartyCustom;
 
 Scene_PartyCustom.prototype.create = function() {
     Scene_MenuBase.prototype.create.call(this);
+    loadStatusBitmaps.call(this);
     this._selectedActor = null;
     this._selectedSprite = null;
     this._clickableSprites = [];
     this._reservePage = 0;
+    this._animationsDone = false;   // флаг: анимация ещё не проигрывалась
     this.createTitle();
     this.createParty();
     this.createFaceBar();
+    this._animationsDone = true;    // после первого построения анимация больше не нужна
     this.updateClickableList();
 };
 
@@ -62,18 +429,30 @@ Scene_PartyCustom.prototype.update = function() {
     if (TouchInput.isTriggered()) {
         this.handleClick();
     }
+    if (this._statusSprites) {
+        for (var i = 0; i < this._statusSprites.length; i++) {
+            this._statusSprites[i].update();
+        }
+    }
 };
 
 Scene_PartyCustom.prototype.createTitle = function() {
     this._titleWindow = new Window_Base(0, 0, 240, 72);
-    this._titleWindow.drawText("PARTY", 0, 0, 200, 'left');
+    this._titleWindow.drawText("PARTY", 0, 0, 200, 'center');
     this.addWindow(this._titleWindow);
 };
 
 Scene_PartyCustom.prototype.createFaceBar = function() {
+    this._faceFrameWindow = new Window_Base(0, 70, Graphics.boxWidth, maxFaceSize + 40);
+    this._faceFrameWindow.opacity = 255;
+    this._faceFrameWindow.contentsOpacity = 0;
+    this._faceFrameWindow.deactivate();
+    this.addChild(this._faceFrameWindow);
+
     this._faceContainer = new Sprite();
-    this._faceContainer.y = 100;
+    this._faceContainer.y = 90;
     this.addChild(this._faceContainer);
+
     this.refreshFaces();
 };
 
@@ -107,6 +486,7 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
     var actors = this.reserveActorsForPage(this._reservePage);
     var count = actors.length;
     if (count === 0) {
+        if (this._faceFrameWindow) this._faceFrameWindow.visible = false;
         this.updateClickableList();
         return;
     }
@@ -127,17 +507,26 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
         );
         sprite.scale.x = faceScale;
         sprite.scale.y = faceScale;
-        sprite.x = actualSpacing + i * (faceSize + actualSpacing);
+        var targetX = actualSpacing + i * (faceSize + actualSpacing);
         sprite._actor = actor;
+
+        if (!this._animationsDone) {
+            sprite._targetX = targetX;
+            sprite.x = targetX - 50;
+            sprite.opacity = 0;
+            sprite._slideWait = 5 + 10 * i;
+        } else {
+            sprite.x = targetX;
+            sprite.opacity = 255;
+        }
         this.setupInteraction(sprite);
         this._faceContainer.addChild(sprite);
     }, this);
 
-    // Фиксированные позиции стрелок
     var arrowMargin = 10;
-    var arrowY = maxFaceSize / 2 - ARROW_SIZE / 2;
+    var arrowY = maxFaceSize / 2 - ARROW_HEIGHT / 2;
     var leftArrowX = arrowMargin;
-    var rightArrowX = Graphics.boxWidth - ARROW_SIZE - arrowMargin;
+    var rightArrowX = Graphics.boxWidth - ARROW_WIDTH - arrowMargin;
 
     if (this.maxReservePages() > 1) {
         this.createArrow(-1, leftArrowX, arrowY);
@@ -147,22 +536,29 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
     if (this._selectedActor && !actors.contains(this._selectedActor)) {
         this.clearSelection();
     }
+
+    if (this._faceFrameWindow) {
+        this._faceFrameWindow.visible = true;
+        this._faceFrameWindow.width = Graphics.boxWidth;
+        this._faceFrameWindow.height = faceSize + 40;
+        this._faceFrameWindow.createContents();
+        this._faceFrameWindow.contentsOpacity = 0;
+    }
+
     this.updateClickableList();
 };
 
-// Рисует стрелку текстовым символом ◀ или ▶ (как в стандартных окнах выбора)
 Scene_PartyCustom.prototype.createArrow = function(direction, x, y) {
-    var bitmap = new Bitmap(ARROW_SIZE, ARROW_SIZE);
-    bitmap.fontFace = 'GameFont, sans-serif';
-    bitmap.fontSize = 20;
-    bitmap.textColor = '#ffffff'; // стандартный цвет текста в окнах
-    bitmap.drawText(direction === -1 ? '◀' : '▶', 0, 0, ARROW_SIZE, ARROW_SIZE, 'center');
-
+    var bitmap = ImageManager.loadSystem('Window');
     var sprite = new Sprite(bitmap);
+    var sx = direction === -1 ? 121 : 155;
+    var sy = 38;
+    sprite.setFrame(sx, sy, ARROW_WIDTH, ARROW_HEIGHT);
     sprite.x = x;
     sprite.y = y;
     sprite._isArrow = true;
     sprite._arrowDirection = direction;
+    sprite.opacity = 255;
     this.setupInteraction(sprite);
     this._faceContainer.addChild(sprite);
 };
@@ -170,13 +566,20 @@ Scene_PartyCustom.prototype.createArrow = function(direction, x, y) {
 Scene_PartyCustom.prototype.createParty = function() {
     this._partyContainer = new Sprite();
     var charY = (typeof Moghunter !== 'undefined' && Moghunter.scMenu_CharY != null) ? Moghunter.scMenu_CharY : 0;
-    this._partyContainer.y = Graphics.boxHeight + charY;
+    this._partyContainer.y = Graphics.boxHeight + charY + 50;
     this.addChild(this._partyContainer);
     this.refreshParty();
 };
 
 Scene_PartyCustom.prototype.refreshParty = function() {
     this._partyContainer.removeChildren();
+    if (this._statusSprites) {
+        for (var i = 0; i < this._statusSprites.length; i++) {
+            this.removeChild(this._statusSprites[i]);
+        }
+    }
+    this._statusSprites = [];
+
     var battleMembers = $gameParty.battleMembers();
     battleMembers.forEach(function(actor, i) {
         var sprite;
@@ -197,10 +600,56 @@ Scene_PartyCustom.prototype.refreshParty = function() {
         sprite._actor = actor;
         sprite._baseScaleX = sprite.scale.x || 1;
         sprite._baseScaleY = sprite.scale.y || 1;
+
+        if (!this._animationsDone) {
+            sprite._slideWait = 5 + 10 * i;
+            sprite._targetX = 0;
+        } else {
+            sprite.opacity = 255;
+        }
         this.setupInteraction(sprite);
         this._partyContainer.addChild(sprite);
     }, this);
+
     this.layoutParty();
+
+    var children = this._partyContainer.children;
+    for (var idx = 0; idx < children.length; idx++) {
+        var spr = children[idx];
+        if (!this._animationsDone) {
+            spr._targetX = spr.x;
+            spr.x = spr._targetX - 50;
+            spr.opacity = 0;
+        } else {
+            spr.x = spr.x;   // остаётся на месте
+            spr.opacity = 255;
+        }
+    }
+
+    battleMembers.forEach(function(actor, i) {
+        var statusSpr = new MCharStatusParty(actor, this);
+        this._statusSprites.push(statusSpr);
+        this.addChild(statusSpr);
+        var maxSlots = $gameParty.maxBattleMembers();
+        var space = Math.floor((Graphics.boxWidth - 32) / maxSlots);
+        var charX = (typeof Moghunter !== 'undefined' && Moghunter.scMenu_CharX != null) ? Moghunter.scMenu_CharX : 0;
+        var posX = 16 + (space / 2) + (space * i) + charX;
+        var posY = Graphics.boxHeight;
+        statusSpr.layout(posX, posY);
+
+        if (!this._animationsDone) {
+            statusSpr._targetX = posX + statusBaseX;
+            statusSpr.y = posY + statusBaseY;
+            statusSpr.x = statusSpr._targetX - 50;
+            statusSpr._slideWait = 5 + 5 * i;
+            statusSpr.opacity = 0;
+        } else {
+            statusSpr.x = posX + statusBaseX;
+            statusSpr.y = posY + statusBaseY;
+            statusSpr.opacity = 255;
+        }
+    }, this);
+
     this.updateClickableList();
 };
 
@@ -234,9 +683,23 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
     sprite._blink = false;
     sprite.update = function() {
         Sprite.prototype.update.call(this);
+        // Анимация выезда (только если _targetX задан)
+        if (this._slideWait != null && this._slideWait > 0) {
+            this._slideWait--;
+        } else if (this._targetX != null) {
+            if (this.x < this._targetX) {
+                this.x += 2;
+                if (this.x > this._targetX) this.x = this._targetX;
+            }
+            this.opacity += 10;
+            if (this.opacity > 255) this.opacity = 255;
+            if (this.x >= this._targetX && this.opacity >= 255) {
+                this._targetX = null;
+            }
+        }
         if (this._blink) {
             this.opacity = 150 + Math.sin(Graphics.frameCount * 0.3) * 100;
-        } else {
+        } else if (this._targetX == null) {
             this.opacity = 255;
         }
     };
