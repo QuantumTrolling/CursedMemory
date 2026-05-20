@@ -1,5 +1,5 @@
 //=============================================================================
-// EXT_ShopVisual.js v3.0 (без статуса, золото возвращено)
+// EXT_ShopVisual.js v3.0 (финальный)
 //=============================================================================
 // Полностью переработанный интерфейс магазина.
 // Исправлено:
@@ -10,8 +10,10 @@
 //   - Цена выводится внизу карточки в системной рамке (windowskin).
 //   - Стандартная рамка окна списка товаров убрана.
 //   - Правая кнопка мыши корректно снимает выбор, не закрывая магазин.
-//   - Окно статуса персонажа (Party Status) полностью убрано.
+//   - Окно статуса персонажа (Party Status) полностью скрыто.
 //   - Окно с деньгами (Gold Window) исправлено.
+//   - Параметр sellButton (true/false) управляет кнопкой «Торговать».
+//   - После выбора предмета наведение не работает, клик переключает на другой.
 //=============================================================================
 
 var Imported = Imported || {};
@@ -44,7 +46,7 @@ if (!Imported.YEP_ShopMenuCore) {
         actionY: Number(parameters['actionY'] || 390),
         goldX: Number(parameters['goldX'] || 0),
         goldY: Number(parameters['goldY'] || 0),
-        sellButton: parameters['sellButton'] === 'false' ? false : false  // по умолчанию true
+        sellButton: parameters['sellButton'] === 'false' ? false : true
     };
 
     var coinIconIndex = params.coinIcon !== 0 ? params.coinIcon : ($dataSystem ? $dataSystem.currencyIcon || 313 : 313);
@@ -213,7 +215,7 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     //=============================================================================
-    // Window_ShopBuyCustom – карточки товаров (без названия предмета)
+    // Window_ShopBuyCustom – карточки товаров
     //=============================================================================
     function Window_ShopBuyCustom() {
         this.initialize.apply(this, arguments);
@@ -226,20 +228,55 @@ if (!Imported.YEP_ShopMenuCore) {
         this._hoverIndex = -1;
         this._hoverAnim = 0;
         this._itemSelected = false;
+        this._customDescWindow = null;
+        this._customNameWindow = null;
+        this._buyActionWindow = null;
+        this._sellActionWindow = null;
 
         this.setHandler('ok', function() {
             this._itemSelected = true;
-            this.updateHelp();
+            this.callUpdateHelp();
         });
     };
 
+    Window_ShopBuyCustom.prototype.item = function() {
+        var index = this.index();
+        if (index >= 0 && index < this._data.length) {
+            return this._data[index];
+        }
+        return null;
+    };
+
+    Window_ShopBuyCustom.prototype.callUpdateHelp = function() {
+        Window_ShopBuy.prototype.updateHelp.call(this);
+        var item = this.item();
+        if (item) {
+            if (this._customDescWindow) {
+                this._customDescWindow.visible = true;
+                this._customDescWindow.setItem(item);
+            }
+            if (this._customNameWindow) {
+                this._customNameWindow.visible = true;
+                this._customNameWindow.setItem(item);
+            }
+        } else {
+            if (this._customDescWindow) this._customDescWindow.visible = false;
+            if (this._customNameWindow) this._customNameWindow.visible = false;
+        }
+        if (SceneManager._scene) {
+            SceneManager._scene.updateActionEnabled();
+        }
+    };
+
     Window_ShopBuyCustom.prototype.isTouchEnabled = function() {
-        return !this._itemSelected && Window_ShopBuy.prototype.isTouchEnabled.call(this);
+        return Window_ShopBuy.prototype.isTouchEnabled.call(this);
     };
 
     Window_ShopBuyCustom.prototype.select = function(index) {
-        if (this._itemSelected && index !== -1) return;
         Window_ShopBuy.prototype.select.call(this, index);
+        if (index !== -1) {
+            this.callUpdateHelp();
+        }
     };
 
     Window_ShopBuyCustom.prototype._refreshFrame = function() {};
@@ -280,7 +317,7 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Window_ShopBuyCustom.prototype.update = function() {
         Window_ShopBuy.prototype.update.call(this);
-        if (this._itemSelected) return;
+
         var x = this.canvasToLocalX(TouchInput.x);
         var y = this.canvasToLocalY(TouchInput.y);
         var newHover = -1;
@@ -292,16 +329,19 @@ if (!Imported.YEP_ShopMenuCore) {
                 break;
             }
         }
-        if (newHover !== this._hoverIndex) {
-            this._hoverIndex = newHover;
-            this.refresh();
+
+        if (!this._itemSelected) {
+            if (newHover !== this._hoverIndex) {
+                this._hoverIndex = newHover;
+                this.refresh();
+            }
+            this._hoverAnim += 0.05;
         }
-        this._hoverAnim += 0.05;
 
         if (TouchInput.isTriggered() && newHover >= 0) {
             this.select(newHover);
             this._itemSelected = true;
-            this.updateHelp();
+            this.callUpdateHelp();
         }
     };
 
@@ -309,13 +349,13 @@ if (!Imported.YEP_ShopMenuCore) {
     Window_ShopBuyCustom.prototype.cursorDown = function(wrap) {
         if (this._itemSelected) return;
         _custom_cursorDown.call(this, wrap);
-        this.updateHelp();
+        this.callUpdateHelp();
     };
     var _custom_cursorUp = Window_ShopBuyCustom.prototype.cursorUp;
     Window_ShopBuyCustom.prototype.cursorUp = function(wrap) {
         if (this._itemSelected) return;
         _custom_cursorUp.call(this, wrap);
-        this.updateHelp();
+        this.callUpdateHelp();
     };
 
     Window_ShopBuyCustom.prototype.drawItem = function(index) {
@@ -385,18 +425,16 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     //=============================================================================
-    // Scene_Shop (без статусного окна)
+    // Scene_Shop
     //=============================================================================
     var _Scene_Shop_create = Scene_Shop.prototype.create;
     Scene_Shop.prototype.create = function() {
         this._vwStorage = {};
         _Scene_Shop_create.call(this);
 
-        // Скрываем и больше не используем стандартное статусное окно
         if (this._statusWindow) {
             this._statusWindow.hide();
             this._statusWindow.visible = false;
-            this._statusWindow = null;
         }
 
         if (this._backgroundSprite) {
@@ -406,7 +444,13 @@ if (!Imported.YEP_ShopMenuCore) {
         this.createShopTrader();
         this.repositionStandardWindows();
 
-        // ПРАВАЯ КНОПКА МЫШИ
+        if (this._buyWindow && this._descWindow && this._nameWindow) {
+            this._buyWindow._customDescWindow = this._descWindow;
+            this._buyWindow._customNameWindow = this._nameWindow;
+            this._buyWindow._buyActionWindow = this._buyActionWindow;
+            this._buyWindow._sellActionWindow = this._sellActionWindow;
+        }
+
         this._onContextMenu = function(e) {
             e.preventDefault();
             if (this._buyWindow && this._buyWindow._itemSelected) {
@@ -424,6 +468,14 @@ if (!Imported.YEP_ShopMenuCore) {
             Graphics._canvas.addEventListener('contextmenu', this._onContextMenu);
         } else {
             console.warn('A_fix_shop: Graphics._canvas недоступен, слушатель ПКМ не добавлен.');
+        }
+    };
+
+    var _Scene_Shop_activateBuyWindow = Scene_Shop.prototype.activateBuyWindow;
+    Scene_Shop.prototype.activateBuyWindow = function() {
+        _Scene_Shop_activateBuyWindow.call(this);
+        if (this._statusWindow) {
+            this._statusWindow.hide();
         }
     };
 
@@ -454,7 +506,7 @@ if (!Imported.YEP_ShopMenuCore) {
         if (this._goldWindow) {
             this._goldWindow.width = 140;
             this._goldWindow.x = Graphics.boxWidth - this._goldWindow.width - 10;
-            this._goldWindow.y = params.goldY;  // теперь параметр существует
+            this._goldWindow.y = params.goldY;
             this._goldWindow.createContents();
             this._goldWindow.refresh();
         }
@@ -476,6 +528,13 @@ if (!Imported.YEP_ShopMenuCore) {
         this.createDescWindow();
         this.createNameWindow();
         this.createActionWindow();
+
+        if (this._buyWindow && this._descWindow && this._nameWindow) {
+            this._buyWindow._customDescWindow = this._descWindow;
+            this._buyWindow._customNameWindow = this._nameWindow;
+            this._buyWindow._buyActionWindow = this._buyActionWindow;
+            this._buyWindow._sellActionWindow = this._sellActionWindow;
+        }
     };
 
     Scene_Shop.prototype.replaceBuyWindow = function(oldBuyWindow) {
@@ -483,8 +542,7 @@ if (!Imported.YEP_ShopMenuCore) {
         var newBuy = new Window_ShopBuyCustom(0, 0, params.listHeight, shopGoods);
         newBuy.setHelpWindow(oldBuyWindow._helpWindow);
         newBuy.setInfoWindow(oldBuyWindow._infoWindow);
-        newBuy.setStatusWindow(null);  // статуса больше нет
-
+        newBuy.setStatusWindow(null);
         newBuy.setHandler('cancel', this.onCancel.bind(this));
 
         newBuy.select(-1);
@@ -509,23 +567,6 @@ if (!Imported.YEP_ShopMenuCore) {
         this._nameWindow = new Window_ShopItemName(params.descX, nameY, nameWidth);
         this.addWindow(this._nameWindow);
         this._nameWindow.hide();
-
-        var self = this;
-        var oldUpdateHelp = this._buyWindow.updateHelp;
-        this._buyWindow.updateHelp = function() {
-            oldUpdateHelp.call(this);
-            var item = this.item();
-            var show = !!item;
-            if (self._descWindow) {
-                self._descWindow.visible = show;
-                if (show) self._descWindow.setItem(item);
-            }
-            if (self._nameWindow) {
-                self._nameWindow.visible = show;
-                if (show) self._nameWindow.setItem(item);
-            }
-            if (self._buyActionWindow) self.updateActionEnabled();
-        };
     };
 
     Scene_Shop.prototype.createActionWindow = function() {
@@ -540,7 +581,7 @@ if (!Imported.YEP_ShopMenuCore) {
             this.addWindow(this._sellActionWindow);
             this._sellActionWindow.hide();
         } else {
-            this._sellActionWindow = null;   // кнопка не создана
+            this._sellActionWindow = null;
         }
     };
 
