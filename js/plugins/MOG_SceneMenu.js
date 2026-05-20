@@ -361,6 +361,9 @@ ImageManager.loadMenusMainCommands = function(filename) {
 var _mog_scmenu_create = Scene_Menu.prototype.create;
 Scene_Menu.prototype.create = function() {
 	_mog_scmenu_create.call(this);
+	this._hoverCommandIndex = -1;
+    this._hoverCommandFrames = 0;
+    this._hoverDelayFrames = 8;  // можно настроить под себя
 	this.loadBitmapsMain();
 	this.createField();
 	this.createMonogatari();
@@ -376,12 +379,12 @@ Scene_Menu.prototype.loadBitmapsMain = function() {
     }
     this._comBitmaps = [];
     
-    // Удаляем команду "Навыки" (symbol: 'skill')
-    this._commandWindow._list = this._commandWindow._list.filter(function(cmd) {
-        return cmd.symbol !== 'skill';
-    });
-    // ВАЖНО: обновляем _comList после фильтрации
-    this._comList = this._commandWindow._list;
+// Удаляем команду "Навыки" и "Инвентарь"
+this._commandWindow._list = this._commandWindow._list.filter(function(cmd) {
+    return cmd.symbol !== 'skill' && cmd.symbol !== 'item';
+});
+// ВАЖНО: обновляем _comList после фильтрации
+this._comList = this._commandWindow._list;
     
     for (var i = 0; i < this._comList.length; i++) {
          this._comBitmaps[i] = ImageManager.loadMenusMainCommands(this._comList[i].name);
@@ -619,70 +622,88 @@ Scene_Menu.prototype.createCommands = function() {
 // * update Commands (hover altera o índice selecionado)
 //==============================
 Scene_Menu.prototype.updateCommands = function() {
-	 // Se o menu não está ativo (status active), não interferimos
-	 if (!this._statusWindow.active && this._commandWindow.active) {
-		 // Определяем, на какую иконку наведена мышь
-		 var hoverIndex = -1;
-		 for (var i = 0; i < this._commands.length; i++) {
-			 if (this.isOnSprite(this._commands[i])) {
-				 hoverIndex = i;
-				 break;
-			 }
-		 }
-		 // Если мышь над иконкой, меняем реальное выделение
-		 if (hoverIndex !== -1 && this._commandWindow._index !== hoverIndex) {
-			 this._commandWindow.select(hoverIndex);
-		 }
-	 }
+    // === НАВЕДЕНИЕ МЫШИ С ЗАДЕРЖКОЙ ===
+    if (!this._statusWindow.active && this._commandWindow.active) {
+        var hoverIndex = -1;
+        for (var i = 0; i < this._commands.length; i++) {
+            if (this.isOnSprite(this._commands[i])) {
+                hoverIndex = i;
+                break;
+            }
+        }
 
-	 // Обычное обновление анимации масштаба для ВСЕХ иконок
-	 for (var i = 0; i < this._commands.length; i++) {
-		  // Определяем, является ли иконка выбранной (индекс совпадает)
-		  var isSelected = (i === this._commandWindow._index);
+        if (hoverIndex === -1) {
+            // Мышь не над иконками — сбрасываем кандидата
+            this._hoverCommandIndex = -1;
+            this._hoverCommandFrames = 0;
+        } else {
+            if (this._hoverCommandIndex === hoverIndex) {
+                // Мышь остаётся на той же иконке
+                this._hoverCommandFrames++;
+                if (this._hoverCommandFrames >= this._hoverDelayFrames &&
+                    this._commandWindow._index !== hoverIndex) {
+                    // Порог достигнут — переключаем индекс
+                    this._commandWindow._index = hoverIndex;
+                    this._commandWindow.updateCursor();
+                }
+            } else {
+                // Мышь перешла на другую иконку — сбрасываем счётчик
+                this._hoverCommandIndex = hoverIndex;
+                this._hoverCommandFrames = 0;
+            }
+        }
+    } else {
+        // Если активно окно статуса или команды не активно, сбрасываем кандидата
+        this._hoverCommandIndex = -1;
+        this._hoverCommandFrames = 0;
+    }
 
-		  if (isSelected) {
-		       // Для выбранной иконки: позиция может смещаться к активной позиции
-		       var nx = this._statusWindow.active ? Moghunter.scMenu_ComWX : this._compos[i][0];
-			   var ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];
-			   if (this._commandWindow.isCurrentItemEnabled()) {this._commands[i].opacity += 20};
+    // === АНИМАЦИЯ ИКОНОК (без изменений) ===
+    for (var i = 0; i < this._commands.length; i++) {
+        var isSelected = (i === this._commandWindow._index);
 
-			   // Анимация пульсации масштаба
-			   if (this._comzoom[i] === 0 && !this._statusWindow.active) {
-				   this._commands[i].scale.x += 0.01;
-				   if (this._commands[i].scale.x >= 1.30) {
-					   this._commands[i].scale.x = 1.30;
-				       this._comzoom[i] = 1;
-				   };
-			   } else {
-				   this._commands[i].scale.x -= 0.01;
-				   if (this._commands[i].scale.x <= 1.00) {
-					   this._commands[i].scale.x = 1.00;
-				       this._comzoom[i] = 0;
-				   };
-		       };
-			   // Плавное движение
-			   this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
-			   this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
-			   this._commands[i].scale.y = this._commands[i].scale.x;
+        if (isSelected) {
+            var nx = this._statusWindow.active ? Moghunter.scMenu_ComWX : this._compos[i][0];
+            var ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];
+            if (this._commandWindow.isCurrentItemEnabled()) {
+                this._commands[i].opacity += 20;
+            }
 
-		  } else {
-		       // Невыбранные иконки: возвращаем на исходную позицию, масштаб 1
-		       var nx = this._compos[i][0];
-			   var ny = this._compos[i][1];
-			   this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
-			   this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
-			   if (this._commands[i].opacity < 255) {
-				   this._commands[i].opacity += 10;
-				   if (this._commands[i].opacity > 255) this._commands[i].opacity = 255;
-			   }
-			   if (this._commands[i].scale.x > 1.00) {
-				   this._commands[i].scale.x -= 0.01;
-				   if (this._commands[i].scale.x < 1.00) this._commands[i].scale.x = 1.00;
-			   }
-			   this._commands[i].scale.y = this._commands[i].scale.x;
-			   this._comzoom[i] = 0;
-		  };
-	 };
+            if (this._comzoom[i] === 0 && !this._statusWindow.active) {
+                this._commands[i].scale.x += 0.01;
+                if (this._commands[i].scale.x >= 1.30) {
+                    this._commands[i].scale.x = 1.30;
+                    this._comzoom[i] = 1;
+                }
+            } else {
+                this._commands[i].scale.x -= 0.01;
+                if (this._commands[i].scale.x <= 1.00) {
+                    this._commands[i].scale.x = 1.00;
+                    this._comzoom[i] = 0;
+                }
+            }
+
+            this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
+            this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
+            this._commands[i].scale.y = this._commands[i].scale.x;
+
+        } else {
+            var nx = this._compos[i][0];
+            var ny = this._compos[i][1];
+            this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
+            this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
+            if (this._commands[i].opacity < 255) {
+                this._commands[i].opacity += 10;
+                if (this._commands[i].opacity > 255) this._commands[i].opacity = 255;
+            }
+            if (this._commands[i].scale.x > 1.00) {
+                this._commands[i].scale.x -= 0.01;
+                if (this._commands[i].scale.x < 1.00) this._commands[i].scale.x = 1.00;
+            }
+            this._commands[i].scale.y = this._commands[i].scale.x;
+            this._comzoom[i] = 0;
+        }
+    }
 };
 
 //==============================
@@ -1065,17 +1086,16 @@ Scene_Menu.prototype.updateWindowStatus = function() {
 //==============================
 var _mog_mono_scmenu_update = Scene_Menu.prototype.update;
 Scene_Menu.prototype.update = function() {
-    _mog_mono_scmenu_update.call(this)
-	if (this._commands) {this.updateCommands()};
-	if (this._commandName) {this.updateCommandName()};
-	if (!this._selection && this._facesBitmaps && this._facesBitmaps[0].isReady()) {this.createAfter()};
-	if (this._selection) {this.updateSelection()};
-	// Playtime atualizado somente se existir
-	if (this._playTime) {this.updateTime()};
-	if (this._magicCircle) {this.updateMagicCircle()};
-	this.updateComField();
-	this.updateWindowStatus();
-	this.updateTouchScreen();
+    _mog_mono_scmenu_update.call(this);
+    if (this._commands) { this.updateCommands(); }
+    if (this._commandName) { this.updateCommandName(); }
+    if (!this._selection && this._facesBitmaps && this._facesBitmaps[0].isReady()) { this.createAfter(); }
+    if (this._selection) { this.updateSelection(); }
+    if (this._playTime) { this.updateTime(); }
+    if (this._magicCircle) { this.updateMagicCircle(); }
+    this.updateComField();
+    this.updateWindowStatus();
+    this.updateTouchScreen();
 };
 
 //=============================================================================

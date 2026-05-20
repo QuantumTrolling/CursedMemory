@@ -1,5 +1,5 @@
 //=============================================================================
-// EXT_ShopVisual.js v3.0
+// EXT_ShopVisual.js v3.0 (без статуса, золото возвращено)
 //=============================================================================
 // Полностью переработанный интерфейс магазина.
 // Исправлено:
@@ -8,9 +8,10 @@
 //   - Кнопки "Купить" и "Торговать" появляются только после клика/выбора предмета.
 //   - При нажатии Esc/ПКМ (отмена) выделение снимается, кнопки скрываются.
 //   - Цена выводится внизу карточки в системной рамке (windowskin).
-//   - Переключение актёров в статусном окне стрелками.
 //   - Стандартная рамка окна списка товаров убрана.
 //   - Правая кнопка мыши корректно снимает выбор, не закрывая магазин.
+//   - Окно статуса персонажа (Party Status) полностью убрано.
+//   - Окно с деньгами (Gold Window) исправлено.
 //=============================================================================
 
 var Imported = Imported || {};
@@ -36,16 +37,14 @@ if (!Imported.YEP_ShopMenuCore) {
         listHeight: Number(parameters['listHeight'] || 420),
         listColumns: Number(parameters['listColumns'] || 3),
         listFontSize: Number(parameters['listFontSize'] || 18),
-        descX: Number(parameters['descX'] || 400),
+        descX: Number(parameters['descX'] || 0),
         descY: Number(parameters['descY'] || 460),
         descHeight: Number(parameters['descHeight'] || 260),
         actionX: Number(parameters['actionX'] || 516),
         actionY: Number(parameters['actionY'] || 390),
-        statusX: Number(parameters['statusX'] || 0),
-        statusY: Number(parameters['statusY'] || 400),
-        statusWidth: Number(parameters['statusWidth'] || 400),
         goldX: Number(parameters['goldX'] || 0),
-        goldY: Number(parameters['goldY'] || 0)
+        goldY: Number(parameters['goldY'] || 0),
+        sellButton: parameters['sellButton'] === 'false' ? false : false  // по умолчанию true
     };
 
     var coinIconIndex = params.coinIcon !== 0 ? params.coinIcon : ($dataSystem ? $dataSystem.currencyIcon || 313 : 313);
@@ -61,7 +60,7 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Window_ShopItemName.prototype.initialize = function(x, y, width) {
         var height = this.fittingHeight(1);
-        Window_Base.prototype.initialize.call(this, x, y - 30, width - 500, height);
+        Window_Base.prototype.initialize.call(this, x, y - 30, width - 800, height);
         this._item = null;
         this.refresh();
     };
@@ -125,7 +124,7 @@ if (!Imported.YEP_ShopMenuCore) {
     Window_ShopBuyAction.prototype.constructor = Window_ShopBuyAction;
 
     Window_ShopBuyAction.prototype.initialize = function(x, y, width) {
-        Window_Base.prototype.initialize.call(this, x, y, width, this.fittingHeight(1));
+        Window_Base.prototype.initialize.call(this, x + 430, y, width, this.fittingHeight(1));
         this._enabled = false;
         this._hover = false;
         this._anim = 0;
@@ -174,7 +173,7 @@ if (!Imported.YEP_ShopMenuCore) {
     Window_ShopSellAction.prototype.constructor = Window_ShopSellAction;
 
     Window_ShopSellAction.prototype.initialize = function(x, y, width) {
-        Window_Base.prototype.initialize.call(this, x, y, width, this.fittingHeight(1));
+        Window_Base.prototype.initialize.call(this, x + 430, y, width, this.fittingHeight(1));
         this._enabled = false;
         this._hover = false;
         this._anim = 0;
@@ -233,8 +232,6 @@ if (!Imported.YEP_ShopMenuCore) {
             this.updateHelp();
         });
     };
-
-    // isCancelEnabled по умолчанию true, поэтому Esc работает через обработчик cancel
 
     Window_ShopBuyCustom.prototype.isTouchEnabled = function() {
         return !this._itemSelected && Window_ShopBuy.prototype.isTouchEnabled.call(this);
@@ -388,33 +385,20 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     //=============================================================================
-    // Расширение Window_ShopStatus
-    //=============================================================================
-    var _Window_ShopStatus_initialize = Window_ShopStatus.prototype.initialize;
-    Window_ShopStatus.prototype.initialize = function(x, y, width, height) {
-        _Window_ShopStatus_initialize.call(this, x, y, width, height);
-        this._actorIndex = 0;
-    };
-
-    var _Window_ShopStatus_update = Window_ShopStatus.prototype.update;
-    Window_ShopStatus.prototype.update = function() {
-        _Window_ShopStatus_update.call(this);
-        if (Input.isTriggered('left')) {
-            this._actorIndex = (this._actorIndex - 1 + $gameParty.members().length) % $gameParty.members().length;
-            this.refresh();
-        } else if (Input.isTriggered('right')) {
-            this._actorIndex = (this._actorIndex + 1) % $gameParty.members().length;
-            this.refresh();
-        }
-    };
-
-    //=============================================================================
-    // Scene_Shop
+    // Scene_Shop (без статусного окна)
     //=============================================================================
     var _Scene_Shop_create = Scene_Shop.prototype.create;
     Scene_Shop.prototype.create = function() {
         this._vwStorage = {};
         _Scene_Shop_create.call(this);
+
+        // Скрываем и больше не используем стандартное статусное окно
+        if (this._statusWindow) {
+            this._statusWindow.hide();
+            this._statusWindow.visible = false;
+            this._statusWindow = null;
+        }
+
         if (this._backgroundSprite) {
             this._backgroundSprite.visible = false;
         }
@@ -422,27 +406,24 @@ if (!Imported.YEP_ShopMenuCore) {
         this.createShopTrader();
         this.repositionStandardWindows();
 
-        // ~~~ ПРАВАЯ КНОПКА МЫШИ – прямая обработка с проверкой canvas ~~~
+        // ПРАВАЯ КНОПКА МЫШИ
         this._onContextMenu = function(e) {
-            e.preventDefault(); // убираем стандартное контекстное меню браузера
-            // Если предмет уже выбран – снимаем выделение и кнопки
+            e.preventDefault();
             if (this._buyWindow && this._buyWindow._itemSelected) {
                 this._buyWindow._itemSelected = false;
                 this._buyWindow.select(-1);
                 this._buyWindow.refresh();
                 if (this._descWindow) this._descWindow.hide();
                 if (this._nameWindow) this._nameWindow.hide();
-                if (this._statusWindow) this._statusWindow.hide();
                 this.updateActionEnabled();
             } else {
-                // Ничего не выбрано – закрываем магазин, как по Esc
                 this.popScene();
             }
         }.bind(this);
-        if (Graphics.canvas) {
-            Graphics.canvas.addEventListener('contextmenu', this._onContextMenu);
+        if (Graphics._canvas) {
+            Graphics._canvas.addEventListener('contextmenu', this._onContextMenu);
         } else {
-            console.warn('A_fix_shop: Graphics.canvas недоступен, слушатель ПКМ не добавлен.');
+            console.warn('A_fix_shop: Graphics._canvas недоступен, слушатель ПКМ не добавлен.');
         }
     };
 
@@ -471,9 +452,9 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Scene_Shop.prototype.repositionStandardWindows = function() {
         if (this._goldWindow) {
-            this._goldWindow.width = 180;
+            this._goldWindow.width = 140;
             this._goldWindow.x = Graphics.boxWidth - this._goldWindow.width - 10;
-            this._goldWindow.y = params.goldY;
+            this._goldWindow.y = params.goldY;  // теперь параметр существует
             this._goldWindow.createContents();
             this._goldWindow.refresh();
         }
@@ -486,15 +467,7 @@ if (!Imported.YEP_ShopMenuCore) {
             this._buyWindow.createContents();
             this._buyWindow.refresh();
         }
-        if (this._statusWindow) {
-            this._statusWindow.x = params.statusX;
-            this._statusWindow.y = params.statusY;
-            this._statusWindow.width = params.statusWidth;
-            this._statusWindow.height = Graphics.boxHeight - params.statusY;
-            this._statusWindow.createContents();
-            this._statusWindow.refresh();
-            this._statusWindow.hide();
-        }
+
         if (this._commandWindow) this._commandWindow.hide();
         if (this._infoWindow) this._infoWindow.hide();
         if (this._dummyWindow) this._dummyWindow.hide();
@@ -510,12 +483,10 @@ if (!Imported.YEP_ShopMenuCore) {
         var newBuy = new Window_ShopBuyCustom(0, 0, params.listHeight, shopGoods);
         newBuy.setHelpWindow(oldBuyWindow._helpWindow);
         newBuy.setInfoWindow(oldBuyWindow._infoWindow);
-        newBuy.setStatusWindow(oldBuyWindow._statusWindow);
+        newBuy.setStatusWindow(null);  // статуса больше нет
 
-        // Обработчик cancel для Esc (работает через стандартное окно)
         newBuy.setHandler('cancel', this.onCancel.bind(this));
 
-        var self = this;
         newBuy.select(-1);
         newBuy._itemSelected = false;
         newBuy.activate();
@@ -553,9 +524,6 @@ if (!Imported.YEP_ShopMenuCore) {
                 self._nameWindow.visible = show;
                 if (show) self._nameWindow.setItem(item);
             }
-            if (self._statusWindow) {
-                self._statusWindow.visible = show;
-            }
             if (self._buyActionWindow) self.updateActionEnabled();
         };
     };
@@ -564,12 +532,16 @@ if (!Imported.YEP_ShopMenuCore) {
         var btnWidth = 160;
         var gap = 10;
         this._buyActionWindow = new Window_ShopBuyAction(params.actionX, params.actionY, btnWidth);
-        this._sellActionWindow = new Window_ShopSellAction(params.actionX + btnWidth + gap, params.actionY, btnWidth);
         this.addWindow(this._buyActionWindow);
-        this.addWindow(this._sellActionWindow);
-
         this._buyActionWindow.hide();
-        this._sellActionWindow.hide();
+
+        if (params.sellButton) {
+            this._sellActionWindow = new Window_ShopSellAction(params.actionX + btnWidth + gap, params.actionY, btnWidth);
+            this.addWindow(this._sellActionWindow);
+            this._sellActionWindow.hide();
+        } else {
+            this._sellActionWindow = null;   // кнопка не создана
+        }
     };
 
     Scene_Shop.prototype.updateActionEnabled = function() {
@@ -579,31 +551,29 @@ if (!Imported.YEP_ShopMenuCore) {
             var visible = selected && !!item;
 
             this._buyActionWindow.setEnabled(visible);
-            this._sellActionWindow.setEnabled(visible);
             this._buyActionWindow.visible = visible;
-            this._sellActionWindow.visible = visible;
+
+            if (this._sellActionWindow) {
+                this._sellActionWindow.setEnabled(visible);
+                this._sellActionWindow.visible = visible;
+            }
         }
     };
 
-    // Обработчик Esc – остался без изменений в логике
     var _Scene_Shop_onCancel = Scene_Shop.prototype.onCancel;
     Scene_Shop.prototype.onCancel = function() {
         if (this._buyWindow && this._buyWindow._itemSelected) {
-            // Снимаем выделение
             this._buyWindow._itemSelected = false;
             this._buyWindow.select(-1);
             this._buyWindow.refresh();
             if (this._descWindow) this._descWindow.hide();
             if (this._nameWindow) this._nameWindow.hide();
-            if (this._statusWindow) this._statusWindow.hide();
             this.updateActionEnabled();
-            // НЕ закрываем магазин
         } else {
-            _Scene_Shop_onCancel.call(this); // стандартное закрытие
+            _Scene_Shop_onCancel.call(this);
         }
     };
 
-    // Удаляем слушатель при закрытии
     var _Scene_Shop_terminate = Scene_Shop.prototype.terminate;
     Scene_Shop.prototype.terminate = function() {
         if (this._onContextMenu && Graphics.canvas) {
@@ -616,6 +586,35 @@ if (!Imported.YEP_ShopMenuCore) {
             delete this._vwStorage['shopTrader'];
         }
         _Scene_Shop_terminate.call(this);
+    };
+
+    //=============================================================================
+    // Кнопки «Купить» и «Торговать»
+    //=============================================================================
+    Scene_Shop.prototype.commandBuyAction = function() {
+        var item = this._buyWindow.item();
+        if (item) {
+            var price = this._buyWindow.price(item);
+            if ($gameParty.gold() >= price) {
+                SoundManager.playShop();
+                $gameParty.loseGold(price);
+                $gameParty.gainItem(item, 1);
+                this._goldWindow.refresh();
+                this._buyWindow.refresh();
+                this._buyWindow.select(-1);
+                this._buyWindow._itemSelected = false;
+                this.updateActionEnabled();
+                this._buyWindow.activate();
+            } else {
+                SoundManager.playBuzzer();
+            }
+        }
+    };
+
+    Scene_Shop.prototype.commandSellAction = function() {
+        if (this._buyWindow && this._buyWindow.item()) {
+            this.onSellOk();
+        }
     };
 
 })();

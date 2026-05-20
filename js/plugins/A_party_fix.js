@@ -1,6 +1,6 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v33 (animate only on scene start)
+ * @plugindesc Custom Party Scene v37 (arrow SE Ok like MOG, conditional visibility)
  * @author ChatGPT (improved)
  *
  * @help
@@ -8,10 +8,14 @@
  * - Верхняя панель: лица резервных героев (в оконной рамке).
  *   Анимация выезда — только при первом открытии.
  * - Стрелки навигации: стандартные из system/Window.
+ *   Видимы только если есть следующая/предыдущая страница.
  * - Нижняя панель: портреты текущего боевого отряда.
  *   Анимация выезда — только при первом открытии.
  * - Клик по герою → мигание, клик по другому → обмен местами.
  * - Окна статуса (MCharStatus) с анимацией только при старте.
+ * - Звук при клике на персонажа и стрелки настраивается в параметрах.
+ *   Если имя файла SE не указано, используются системные звуки:
+ *   "OK" для персонажей и стрелок (как в MOG_SceneMenu).
  *
  * @param facesPerPage
  * @desc Количество резервных лиц на странице (по умолчанию 6)
@@ -116,6 +120,40 @@
  * @param statusShowStates
  * @desc Показывать состояния (true/false)
  * @default false
+ *
+ * @param seClickName
+ * @desc Имя файла SE (без расширения), проигрываемого при клике по персонажу.
+ * Оставьте пустым, чтобы использовать системный звук "OK".
+ * @default
+ *
+ * @param seClickVolume
+ * @desc Громкость SE клика по персонажу (0-100)
+ * @default 80
+ *
+ * @param seClickPitch
+ * @desc Высота тона SE клика по персонажу (50-150)
+ * @default 100
+ *
+ * @param seClickPan
+ * @desc Панорама SE клика по персонажу (-100 лево, 0 центр, 100 право)
+ * @default 0
+ *
+ * @param seArrowName
+ * @desc Имя файла SE (без расширения), проигрываемого при клике на стрелку.
+ * Оставьте пустым, чтобы использовать системный звук "OK".
+ * @default
+ *
+ * @param seArrowVolume
+ * @desc Громкость SE стрелки (0-100)
+ * @default 80
+ *
+ * @param seArrowPitch
+ * @desc Высота тона SE стрелки (50-150)
+ * @default 100
+ *
+ * @param seArrowPan
+ * @desc Панорама SE стрелки (-100 лево, 0 центр, 100 право)
+ * @default 0
  */
 
 (function() {
@@ -149,6 +187,18 @@ var equipY        = Number(parameters['statusEquipY'] || -15);
 var equipSpace    = Number(parameters['statusEquipSpace'] || 36);
 var showStates    = String(parameters['statusShowStates'] || 'false') === 'true';
 
+// Параметры SE клика по персонажу
+var seClickName   = String(parameters['seClickName'] || '').trim();
+var seClickVolume = Number(parameters['seClickVolume'] || 80);
+var seClickPitch  = Number(parameters['seClickPitch'] || 100);
+var seClickPan    = Number(parameters['seClickPan'] || 0);
+
+// Параметры SE клика по стрелкам
+var seArrowName   = String(parameters['seArrowName'] || '').trim();
+var seArrowVolume = Number(parameters['seArrowVolume'] || 80);
+var seArrowPitch  = Number(parameters['seArrowPitch'] || 100);
+var seArrowPan    = Number(parameters['seArrowPan'] || 0);
+
 var ARROW_WIDTH  = 22;
 var ARROW_HEIGHT = 20;
 
@@ -173,7 +223,7 @@ function loadStatusBitmaps() {
     this._iconSet = ImageManager.loadSystem('IconSet');
 }
 
-// ----------- Класс окна статуса одного персонажа (без анимации при обмене) -----------
+// ----------- Класс окна статуса одного персонажа -----------
 function MCharStatusParty(actor, scene) {
     this.initialize(actor, scene);
 }
@@ -184,9 +234,9 @@ MCharStatusParty.prototype.initialize = function(actor, scene) {
     Sprite.prototype.initialize.call(this);
     this._actor = actor;
     this._scene = scene;
-    this._targetX = null;          // будет задано снаружи, если нужна анимация
+    this._targetX = null;
     this._slideWait = 0;
-    this.opacity = 255;            // по умолчанию полностью видим
+    this.opacity = 255;
     this.createSprites();
     this.refresh();
 };
@@ -389,7 +439,7 @@ MCharStatusParty.prototype.update = function() {
         this.opacity += 10;
         if (this.opacity > 255) this.opacity = 255;
         if (this.x >= this._targetX && this.opacity >= 255) {
-            this._targetX = null; // анимация завершена
+            this._targetX = null;
         }
     }
     if (this._actor && Graphics.frameCount % 5 === 0) {
@@ -412,11 +462,11 @@ Scene_PartyCustom.prototype.create = function() {
     this._selectedSprite = null;
     this._clickableSprites = [];
     this._reservePage = 0;
-    this._animationsDone = false;   // флаг: анимация ещё не проигрывалась
+    this._animationsDone = false;
     this.createTitle();
     this.createParty();
     this.createFaceBar();
-    this._animationsDone = true;    // после первого построения анимация больше не нужна
+    this._animationsDone = true;
     this.updateClickableList();
 };
 
@@ -523,14 +573,13 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
         this._faceContainer.addChild(sprite);
     }, this);
 
-    var arrowMargin = 10;
-    var arrowY = maxFaceSize / 2 - ARROW_HEIGHT / 2;
-    var leftArrowX = arrowMargin;
-    var rightArrowX = Graphics.boxWidth - ARROW_WIDTH - arrowMargin;
-
-    if (this.maxReservePages() > 1) {
-        this.createArrow(-1, leftArrowX, arrowY);
-        this.createArrow(1, rightArrowX, arrowY);
+    // Стрелки с условной видимостью
+    var maxPages = this.maxReservePages();
+    if (maxPages > 1) {
+        // Левая стрелка видна, только если есть предыдущая страница
+        this.createArrow(-1, 10, maxFaceSize / 2 - ARROW_HEIGHT / 2, this._reservePage > 0);
+        // Правая стрелка видна, только если есть следующая страница
+        this.createArrow(1, Graphics.boxWidth - ARROW_WIDTH - 10, maxFaceSize / 2 - ARROW_HEIGHT / 2, this._reservePage < maxPages - 1);
     }
 
     if (this._selectedActor && !actors.contains(this._selectedActor)) {
@@ -548,7 +597,7 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
     this.updateClickableList();
 };
 
-Scene_PartyCustom.prototype.createArrow = function(direction, x, y) {
+Scene_PartyCustom.prototype.createArrow = function(direction, x, y, visible) {
     var bitmap = ImageManager.loadSystem('Window');
     var sprite = new Sprite(bitmap);
     var sx = direction === -1 ? 121 : 155;
@@ -559,6 +608,7 @@ Scene_PartyCustom.prototype.createArrow = function(direction, x, y) {
     sprite._isArrow = true;
     sprite._arrowDirection = direction;
     sprite.opacity = 255;
+    sprite.visible = visible;
     this.setupInteraction(sprite);
     this._faceContainer.addChild(sprite);
 };
@@ -621,7 +671,7 @@ Scene_PartyCustom.prototype.refreshParty = function() {
             spr.x = spr._targetX - 50;
             spr.opacity = 0;
         } else {
-            spr.x = spr.x;   // остаётся на месте
+            spr.x = spr.x;
             spr.opacity = 255;
         }
     }
@@ -683,7 +733,6 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
     sprite._blink = false;
     sprite.update = function() {
         Sprite.prototype.update.call(this);
-        // Анимация выезда (только если _targetX задан)
         if (this._slideWait != null && this._slideWait > 0) {
             this._slideWait--;
         } else if (this._targetX != null) {
@@ -739,12 +788,34 @@ Scene_PartyCustom.prototype.changeReservePage = function(direction) {
         SoundManager.playBuzzer();
         return;
     }
-    SoundManager.playCursor();
+    // Звук стрелки: свой SE или системный OK
+    if (seArrowName !== '') {
+        AudioManager.playSe({
+            name: seArrowName,
+            volume: seArrowVolume,
+            pitch: seArrowPitch,
+            pan: seArrowPan
+        });
+    } else {
+        SoundManager.playOk();
+    }
     this._reservePage = newPage;
     this.refreshFaces();
 };
 
 Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
+    // Звук клика по персонажу
+    if (seClickName !== '') {
+        AudioManager.playSe({
+            name: seClickName,
+            volume: seClickVolume,
+            pitch: seClickPitch,
+            pan: seClickPan
+        });
+    } else {
+        SoundManager.playOk();
+    }
+
     if (!this._selectedActor) {
         this.clearSelection();
         this._selectedActor = actor;
