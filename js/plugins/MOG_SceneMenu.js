@@ -241,6 +241,9 @@
  * - Mantida a animação de seleção (aumento da icone selecionada),
  * - Corrigida a interação com o mouse (cliques e hover),
  * - Hover agora altera o índice selecionado (a seleção segue o mouse) para comandos e faces.
+ *
+ * Modificação adicional:
+ * - Иконки состояний (States) больше не отображаются в меню.
  */
 
 //=============================================================================
@@ -1213,7 +1216,7 @@ MCharStatus.prototype.createSprites = function() {
 	this.createMPNumber();
     this.createMPNumber2();
 	this.createLVNumber();
-	this.createStates();
+	// DISABLED STATE ICONS: this.createStates();
 	this.createName();
 	this.createEquipIcons();
 };
@@ -1481,7 +1484,7 @@ MCharStatus.prototype.update = function() {
 	};
 	if (this._hpMeter) {this.updateMeter(this._hpMeter,this._hpMeterData,this._actor.hp,this._actor.mhp)};
 	if (this._mpMeter) {this.updateMeter(this._mpMeter,this._mpMeterData,this._actor.mp,this._actor.mmp)};
-	if (this._state_icon) {this.update_states()};
+	// DISABLED STATE ICONS: if (this._state_icon) {this.update_states()};
 	if (this._wait > 0) {this._wait--;return}
 	this.opacity += 10;
 	if (this.x > 0) {this.x -= 2;
