@@ -1,5 +1,5 @@
 //=============================================================================
-// EXT_ShopVisual.js v3.0 (финальный)
+// EXT_ShopVisual.js v3.7 (исправлена ошибка _cursorRect.set)
 //=============================================================================
 // Полностью переработанный интерфейс магазина.
 // Исправлено:
@@ -14,6 +14,8 @@
 //   - Окно с деньгами (Gold Window) исправлено.
 //   - Параметр sellButton (true/false) управляет кнопкой «Торговать».
 //   - После выбора предмета наведение не работает, клик переключает на другой.
+//   - v3.7: Исправлен вылет "this._cursorRect.set is not a function".
+//          Стандартный курсор отключён через isCursorVisible().
 //=============================================================================
 
 var Imported = Imported || {};
@@ -232,11 +234,6 @@ if (!Imported.YEP_ShopMenuCore) {
         this._customNameWindow = null;
         this._buyActionWindow = null;
         this._sellActionWindow = null;
-
-        this.setHandler('ok', function() {
-            this._itemSelected = true;
-            this.callUpdateHelp();
-        });
     };
 
     Window_ShopBuyCustom.prototype.item = function() {
@@ -272,7 +269,9 @@ if (!Imported.YEP_ShopMenuCore) {
         return Window_ShopBuy.prototype.isTouchEnabled.call(this);
     };
 
+    // Блокируем смену индекса через select, если предмет залочен
     Window_ShopBuyCustom.prototype.select = function(index) {
+        if (this._itemSelected && index !== this.index()) return;
         Window_ShopBuy.prototype.select.call(this, index);
         if (index !== -1) {
             this.callUpdateHelp();
@@ -281,6 +280,11 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Window_ShopBuyCustom.prototype._refreshFrame = function() {};
     Window_ShopBuyCustom.prototype._refreshBack = function() {};
+
+    // Полностью отключаем стандартный курсор
+    Window_ShopBuyCustom.prototype.isCursorVisible = function() {
+        return false;
+    };
 
     Window_ShopBuyCustom.prototype.windowWidth = function() { return params.listWidth; };
     Window_ShopBuyCustom.prototype.maxCols = function() { return params.listColumns; };
@@ -333,18 +337,38 @@ if (!Imported.YEP_ShopMenuCore) {
         if (!this._itemSelected) {
             if (newHover !== this._hoverIndex) {
                 this._hoverIndex = newHover;
-                this.refresh();
+                // Обновляем описание без изменения индекса (без скролла)
+                var item = (newHover >= 0) ? this._data[newHover] : null;
+                if (this._customDescWindow) {
+                    this._customDescWindow.visible = !!item;
+                    this._customDescWindow.setItem(item);
+                }
+                if (this._customNameWindow) {
+                    this._customNameWindow.visible = !!item;
+                    this._customNameWindow.setItem(item);
+                }
+                if (SceneManager._scene) {
+                    SceneManager._scene.updateActionEnabled();
+                }
+                this.refresh(); // перерисовываем, чтобы обновить hover-подсветку
             }
             this._hoverAnim += 0.05;
         }
 
+        // ЛКМ: фиксация предмета или переключение на другой при локе
         if (TouchInput.isTriggered() && newHover >= 0) {
-            this.select(newHover);
+            if (this._itemSelected && this.index() === newHover) {
+                return;
+            }
+            // При клике вызываем оригинальный select (скролл к предмету, установка _index)
+            Window_ShopBuy.prototype.select.call(this, newHover);
             this._itemSelected = true;
             this.callUpdateHelp();
+            this.refresh();
         }
     };
 
+    // Блокируем перемещение курсора клавишами, если предмет залочен
     var _custom_cursorDown = Window_ShopBuyCustom.prototype.cursorDown;
     Window_ShopBuyCustom.prototype.cursorDown = function(wrap) {
         if (this._itemSelected) return;
@@ -369,11 +393,14 @@ if (!Imported.YEP_ShopMenuCore) {
         var h = this.itemHeight();
         var cx = x + w / 2;
 
-        var isHover = (index === this._hoverIndex);
+        // Определяем, надо ли подсвечивать
+        var isHover = (!this._itemSelected && index === this._hoverIndex);
+        var isSelected = (this._itemSelected && index === this.index());
+        var highlight = isHover || isSelected;
 
         this.contents.fillRect(x, y, w, h, 'rgba(0, 0, 0, 0.4)');
         this.drawSkinFrame(x, y, w, h);
-        if (isHover) {
+        if (highlight) {
             var alpha = 0.15 + Math.sin(this._hoverAnim) * 0.1;
             this.contents.fillRect(x, y, w, h, 'rgba(255,255,255,' + alpha + ')');
         }
@@ -453,17 +480,10 @@ if (!Imported.YEP_ShopMenuCore) {
 
         this._onContextMenu = function(e) {
             e.preventDefault();
-            if (this._buyWindow && this._buyWindow._itemSelected) {
-                this._buyWindow._itemSelected = false;
-                this._buyWindow.select(-1);
-                this._buyWindow.refresh();
-                if (this._descWindow) this._descWindow.hide();
-                if (this._nameWindow) this._nameWindow.hide();
-                this.updateActionEnabled();
-            } else {
-                this.popScene();
-            }
+            // При ПКМ вызываем общий onCancel (снимает лок или выходит)
+            this.onCancel();
         }.bind(this);
+
         if (Graphics._canvas) {
             Graphics._canvas.addEventListener('contextmenu', this._onContextMenu);
         } else {
@@ -543,6 +563,7 @@ if (!Imported.YEP_ShopMenuCore) {
         newBuy.setHelpWindow(oldBuyWindow._helpWindow);
         newBuy.setInfoWindow(oldBuyWindow._infoWindow);
         newBuy.setStatusWindow(null);
+        // Обработчик cancel перенаправляем на onCancel сцены
         newBuy.setHandler('cancel', this.onCancel.bind(this));
 
         newBuy.select(-1);
@@ -601,18 +622,32 @@ if (!Imported.YEP_ShopMenuCore) {
         }
     };
 
-    var _Scene_Shop_onCancel = Scene_Shop.prototype.onCancel;
+    // Единая точка обработки отмены (ESC и ПКМ)
     Scene_Shop.prototype.onCancel = function() {
         if (this._buyWindow && this._buyWindow._itemSelected) {
+            // Снимаем лок
             this._buyWindow._itemSelected = false;
+            this._buyWindow._hoverIndex = -1;
             this._buyWindow.select(-1);
             this._buyWindow.refresh();
+
             if (this._descWindow) this._descWindow.hide();
             if (this._nameWindow) this._nameWindow.hide();
+
             this.updateActionEnabled();
-        } else {
-            _Scene_Shop_onCancel.call(this);
+            this._buyWindow.activate();
+            // Не выходим из магазина
+            return;
         }
+
+        // Если лок не установлен — выходим из магазина
+        SceneManager.pop();
+    };
+
+    // popScene теперь просто вызывает onCancel
+    var _Scene_Shop_popScene = Scene_Shop.prototype.popScene;
+    Scene_Shop.prototype.popScene = function() {
+        this.onCancel();
     };
 
     var _Scene_Shop_terminate = Scene_Shop.prototype.terminate;
