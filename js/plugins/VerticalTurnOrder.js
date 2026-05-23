@@ -459,4 +459,6 @@ Scene_Battle.prototype.terminate = function() {
     _Scene_Battle_terminate.call(this);
 };
 
+
+
 })();
