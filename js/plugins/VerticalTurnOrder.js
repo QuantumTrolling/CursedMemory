@@ -43,6 +43,24 @@
  * @text Ширина полосы
  * @type number
  * @default 4
+ *
+ * @param LetterOffsetX
+ * @text Сдвиг буквы по X
+ * @desc Смещение буквы вправо (отрицательные — влево). Может выходить за пределы иконки.
+ * @type number
+ * @default 10
+ *
+ * @param LetterOffsetY
+ * @text Сдвиг буквы по Y
+ * @desc Смещение буквы вверх/вниз (положительные — вниз)
+ * @type number
+ * @default 0
+ *
+ * @param LetterFontSize
+ * @text Размер шрифта буквы
+ * @desc Размер шрифта буквы A, B, C... (по умолчанию 20)
+ * @type number
+ * @default 20
  */
 
 (function() {
@@ -58,6 +76,9 @@ const FRAME_IMAGE = params.FrameImage || "";
 const ALLY_COLOR  = String(params.AllyBarColor || "#00ff00");
 const ENEMY_COLOR = String(params.EnemyBarColor || "#ff0000");
 const BAR_WIDTH   = Number(params.BarWidth || 4);
+const LETTER_OFFSET_X = Number(params.LetterOffsetX || 0);
+const LETTER_OFFSET_Y = Number(params.LetterOffsetY || 0);
+const LETTER_FONT_SIZE = Number(params.LetterFontSize || 20);
 
 const VISIBLE_COUNT = 6;
 const ICON_GAP    = 6;
@@ -68,6 +89,11 @@ let _cloneVisualIndex = -1;
 let _cloneBattler = null;
 let _ctbCloneWindow = null;
 let _lastCloneShouldShow = false;
+
+// ==================================================
+// ОТКЛЮЧАЕМ ВСТРОЕННУЮ БУКВУ YANFLY
+// ==================================================
+Window_CTBIcon.prototype.redrawLetter = function() {};
 
 // ==================================================
 // РАСШИРЕНИЕ Window_CTBIcon: рамка + цветная полоса
@@ -113,6 +139,58 @@ Window_CTBIcon.prototype.refreshSideBar = function() {
   const color = this._battler.isActor() ? ALLY_COLOR : ENEMY_COLOR;
   this._sideBar.bitmap.clear();
   this._sideBar.bitmap.fillAll(color);
+};
+
+// ==================================================
+// НАШ СОБСТВЕННЫЙ СПРАЙТ ДЛЯ БУКВЫ (без обрезки)
+// ==================================================
+
+Window_CTBIcon.prototype.createLabelSprite = function() {
+  if (this._labelSprite) return;
+  if (this.children) {
+    for (const child of this.children) {
+      if (child === this._labelSprite) return;
+    }
+  }
+  // Размер спрайта делаем с запасом, чтобы вместить крупный шрифт
+  const bitmap = new Bitmap(80, 40);
+  bitmap.fontSize = LETTER_FONT_SIZE;
+  bitmap.textColor = '#ffffff';
+  bitmap.outlineColor = 'rgba(0,0,0,0.7)';
+  bitmap.outlineWidth = 3;
+  this._labelSprite = new Sprite(bitmap);
+  this.addChild(this._labelSprite);
+};
+
+Window_CTBIcon.prototype.updateEnemyLabel = function() {
+  if (!this._battler || !this._battler.isEnemy()) {
+    if (this._labelSprite) this._labelSprite.visible = false;
+    return;
+  }
+  if (!this._battler._plural) {
+    if (this._labelSprite) this._labelSprite.visible = false;
+    return;
+  }
+
+  this.createLabelSprite();
+  const letter = this._battler._letter;
+  const bitmap = this._labelSprite.bitmap;
+  // Обновляем размер шрифта на случай изменения параметра
+  bitmap.fontSize = LETTER_FONT_SIZE;
+  bitmap.clear();
+  bitmap.drawText(letter, 0, 0, bitmap.width, bitmap.height, 'center');
+
+  // Базовая позиция: правый нижний угол иконки
+  if (this._windowContentsSprite) {
+    const iconW = this.iconWidth();
+    const iconH = this.iconHeight();
+    // Центр спрайта выравниваем относительно правого нижнего угла иконки
+    const baseX = this._windowContentsSprite.x + iconW - bitmap.width / 2 - 2;
+    const baseY = this._windowContentsSprite.y + iconH - bitmap.height / 2 - 2;
+    this._labelSprite.x = baseX + LETTER_OFFSET_X;
+    this._labelSprite.y = baseY + LETTER_OFFSET_Y;
+  }
+  this._labelSprite.visible = true;
 };
 
 // ==================================================
@@ -168,7 +246,6 @@ Window_CTBIcon.prototype.destinationY = function() {
   const index = order.indexOf(this._battler);
   if (index < 0) return this.baseY();
 
-  // Сдвиг из-за присутствия клона (только если клон принадлежит актору)
   let shift = 0;
   if (_cloneVisualIndex >= 0 && this._battler !== _cloneBattler) {
     if (index >= _cloneVisualIndex) {
@@ -219,7 +296,7 @@ Window_CTBIcon.prototype.updateCTBHighlight = function() {
 };
 
 // ==================================================
-// ОСНОВНОЙ UPDATE (для основных плашек)
+// ОСНОВНОЙ UPDATE (с обновлением буквы)
 // ==================================================
 
 const _Window_CTBIcon_update = Window_CTBIcon.prototype.update;
@@ -231,13 +308,13 @@ Window_CTBIcon.prototype.update = function() {
   this.refreshSideBar();
   this.updateCTBHighlight();
   this.updateCTBVisibility();
+  this.updateEnemyLabel();   // ← наша буква
 };
 
 // ==================================================
 // CLONE TURN PREVIEW — ТОЛЬКО ДЛЯ АКТОРОВ
 // ==================================================
 
-// ---- Расчёт будущих тиков с учётом предмета (или без)
 Game_Battler.prototype.calcFutureTicksWithItem = function(item) {
     let futureSpeed = 0;
     if (item) {
@@ -255,17 +332,13 @@ Game_Battler.prototype.calcFutureTicksWithItem = function(item) {
     return (goal - futureSpeed) / this.ctbSpeedTick();
 };
 
-// ---- Найти будущий индекс в очереди с учётом предмета (или без)
 function calcFutureIndexForBattler(battler) {
     const futureTicks = battler.calcFutureTicksWithItem(null);
-
     const members = $gameParty.aliveMembers().concat($gameTroop.aliveMembers());
-
     const ticksArray = members.map(b => {
         if (b === battler) return futureTicks;
         return b.ctbTicksToReady();
     });
-
     const sorted = ticksArray.slice().sort((a, b) => a - b);
     const epsilon = 0.0001;
     for (let i = 0; i < sorted.length; i++) {
@@ -273,10 +346,6 @@ function calcFutureIndexForBattler(battler) {
     }
     return -1;
 }
-
-// ==================================================
-// КЛОН — НАСТОЯЩАЯ CTB ПЛАШКА (наследует Window_CTBIcon)
-// ==================================================
 
 function Window_CTBClone() {
     this.initialize.apply(this, arguments);
@@ -289,7 +358,7 @@ Window_CTBClone.prototype.initialize = function() {
     const dummy = { _battler: null };
     Window_CTBIcon.prototype.initialize.call(this, dummy);
     this.opacity = 0;
-    this.contentsOpacity = 160; // полупрозрачный
+    this.contentsOpacity = 160;
 };
 
 Window_CTBClone.prototype.setBattler = function(battler) {
@@ -303,6 +372,11 @@ Window_CTBClone.prototype.updatePositionX = function() {};
 Window_CTBClone.prototype.updatePositionY = function() {};
 Window_CTBClone.prototype.updateDestinationX = function() {};
 Window_CTBClone.prototype.updateBattler = function() {};
+
+// Клону подписи не нужны
+Window_CTBClone.prototype.updateEnemyLabel = function() {
+    if (this._labelSprite) this._labelSprite.visible = false;
+};
 
 Window_CTBClone.prototype.update = function() {
     Window_CTBIcon.prototype.update.call(this);
@@ -319,7 +393,7 @@ Window_CTBClone.prototype.setFutureIndex = function(index) {
 };
 
 // ==================================================
-// УПРАВЛЕНИЕ КЛОНОМ (только для акторов)
+// УПРАВЛЕНИЕ КЛОНОМ
 // ==================================================
 
 function showCloneForActor(actor) {
@@ -327,28 +401,15 @@ function showCloneForActor(actor) {
         hideClone();
         return;
     }
-
     const order = BattleManager.ctbTurnOrder();
-    if (!order) {
-        hideClone();
-        return;
-    }
+    if (!order) { hideClone(); return; }
 
     const currentIndex = order.indexOf(actor);
-    if (currentIndex < 0) {
-        hideClone();
-        return;
-    }
+    if (currentIndex < 0) { hideClone(); return; }
 
     const futureIndex = calcFutureIndexForBattler(actor);
-    if (futureIndex < 0) {
-        hideClone();
-        return;
-    }
+    if (futureIndex < 0) { hideClone(); return; }
 
-    // Помещаем клон на одну позицию ниже futureIndex,
-    // чтобы он всегда оказывался после всех, кто остаётся впереди,
-    // и особенно после врагов.
     let visualIndex;
     if (futureIndex <= currentIndex) {
         visualIndex = currentIndex + 1;
@@ -363,7 +424,6 @@ function showCloneForActor(actor) {
         _ctbCloneWindow = new Window_CTBClone();
         SceneManager._scene.addChild(_ctbCloneWindow);
     }
-
     _ctbCloneWindow.setBattler(actor);
     _ctbCloneWindow.setFutureIndex(visualIndex);
     _ctbCloneWindow.visible = true;
@@ -379,7 +439,6 @@ function hideClone() {
 // ИНТЕГРАЦИЯ В БОЕВУЮ СИСТЕМУ
 // ==================================================
 
-// При начале ввода команд актора — показываем клон
 const _Scene_Battle_startActorCommandSelection = Scene_Battle.prototype.startActorCommandSelection;
 Scene_Battle.prototype.startActorCommandSelection = function() {
     _Scene_Battle_startActorCommandSelection.call(this);
@@ -387,7 +446,6 @@ Scene_Battle.prototype.startActorCommandSelection = function() {
     if (actor) showCloneForActor(actor);
 };
 
-// Также при старте хода (если актор сразу готов к вводу)
 const _BattleManager_startCTBInput = BattleManager.startCTBInput;
 BattleManager.startCTBInput = function(battler) {
     _BattleManager_startCTBInput.call(this, battler);
@@ -396,7 +454,6 @@ BattleManager.startCTBInput = function(battler) {
     }
 };
 
-// При завершении хода актора — скрываем клон
 const _Game_Battler_endTurnAllCTB = Game_Battler.prototype.endTurnAllCTB;
 Game_Battler.prototype.endTurnAllCTB = function() {
     _Game_Battler_endTurnAllCTB.call(this);
@@ -405,43 +462,24 @@ Game_Battler.prototype.endTurnAllCTB = function() {
     }
 };
 
-// Основной цикл обновления сцены — дублируем показ и обновление позиции
 const _Scene_Battle_update = Scene_Battle.prototype.update;
 Scene_Battle.prototype.update = function() {
     _Scene_Battle_update.call(this);
+    const actor = BattleManager.actor();
+    if (BattleManager.isInputting() && actor) {
+        showCloneForActor(actor);
+    } else {
+        hideClone();
+    }
 
-	const actor = BattleManager.actor();
-
-	if (BattleManager.isInputting() && actor) {
-		showCloneForActor(actor);
-	} else {
-		hideClone();
-	}
-
-    // Далее без изменений — обновление позиции клона
     if (_ctbCloneWindow && _ctbCloneWindow.visible && _cloneBattler) {
         const order = BattleManager.ctbTurnOrder();
         if (!order) return;
-
         const currentIndex = order.indexOf(_cloneBattler);
-        if (currentIndex < 0) {
-            hideClone();
-            return;
-        }
-
+        if (currentIndex < 0) { hideClone(); return; }
         const futureIndex = calcFutureIndexForBattler(_cloneBattler);
-        if (futureIndex < 0) {
-            hideClone();
-            return;
-        }
-
-        let visualIndex;
-        if (futureIndex <= currentIndex) {
-            visualIndex = currentIndex + 1;
-        } else {
-            visualIndex = futureIndex + 1;
-        }
-
+        if (futureIndex < 0) { hideClone(); return; }
+        let visualIndex = (futureIndex <= currentIndex) ? currentIndex + 1 : futureIndex + 1;
         if (visualIndex !== _cloneVisualIndex) {
             _cloneVisualIndex = visualIndex;
             _ctbCloneWindow.setFutureIndex(visualIndex);
@@ -458,7 +496,5 @@ Scene_Battle.prototype.terminate = function() {
     }
     _Scene_Battle_terminate.call(this);
 };
-
-
 
 })();

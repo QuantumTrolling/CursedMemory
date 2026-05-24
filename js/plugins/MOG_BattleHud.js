@@ -1721,6 +1721,19 @@ Game_Actor.prototype.initMembers = function() {
 	
 };
 
+//==============================
+// * Get Enemy Letter
+//==============================
+Battle_Hud.prototype.getEnemyLetter = function(battler) {
+    if (!battler.isEnemy()) return "";
+    var enemies = $gameTroop.aliveMembers().filter(function(e) { 
+        return e.enemyId() === battler.enemyId(); 
+    });
+    if (enemies.length <= 1) return "";
+    var indexAmong = enemies.indexOf(battler);
+    return String.fromCharCode(65 + indexAmong);
+};
+
 //=============================================================================
 // ** Game Action
 //=============================================================================
@@ -3292,14 +3305,26 @@ Battle_Hud.prototype.create_name = function() {
 // * Refresh Name
 //==============================
 Battle_Hud.prototype.refresh_name = function() {
-	this._name.bitmap.clear();
-	var align = "left"
-	if (Moghunter.bhud_name_align === 1) {
-		var align = "center"
-	} else if (Moghunter.bhud_name_align === 2) {
-		var align = "right"
-	};
-	this._name.bitmap.drawText(this._battler._name, 0, 0, this._name.bitmap.width, this._name.bitmap.height,align);	
+    this._name.bitmap.clear();
+    var align = "left";
+    if (Moghunter.bhud_name_align === 1) {
+        align = "center";
+    } else if (Moghunter.bhud_name_align === 2) {
+        align = "right";
+    }
+    
+    // Базовое имя из базы данных
+    var name = this._battler.name();
+    
+    // Добавляем букву для врагов-дубликатов
+    if (this._battler.isEnemy()) {
+        var letter = this.getEnemyLetter(this._battler);
+        if (letter) {
+            name += " " + letter;
+        }
+    }
+    
+    this._name.bitmap.drawText(name, 0, 0, this._name.bitmap.width, this._name.bitmap.height, align);
 };
 
 //==============================
@@ -4240,4 +4265,43 @@ Game_Action.prototype.needsSelection = function() {
         return false; // действие на всех противников — не требует выбора цели
     }
     return _mog_bhud_needsSelection.call(this);
+};
+
+//=============================================================================
+// Добавление букв (A, B, C) к именам одинаковых врагов в окне выбора цели
+//=============================================================================
+
+// Сохраняем оригинальный метод отрисовки врага в списке
+var _mog_bhud_enemy_drawItem = Window_BattleEnemy.prototype.drawItem;
+Window_BattleEnemy.prototype.drawItem = function(index) {
+    // Вызываем оригинал
+    _mog_bhud_enemy_drawItem.call(this, index);
+    
+    // Получаем врага по индексу
+    var enemy = this._enemies[index];
+    if (!enemy) return;
+    
+    // Вычисляем букву для этого врага
+    var letter = this.getEnemyLetter(enemy);
+    if (!letter) return; // Буква не нужна, если враг уникален
+    
+    // Позиция для буквы (правее имени)
+    var nameWidth = this.textWidth(enemy.name()) + this.textPadding() * 2;
+    var x = this.itemRect(index).x + nameWidth + 4; // 4 пикселя отступ
+    var y = this.itemRect(index).y;
+    
+    // Рисуем букву тем же шрифтом, что и имя
+    this.contents.fontSize = this.contents.fontSize; // используем текущий размер
+    this.drawText(letter, x, y, 40, 'left'); // 40 пикселей должно хватить для одной буквы
+};
+
+// Вспомогательная функция (можно также вынести в Battle_Hud, но здесь используем Window)
+Window_BattleEnemy.prototype.getEnemyLetter = function(battler) {
+    if (!battler.isEnemy()) return '';
+    var enemies = $gameTroop.aliveMembers().filter(function(e) { 
+        return e.enemyId() === battler.enemyId(); 
+    });
+    if (enemies.length <= 1) return '';
+    var indexAmong = enemies.indexOf(battler);
+    return String.fromCharCode(65 + indexAmong); // 65 = 'A'
 };

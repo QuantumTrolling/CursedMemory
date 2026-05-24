@@ -1,48 +1,84 @@
 /*:
- * @plugindesc Состояния: бонус MAT от DEF и LUK от ATK
+ * @plugindesc Состояния: динамические бонусы от параметров и HP
  * @author Помощник
- * @help Добавляет теги для состояний:
- *   <MAT Bonus from DEF: 0.5>
- *   <MAT Bonus from DEF: 50%>
  *
- *   <LUK Bonus from ATK: 0.3>
- *   <LUK Bonus from ATK: 30%>
- * 
- * При наличии состояния:
- *   MAT увеличивается на (DEF × множитель),
- *   LUK увеличивается на (ATK × множитель).
- * Бонусы от разных состояний суммируются.
- * Результат округляется вниз.
+ * @help
+ * Примеры тегов:
+ *
+ * <MAT Bonus from DEF: 50%>
+ * <LUK Bonus from ATK: 30%>
+ *
+ * <AGI Bonus from Missing HP: 5%>
+ * <DEF Bonus from Missing HP: 10%>
+ *
+ * <AGI Bonus from Current HP: 2%>
+ * <LUK Bonus from Current HP: 1%>
+ *
+ * Поддержка:
+ * MAT, ATK, DEF, AGI, LUK
+ * Источники:
+ * ATK, DEF, MAT, AGI, LUK, Current HP, Missing HP
  */
 
 (function() {
-    var _Game_BattlerBase_param = Game_BattlerBase.prototype.param;
+
+    const PARAM_MAP = {
+        MHP: 0,
+        MMP: 1,
+        ATK: 2,
+        DEF: 3,
+        MAT: 4,
+        MDF: 5,
+        AGI: 6,
+        LUK: 7
+    };
+
+    const _Game_BattlerBase_param = Game_BattlerBase.prototype.param;
+
     Game_BattlerBase.prototype.param = function(paramId) {
-        var value = _Game_BattlerBase_param.call(this, paramId);
-        if (this.states) {
-            var states = this.states();
-            if (paramId === 4) { // MAT (магическая атака)
-                for (var i = 0; i < states.length; i++) {
-                    var note = states[i].note;
-                    var match = note.match(/<MAT[ _]?BONUS[ _]?FROM[ _]?DEF:[ _]?(\d+\.?\d*)\s*%?>/i);
-                    if (match) {
-                        var mult = parseFloat(match[1]);
-                        if (match[0].includes('%')) mult /= 100;
-                        value += Math.floor(this.param(3) * mult); // DEF = параметр 3
-                    }
+        let baseValue = _Game_BattlerBase_param.call(this, paramId);
+        let value = baseValue;
+
+        const states = this.states();
+        if (!states) return value;
+
+        for (let i = 0; i < states.length; i++) {
+            const note = states[i].note;
+
+            const regex = /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+            let match;
+
+            while ((match = regex.exec(note)) !== null) {
+                let target = match[1].toUpperCase();
+                let source = match[2].toUpperCase();
+                let mult = parseFloat(match[3]);
+
+                if (match[0].includes('%')) mult /= 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+
+                let sourceValue = 0;
+
+                // 📌 Источник = параметр
+                if (PARAM_MAP[source] !== undefined) {
+                    sourceValue = _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
                 }
-            } else if (paramId === 7) { // LUK (удача)
-                for (var i = 0; i < states.length; i++) {
-                    var note = states[i].note;
-                    var match = note.match(/<LUK[ _]?BONUS[ _]?FROM[ _]?ATK:[ _]?(\d+\.?\d*)\s*%?>/i);
-                    if (match) {
-                        var mult = parseFloat(match[1]);
-                        if (match[0].includes('%')) mult /= 100;
-                        value += Math.floor(this.param(2) * mult); // ATK = параметр 2
-                    }
+
+                // 📌 Текущий HP
+                else if (source === "CURRENT HP") {
+                    sourceValue = this.hp || 0;
                 }
+
+                // 📌 Недостающее HP
+                else if (source === "MISSING HP") {
+                    sourceValue = (this.mhp || 0) - (this.hp || 0);
+                }
+
+                value += Math.floor(sourceValue * mult);
             }
         }
+
         return value;
     };
+
 })();
