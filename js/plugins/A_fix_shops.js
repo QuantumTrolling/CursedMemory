@@ -1,18 +1,16 @@
 //=============================================================================
-// A_fix_shops.js (гарантированное количество колонок, column-major режим)
+// A_fix_shops.js (сетка, row-major, скролл, контроль строк)
 //=============================================================================
 /*:
- * @plugindesc Полностью переработанный интерфейс магазина
+ * @plugindesc Магазин с настраиваемыми колонками и скроллом
  * @author
  *
  * @help
- * - Сетка товаров с СТРОГО ЗАДАННЫМ количеством колонок (параметр listColumns)
+ * - Сетка товаров с заданным количеством колонок (listColumns)
  * - Только кнопка "Купить"
- * - Все позиции настраиваются через параметры
- * - Чтобы колонки не «схлопывались», установите достаточную ширину списка:
- *   для 4 колонок – 800+, для 5 колонок – 1000+, для 6 – 1200+ и т.д.
- * - Режим заполнения: "column" – товары заполняются сверху вниз по колонкам (Diablo-стиль),
- *   "row" – стандартное построчное заполнение слева направо.
+ * - Вертикальный скролл, если товаров больше, чем видимых ячеек
+ * - listMaxRows ограничивает количество видимых строк (0 = авто)
+ * - Режим заполнения: "row" (рекомендуется) или "column" (без скролла)
  *
  * ============================
  * ОСНОВНЫЕ НАСТРОЙКИ
@@ -56,7 +54,7 @@
  * @default 0
  *
  * @param listWidth
- * @text Ширина списка (для 5 колонок ставьте 1000+)
+ * @text Ширина списка
  * @type number
  * @default 1000
  *
@@ -66,9 +64,14 @@
  * @default 600
  *
  * @param listColumns
- * @text Количество колонок (строго!)
+ * @text Количество колонок
  * @type number
  * @default 4
+ *
+ * @param listMaxRows
+ * @text Максимум видимых строк (0 = авто)
+ * @type number
+ * @default 0
  *
  * @param listFontSize
  * @text Шрифт цены
@@ -105,7 +108,7 @@
  * @default 14
  *
  * @param descLines
- * @text Макс строк (0 = автоподбор по высоте)
+ * @text Макс строк описания
  * @type number
  * @default 0
  *
@@ -152,9 +155,9 @@
  * @default 0
  *
  * @param fillMode
- * @text Заполнение: row (по строкам) или column (по колонкам)
+ * @text Заполнение: row или column (column без скролла)
  * @type string
- * @default column
+ * @default row
  */
 
 var Imported = Imported || {};
@@ -169,34 +172,32 @@ if (!Imported.YEP_ShopMenuCore) {
 
     var parameters = PluginManager.parameters('A_fix_shops');
     var params = {
-        bgDefault: String(parameters['bgDefault'] || 'fon_taverna'),
-        traderDefault: String(parameters['traderDefault'] || 'velrand_with_bag'),
-        traderX: Number(parameters['traderX'] || 480),
-        traderY: Number(parameters['traderY'] || 60),
-        coinIcon: Number(parameters['coinIcon'] || 313),
-        listX: Number(parameters['listX'] || 0),
-        listY: Number(parameters['listY'] || 0),
-        listWidth: Number(parameters['listWidth'] || 1000),
-        listHeight: Number(parameters['listHeight'] || 600),
-        listColumns: Number(parameters['listColumns'] || 4),
-        listFontSize: Number(parameters['listFontSize'] || 18),
-        descX: Number(parameters['descX'] || 0),
-        descY: Number(parameters['descY'] || 440),
-        descHeight: Number(parameters['descHeight'] || 300),
-        descFontSize: Number(parameters['descFontSize'] || 14),
-        descLines: Number(parameters['descLines'] || 0),
-        descWidth: Number(parameters['descWidth'] || 800),
-        actionX: Number(parameters['actionX'] || 516),
-        actionY: Number(parameters['actionY'] || 390),
-        buyBtnX: Number(parameters['buyBtnX'] || 516),
-        buyBtnY: Number(parameters['buyBtnY'] || 390),
-        nameX: Number(parameters['nameX'] || 0),
-        nameY: Number(parameters['nameY'] || 410),
-        nameWidth: Number(parameters['nameWidth'] || 800),
-        goldX: Number(parameters['goldX'] || 0),
-        goldY: Number(parameters['goldY'] || 0),
-        sellButton: parameters['sellButton'] === 'false' ? false : true,
-        fillMode: String(parameters['fillMode'] || 'column').toLowerCase()
+        bgDefault:       String(parameters['bgDefault'] || 'fon_taverna'),
+        traderDefault:   String(parameters['traderDefault'] || 'velrand_with_bag'),
+        traderX:         Number(parameters['traderX'] || 480),
+        traderY:         Number(parameters['traderY'] || 60),
+        coinIcon:        Number(parameters['coinIcon'] || 313),
+        listX:           Number(parameters['listX'] || 0),
+        listY:           Number(parameters['listY'] || 0),
+        listWidth:       Number(parameters['listWidth'] || 1000),
+        listHeight:      Number(parameters['listHeight'] || 600),
+        listColumns:     Number(parameters['listColumns'] || 4),
+        listMaxRows:     Number(parameters['listMaxRows'] || 0),
+        listFontSize:    Number(parameters['listFontSize'] || 18),
+        descX:           Number(parameters['descX'] || 0),
+        descY:           Number(parameters['descY'] || 440),
+        descHeight:      Number(parameters['descHeight'] || 300),
+        descFontSize:    Number(parameters['descFontSize'] || 14),
+        descLines:       Number(parameters['descLines'] || 0),
+        descWidth:       Number(parameters['descWidth'] || 800),
+        buyBtnX:         Number(parameters['buyBtnX'] || 516),
+        buyBtnY:         Number(parameters['buyBtnY'] || 390),
+        nameX:           Number(parameters['nameX'] || 0),
+        nameY:           Number(parameters['nameY'] || 410),
+        nameWidth:       Number(parameters['nameWidth'] || 800),
+        goldX:           Number(parameters['goldX'] || 0),
+        goldY:           Number(parameters['goldY'] || 0),
+        fillMode:        String(parameters['fillMode'] || 'row').toLowerCase()
     };
 
     var coinIconIndex = params.coinIcon !== 0 ? params.coinIcon : ($dataSystem ? $dataSystem.currencyIcon || 313 : 313);
@@ -213,11 +214,7 @@ if (!Imported.YEP_ShopMenuCore) {
     Window_ShopItemName.prototype.initialize = function() {
         var height = this.fittingHeight(1);
         Window_Base.prototype.initialize.call(this,
-            params.nameX,
-            params.nameY,
-            params.nameWidth,
-            height
-        );
+            params.nameX, params.nameY, params.nameWidth, height);
         this._item = null;
         this.refresh();
     };
@@ -269,17 +266,14 @@ if (!Imported.YEP_ShopMenuCore) {
         if (this._item) {
             var desc = this._item.description.replace(/\\n/g, '\n');
             var lines = desc.split('\n');
-
             if (params.descLines > 0) {
                 lines = lines.slice(0, params.descLines);
             } else {
-                var maxLinesByHeight = Math.floor(this.contentsHeight() / this.lineHeight());
-                lines = lines.slice(0, Math.max(1, maxLinesByHeight));
+                var maxLines = Math.floor(this.contentsHeight() / this.lineHeight());
+                lines = lines.slice(0, Math.max(1, maxLines));
             }
-            desc = lines.join('\n');
-
             this.resetFontSettings();
-            this.drawTextEx(desc, this.textPadding(), 0);
+            this.drawTextEx(lines.join('\n'), this.textPadding(), 0);
         }
     };
 
@@ -294,11 +288,7 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Window_ShopBuyAction.prototype.initialize = function(x, y, width) {
         Window_Base.prototype.initialize.call(this,
-            params.buyBtnX,
-            params.buyBtnY,
-            width,
-            this.fittingHeight(1)
-        );
+            params.buyBtnX, params.buyBtnY, width, this.fittingHeight(1));
         this._enabled = false;
         this._hover = false;
         this._anim = 0;
@@ -357,70 +347,51 @@ if (!Imported.YEP_ShopMenuCore) {
         this._buyActionWindow = null;
     };
 
-    // Получение предмета по текущему индексу (с учётом column-major)
     Window_ShopBuyCustom.prototype.item = function() {
         var index = this.index();
-        if (index >= 0 && index < this._data.length) {
-            return this._data[index];
-        }
-        return null;
+        return (index >= 0 && index < this._data.length) ? this._data[index] : null;
     };
 
     Window_ShopBuyCustom.prototype.callUpdateHelp = function() {
         Window_ShopBuy.prototype.updateHelp.call(this);
         var item = this.item();
         if (item) {
-            if (this._customDescWindow) {
-                this._customDescWindow.visible = true;
-                this._customDescWindow.setItem(item);
-            }
-            if (this._customNameWindow) {
-                this._customNameWindow.visible = true;
-                this._customNameWindow.setItem(item);
-            }
+            if (this._customDescWindow) { this._customDescWindow.visible = true; this._customDescWindow.setItem(item); }
+            if (this._customNameWindow) { this._customNameWindow.visible = true; this._customNameWindow.setItem(item); }
         } else {
             if (this._customDescWindow) this._customDescWindow.visible = false;
             if (this._customNameWindow) this._customNameWindow.visible = false;
         }
-        if (SceneManager._scene) {
-            SceneManager._scene.updateActionEnabled();
-        }
+        if (SceneManager._scene) SceneManager._scene.updateActionEnabled();
     };
 
-    Window_ShopBuyCustom.prototype.isTouchEnabled = function() {
-        return Window_ShopBuy.prototype.isTouchEnabled.call(this);
-    };
+    Window_ShopBuyCustom.prototype.isTouchEnabled = function() { return true; };
 
     Window_ShopBuyCustom.prototype.select = function(index) {
         if (this._itemSelected && index !== this.index()) return;
         Window_ShopBuy.prototype.select.call(this, index);
-        if (index !== -1) {
-            this.callUpdateHelp();
-        }
+        if (index !== -1) this.callUpdateHelp();
     };
 
     Window_ShopBuyCustom.prototype._refreshFrame = function() {};
     Window_ShopBuyCustom.prototype._refreshBack = function() {};
-
-    Window_ShopBuyCustom.prototype.isCursorVisible = function() {
-        return false;
-    };
+    Window_ShopBuyCustom.prototype.isCursorVisible = function() { return false; };
 
     Window_ShopBuyCustom.prototype.windowWidth = function() { return params.listWidth; };
-    Window_ShopBuyCustom.prototype.maxCols = function() {
-        return params.listColumns;
-    };
-
-    Window_ShopBuy.prototype.maxCols = function() {
-        return params.listColumns;
-    };
+    Window_ShopBuyCustom.prototype.maxCols = function() { return params.listColumns; };
+    Window_ShopBuy.prototype.maxCols = function() { return params.listColumns; };
 
     Window_ShopBuyCustom.prototype.spacing = function() { return 0; };
     Window_ShopBuy.prototype.spacing = function() { return 0; };
     Window_ShopBuy.prototype.colSpacing = function() { return 0; };
 
+    // Видимые строки с учётом listMaxRows
     Window_ShopBuyCustom.prototype.numVisibleRows = function() {
-        return Math.floor(this.height / this.itemHeight());
+        var autoRows = Math.floor(this.height / this.itemHeight());
+        if (params.listMaxRows > 0) {
+            return Math.min(params.listMaxRows, autoRows);
+        }
+        return autoRows;
     };
 
     Window_ShopBuyCustom.prototype.lineHeight = function() {
@@ -434,53 +405,62 @@ if (!Imported.YEP_ShopMenuCore) {
         return Math.floor(totalWidth / cols);
     };
 
-    // Вычисление числа строк для column-major
+    // Всего строк (для скролла)
     Window_ShopBuyCustom.prototype.rows = function() {
-        return this.numVisibleRows();
+        return Math.ceil(this.maxItems() / this.maxCols());
     };
 
-    // Максимальное количество отображаемых ячеек (заполняем всю сетку)
-    Window_ShopBuyCustom.prototype.maxPageItems = function() {
-        return this.maxCols() * this.rows();
-    };
-
+    // Максимальное количество предметов – реальное
     Window_ShopBuyCustom.prototype.maxItems = function() {
-        return this.maxCols() * this.rows();
+        return this._data ? this._data.length : 0;
     };
 
-    // Главная фича: позиция ячейки в зависимости от режима заполнения
+    // Количество видимых ячеек на странице
+    Window_ShopBuyCustom.prototype.maxPageItems = function() {
+        return this.maxCols() * this.numVisibleRows();
+    };
+
+    // ★ Исправленный itemRect ★
     Window_ShopBuyCustom.prototype.itemRect = function(index) {
+        var rect = new Rectangle();
         var maxCols = this.maxCols();
         var w = this.itemWidth();
         var h = this.itemHeight();
 
         if (params.fillMode === 'column') {
-            // Column-major: сначала заполняются колонки сверху вниз
-            var rows = this.rows();
-            var col = Math.floor(index / rows);
-            var row = index % rows;
-        } else {
-            // Row-major: стандартное заполнение слева направо
-            var col = index % maxCols;
-            var row = Math.floor(index / maxCols);
+            // Column-режим без скролла
+            var rowsPerScreen = this.numVisibleRows();
+            var col = Math.floor(index / rowsPerScreen);
+            var row = index % rowsPerScreen;
+            rect.x = col * w;
+            rect.y = row * h;
+            rect.width = w;
+            rect.height = h;
+            return rect;
         }
 
-        var x = col * w;
-        var y = row * h;
-        return new Rectangle(x, y, w, h);
+        // Row-режим с вертикальным скроллом
+        var col = index % maxCols;
+        var row = Math.floor(index / maxCols);
+        rect.x = col * w;
+        rect.y = (row - this.topRow()) * h;  // учёт прокрутки
+        rect.width = w;
+        rect.height = h;
+        return rect;
     };
 
-    // Навигация для column-major
+    // Включаем вертикальный скролл
     Window_ShopBuyCustom.prototype.isHorizontal = function() {
-        return params.fillMode !== 'column';
+        return false;
     };
 
+    // Навигация
     Window_ShopBuyCustom.prototype.cursorRight = function(wrap) {
         if (params.fillMode !== 'column') {
             return Window_ShopBuy.prototype.cursorRight.call(this, wrap);
         }
-        var rows = this.rows();
-        var maxItems = this.maxItems();
+        var rows = this.numVisibleRows();
+        var maxItems = this.maxCols() * rows;
         var index = this.index();
         var next = index + rows;
         if (next >= maxItems) {
@@ -494,11 +474,11 @@ if (!Imported.YEP_ShopMenuCore) {
         if (params.fillMode !== 'column') {
             return Window_ShopBuy.prototype.cursorLeft.call(this, wrap);
         }
-        var rows = this.rows();
+        var rows = this.numVisibleRows();
         var index = this.index();
         var next = index - rows;
         if (next < 0) {
-            if (wrap) next = this.maxItems() - rows + (index % rows);
+            if (wrap) next = this.maxCols() * rows - rows + (index % rows);
             else return;
         }
         this.select(next);
@@ -508,16 +488,14 @@ if (!Imported.YEP_ShopMenuCore) {
         if (params.fillMode !== 'column') {
             return Window_ShopBuy.prototype.cursorDown.call(this, wrap);
         }
-        var rows = this.rows();
-        var maxItems = this.maxItems();
+        var rows = this.numVisibleRows();
+        var maxItems = this.maxCols() * rows;
         var index = this.index();
         var col = Math.floor(index / rows);
         var next = index + 1;
-        // Проверяем, не вышли ли за границы текущей колонки
         if (Math.floor(next / rows) !== col || next >= maxItems) {
-            if (wrap) {
-                next = col * rows; // в начало колонки
-            } else return;
+            if (wrap) next = col * rows;
+            else return;
         }
         this.select(next);
     };
@@ -526,64 +504,53 @@ if (!Imported.YEP_ShopMenuCore) {
         if (params.fillMode !== 'column') {
             return Window_ShopBuy.prototype.cursorUp.call(this, wrap);
         }
-        var rows = this.rows();
+        var rows = this.numVisibleRows();
         var index = this.index();
         var col = Math.floor(index / rows);
         var next = index - 1;
         if (next < 0 || Math.floor(next / rows) !== col) {
-            if (wrap) {
-                next = (col + 1) * rows - 1; // в конец колонки
-            } else return;
+            if (wrap) next = (col + 1) * rows - 1;
+            else return;
         }
         this.select(next);
     };
 
-    // Отрисовка карточки (общая для обоих режимов)
+    // Отрисовка карточки
     Window_ShopBuyCustom.prototype.drawItem = function(index) {
         var item = (index < this._data.length) ? this._data[index] : null;
         var rect = this.itemRect(index);
-        var x = rect.x;
-        var y = rect.y;
-        var w = rect.width;
-        var h = this.itemHeight();
+        var x = rect.x, y = rect.y, w = rect.width, h = this.itemHeight();
         var cx = x + w / 2;
 
-        // Фон ячейки
+        // Отсечение невидимых ячеек
+        if (y + h < 0 || y > this.contents.height) return;
+
         this.contents.fillRect(x, y, w, h, 'rgba(0, 0, 0, 0.4)');
         this.drawSkinFrame(x, y, w, h);
-
-        if (!item) return; // пустая ячейка
+        if (!item) return;
 
         var isHover = (!this._itemSelected && index === this._hoverIndex);
         var isSelected = (this._itemSelected && index === this.index());
-        var highlight = isHover || isSelected;
-
-        if (highlight) {
+        if (isHover || isSelected) {
             var alpha = 0.15 + Math.sin(this._hoverAnim) * 0.1;
             this.contents.fillRect(x, y, w, h, 'rgba(255,255,255,' + alpha + ')');
         }
 
         this.resetFontSettings();
-
         var iconWh = Math.min(64, w * 0.6);
         var bitmap = ImageManager.loadSystem('IconSet');
         var sx = item.iconIndex % 16 * Window_Base._iconWidth;
         var sy = Math.floor(item.iconIndex / 16) * Window_Base._iconHeight;
-        var dx = cx - iconWh / 2;
-        var dy = y + 12;
+        var dx = cx - iconWh / 2, dy = y + 12;
 
         var ctx = this.contents.context;
         var smooth = ctx.imageSmoothingEnabled;
         ctx.imageSmoothingEnabled = false;
-        this.contents.blt(bitmap, sx, sy, Window_Base._iconWidth, Window_Base._iconHeight,
-                          dx, dy, iconWh, iconWh);
+        this.contents.blt(bitmap, sx, sy, Window_Base._iconWidth, Window_Base._iconHeight, dx, dy, iconWh, iconWh);
         ctx.imageSmoothingEnabled = smooth;
 
         var price = Yanfly.Util.toGroup(this.price(item));
-
-        this.contents.fontSize = params.listFontSize || 
-            (Imported.YEP_CoreEngine ? Yanfly.Param.GoldFontSize : 18);
-
+        this.contents.fontSize = params.listFontSize || (Imported.YEP_CoreEngine ? Yanfly.Param.GoldFontSize : 18);
         var textW = this.textWidth(price);
         var iconW = (coinIconIndex > 0) ? Window_Base._iconWidth + 4 : 0;
         var totalW = textW + iconW + 24;
@@ -593,54 +560,52 @@ if (!Imported.YEP_ShopMenuCore) {
         var boxY = y + h - boxH;
 
         this.drawSkinFrame(boxX, boxY, boxW, boxH);
-
         var canAfford = $gameParty.gold() >= this.price(item);
         this.changeTextColor(canAfford ? this.normalColor() : this.textColor(8));
-
         this.drawText(price, boxX + 24, boxY - 39, boxW - (coinIconIndex > 0 ? 24 : 0), boxH, 'right');
-
         if (coinIconIndex > 0) {
             var iconX = boxX + boxW - Window_Base._iconWidth - 7;
             var iconY = boxY + (boxH - Window_Base._iconHeight) / 2;
             this.drawIcon(coinIconIndex, iconX, iconY);
         }
-
         this.resetFontSettings();
     };
 
     Window_ShopBuyCustom.prototype.drawSkinFrame = function(x, y, w, h) {
         var skin = this.windowskin;
-        var margin = 24;
-        var p = 96;
-        var q = 96;
-
+        var margin = 24, p = 96, q = 96;
         this.contents.blt(skin, p, 0, margin, margin, x, y);
         this.contents.blt(skin, p + q - margin, 0, margin, margin, x + w - margin, y);
         this.contents.blt(skin, p, q - margin, margin, margin, x, y + h - margin);
         this.contents.blt(skin, p + q - margin, q - margin, margin, margin, x + w - margin, y + h - margin);
-
-        this.contents.blt(skin, p + margin, 0, q - margin * 2, margin,
-            x + margin, y, w - margin * 2, margin);
-        this.contents.blt(skin, p + margin, q - margin, q - margin * 2, margin,
-            x + margin, y + h - margin, w - margin * 2, margin);
-        this.contents.blt(skin, p, margin, margin, q - margin * 2,
-            x, y + margin, margin, h - margin * 2);
-        this.contents.blt(skin, p + q - margin, margin, margin, q - margin * 2,
-            x + w - margin, y + margin, margin, h - margin * 2);
+        this.contents.blt(skin, p + margin, 0, q - margin * 2, margin, x + margin, y, w - margin * 2, margin);
+        this.contents.blt(skin, p + margin, q - margin, q - margin * 2, margin, x + margin, y + h - margin, w - margin * 2, margin);
+        this.contents.blt(skin, p, margin, margin, q - margin * 2, x, y + margin, margin, h - margin * 2);
+        this.contents.blt(skin, p + q - margin, margin, margin, q - margin * 2, x + w - margin, y + margin, margin, h - margin * 2);
     };
 
-    // Обновление с поддержкой ховера и тач-ввода
+    // ★ Исправленный update – ховер с учётом скролла ★
     Window_ShopBuyCustom.prototype.update = function() {
-        Window_ShopBuy.prototype.update.call(this);
+        // Вызываем оригинальный update Window_Selectable для работы скролла
+        Window_Selectable.prototype.update.call(this);
 
         var x = this.canvasToLocalX(TouchInput.x);
         var y = this.canvasToLocalY(TouchInput.y);
         var newHover = -1;
-        for (var i = 0; i < this.maxItems(); i++) {
-            var rect = this.itemRect(i);
+
+        var top = this.topRow();          // первая видимая строка
+        var maxCols = this.maxCols();
+        var visibleItems = this.maxPageItems(); // сколько всего ячеек помещается на экране
+
+        // Перебираем только видимые ячейки, но с правильными индексами данных
+        for (var i = 0; i < visibleItems; i++) {
+            var index = top * maxCols + i;
+            if (index >= this.maxItems()) break;  // больше товаров нет
+
+            var rect = this.itemRect(index);
             if (x >= rect.x && x < rect.x + rect.width &&
                 y >= rect.y && y < rect.y + rect.height) {
-                newHover = i;
+                newHover = index;
                 break;
             }
         }
@@ -684,14 +649,9 @@ if (!Imported.YEP_ShopMenuCore) {
         this._vwStorage = {};
         _Scene_Shop_create.call(this);
 
-        if (this._statusWindow) {
-            this._statusWindow.hide();
-            this._statusWindow.visible = false;
-        }
+        if (this._statusWindow) { this._statusWindow.hide(); this._statusWindow.visible = false; }
+        if (this._backgroundSprite) this._backgroundSprite.visible = false;
 
-        if (this._backgroundSprite) {
-            this._backgroundSprite.visible = false;
-        }
         this.createShopBackground();
         this.createShopTrader();
         this.repositionStandardWindows();
@@ -706,28 +666,21 @@ if (!Imported.YEP_ShopMenuCore) {
             e.preventDefault();
             this.onCancel();
         }.bind(this);
-
         if (Graphics._canvas) {
             Graphics._canvas.addEventListener('contextmenu', this._onContextMenu);
-        } else {
-            console.warn('A_fix_shops: Graphics._canvas недоступен, слушатель ПКМ не добавлен.');
         }
     };
 
     var _Scene_Shop_activateBuyWindow = Scene_Shop.prototype.activateBuyWindow;
     Scene_Shop.prototype.activateBuyWindow = function() {
         _Scene_Shop_activateBuyWindow.call(this);
-        if (this._statusWindow) {
-            this._statusWindow.hide();
-        }
+        if (this._statusWindow) this._statusWindow.hide();
     };
 
     Scene_Shop.prototype.createShopBackground = function() {
-        var bgName = ($gameSystem._shopBG !== undefined && $gameSystem._shopBG !== null)
-                     ? $gameSystem._shopBG : params.bgDefault;
+        var bgName = ($gameSystem._shopBG !== undefined) ? $gameSystem._shopBG : params.bgDefault;
         if (!bgName) return;
-        var bitmap = ImageManager.loadPicture(bgName);
-        this._bgSprite = new Sprite(bitmap);
+        this._bgSprite = new Sprite(ImageManager.loadPicture(bgName));
         this._bgSprite.width = Graphics.boxWidth;
         this._bgSprite.height = Graphics.boxHeight;
         this.addChildAt(this._bgSprite, 1);
@@ -735,8 +688,7 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Scene_Shop.prototype.createShopTrader = function() {
         if (typeof VWSprite === 'undefined') return;
-        var traderName = ($gameSystem._shopTrader !== undefined && $gameSystem._shopTrader !== null)
-                         ? $gameSystem._shopTrader : params.traderDefault;
+        var traderName = ($gameSystem._shopTrader !== undefined) ? $gameSystem._shopTrader : params.traderDefault;
         if (!traderName) return;
         var vm = new VWSprite(traderName);
         vm.setLoop(); vm.create();
@@ -758,7 +710,14 @@ if (!Imported.YEP_ShopMenuCore) {
             this._buyWindow.x = params.listX;
             this._buyWindow.y = params.listY;
             this._buyWindow.width = params.listWidth;
-            this._buyWindow.height = params.listHeight;
+            // Высота окна с учётом listMaxRows
+            if (params.listMaxRows > 0) {
+                var itemH = this._buyWindow.itemHeight();
+                var padding = this._buyWindow.standardPadding() * 2;
+                this._buyWindow.height = itemH * params.listMaxRows + padding;
+            } else {
+                this._buyWindow.height = params.listHeight;
+            }
             this._buyWindow.createContents();
             this._buyWindow.refresh();
         }
@@ -786,7 +745,6 @@ if (!Imported.YEP_ShopMenuCore) {
         newBuy.setInfoWindow(oldBuyWindow._infoWindow);
         newBuy.setStatusWindow(null);
         newBuy.setHandler('cancel', this.onCancel.bind(this));
-
         newBuy.select(-1);
         newBuy._itemSelected = false;
         newBuy.activate();
@@ -796,12 +754,7 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     Scene_Shop.prototype.createDescWindow = function() {
-        this._descWindow = new Window_ShopDesc(
-            params.descX,
-            params.descY,
-            params.descWidth,
-            params.descHeight
-        );
+        this._descWindow = new Window_ShopDesc(params.descX, params.descY, params.descWidth, params.descHeight);
         this.addWindow(this._descWindow);
         this._descWindow.hide();
     };
@@ -813,12 +766,9 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     Scene_Shop.prototype.createActionWindow = function() {
-        var btnWidth = 180;
-        this._buyActionWindow = new Window_ShopBuyAction(params.actionX, params.actionY, btnWidth);
+        this._buyActionWindow = new Window_ShopBuyAction(params.buyBtnX, params.buyBtnY, 180);
         this.addWindow(this._buyActionWindow);
         this._buyActionWindow.hide();
-
-        this._sellActionWindow = null;
     };
 
     Scene_Shop.prototype.updateActionEnabled = function() {
@@ -826,7 +776,6 @@ if (!Imported.YEP_ShopMenuCore) {
             var item = this._buyWindow.item();
             var selected = this._buyWindow._itemSelected;
             var visible = selected && !!item;
-
             this._buyActionWindow.setEnabled(visible);
             this._buyActionWindow.visible = visible;
         }
@@ -838,15 +787,12 @@ if (!Imported.YEP_ShopMenuCore) {
             this._buyWindow._hoverIndex = -1;
             this._buyWindow.select(-1);
             this._buyWindow.refresh();
-
             if (this._descWindow) this._descWindow.hide();
             if (this._nameWindow) this._nameWindow.hide();
-
             this.updateActionEnabled();
             this._buyWindow.activate();
             return;
         }
-
         SceneManager.pop();
     };
 
@@ -862,16 +808,10 @@ if (!Imported.YEP_ShopMenuCore) {
         }
         this._onContextMenu = null;
         var vm = this._vwStorage ? this._vwStorage['shopTrader'] : null;
-        if (vm) {
-            vm._selfDestroy();
-            delete this._vwStorage['shopTrader'];
-        }
+        if (vm) { vm._selfDestroy(); delete this._vwStorage['shopTrader']; }
         _Scene_Shop_terminate.call(this);
     };
 
-    //=============================================================================
-    // Покупка товара
-    //=============================================================================
     Scene_Shop.prototype.commandBuyAction = function() {
         var item = this._buyWindow.item();
         if (item) {
