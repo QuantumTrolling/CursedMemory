@@ -370,7 +370,9 @@ if (!Imported.YEP_ShopMenuCore) {
     Window_ShopBuyCustom.prototype.select = function(index) {
         if (this._itemSelected && index !== this.index()) return;
         Window_ShopBuy.prototype.select.call(this, index);
-        if (index !== -1) this.callUpdateHelp();
+        if (index !== -1) {
+            this.callUpdateHelp();
+        }
     };
 
     Window_ShopBuyCustom.prototype._refreshFrame = function() {};
@@ -515,6 +517,35 @@ if (!Imported.YEP_ShopMenuCore) {
         this.select(next);
     };
 
+    // Блокировка перемещения курсора клавишами, пока предмет зафиксирован
+    var _custom_cursorDown = Window_ShopBuyCustom.prototype.cursorDown;
+    Window_ShopBuyCustom.prototype.cursorDown = function(wrap) {
+        if (this._itemSelected) return;
+        _custom_cursorDown.call(this, wrap);
+        this.callUpdateHelp();
+    };
+
+    var _custom_cursorUp = Window_ShopBuyCustom.prototype.cursorUp;
+    Window_ShopBuyCustom.prototype.cursorUp = function(wrap) {
+        if (this._itemSelected) return;
+        _custom_cursorUp.call(this, wrap);
+        this.callUpdateHelp();
+    };
+
+    var _custom_cursorLeft = Window_ShopBuyCustom.prototype.cursorLeft;
+    Window_ShopBuyCustom.prototype.cursorLeft = function(wrap) {
+        if (this._itemSelected) return;
+        _custom_cursorLeft.call(this, wrap);
+        this.callUpdateHelp();
+    };
+
+    var _custom_cursorRight = Window_ShopBuyCustom.prototype.cursorRight;
+    Window_ShopBuyCustom.prototype.cursorRight = function(wrap) {
+        if (this._itemSelected) return;
+        _custom_cursorRight.call(this, wrap);
+        this.callUpdateHelp();
+    };
+
     // Отрисовка карточки
     Window_ShopBuyCustom.prototype.drawItem = function(index) {
         var item = (index < this._data.length) ? this._data[index] : null;
@@ -586,21 +617,20 @@ if (!Imported.YEP_ShopMenuCore) {
 
     // ★ Исправленный update – ховер с учётом скролла ★
     Window_ShopBuyCustom.prototype.update = function() {
-        // Вызываем оригинальный update Window_Selectable для работы скролла
-        Window_Selectable.prototype.update.call(this);
+        // Вызываем update от Window_ShopBuy для работы скролла и стрелок
+        Window_ShopBuy.prototype.update.call(this);
 
         var x = this.canvasToLocalX(TouchInput.x);
         var y = this.canvasToLocalY(TouchInput.y);
         var newHover = -1;
 
-        var top = this.topRow();          // первая видимая строка
+        var top = this.topRow();
         var maxCols = this.maxCols();
-        var visibleItems = this.maxPageItems(); // сколько всего ячеек помещается на экране
+        var visibleItems = this.maxPageItems();
 
-        // Перебираем только видимые ячейки, но с правильными индексами данных
         for (var i = 0; i < visibleItems; i++) {
             var index = top * maxCols + i;
-            if (index >= this.maxItems()) break;  // больше товаров нет
+            if (index >= this.maxItems()) break;
 
             var rect = this.itemRect(index);
             if (x >= rect.x && x < rect.x + rect.width &&
