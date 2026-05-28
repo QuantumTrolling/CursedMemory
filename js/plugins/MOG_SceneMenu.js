@@ -1890,3 +1890,15 @@ if (Imported.MOG_TimeSystem) {
 	   $gameSystem._refresh_window_time = false;
 	};
 }
+
+//=============================================================================
+// ** Window_MenuCommand (алиас для удаления ненужных команд)
+//=============================================================================
+var _mog_menuCommand_makeCommandList = Window_MenuCommand.prototype.makeCommandList;
+Window_MenuCommand.prototype.makeCommandList = function() {
+    _mog_menuCommand_makeCommandList.call(this);
+    // Удаляем "Инвентарь" (item) и "Навыки" (skill)
+    this._list = this._list.filter(function(cmd) {
+        return cmd.symbol !== 'item' && cmd.symbol !== 'skill';
+    });
+};
