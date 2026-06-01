@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v4.10 Глоссарий: табы + футер + подменю (фикс артефактов иконок)
+ * @plugindesc v4.10 Глоссарий: табы + футер + подменю (плавное мигание полоски)
  * @author You
  *
  * @help
@@ -17,7 +17,7 @@
 
 const SG_TABS_HEIGHT = 170;
 const HITBOX_PADDING = 12;
-const DEBUG = false;  // false, когда всё заработает
+const DEBUG = false;
 
 function log() { if (DEBUG) console.log.apply(console, arguments); }
 
@@ -30,7 +30,7 @@ function arrayEquals(a, b) {
 }
 
 //==============================================================
-// ФИКС АРТЕФАКТОВ ИКОНОК (отключение сглаживания + целые координаты)
+// ФИКС АРТЕФАКТОВ ИКОНОК
 //==============================================================
 function drawIconFixed(contents, iconIndex, x, y, scale, alpha) {
     if (alpha === undefined) alpha = 255;
@@ -42,9 +42,8 @@ function drawIconFixed(contents, iconIndex, x, y, scale, alpha) {
     var dw = Math.floor(pw * scale);
     var dh = Math.floor(ph * scale);
     var dx = Math.floor(x + (pw - dw) / 2);
-    var dy = Math.floor(y + (ph - dh) / 2); // по вертикали тоже центрируем при необходимости
+    var dy = Math.floor(y + (ph - dh) / 2);
 
-    // Сохраняем состояние контекста
     var ctx = contents._context;
     var oldSmooth = ctx.imageSmoothingEnabled;
     var oldAlpha = contents.paintOpacity;
@@ -59,7 +58,7 @@ function drawIconFixed(contents, iconIndex, x, y, scale, alpha) {
 }
 
 //==============================================================
-// ПЕРЕОПРЕДЕЛЕНИЕ drawIcon В Window_GlossaryList (из оригинального плагина)
+// ПЕРЕОПРЕДЕЛЕНИЕ drawIcon В Window_GlossaryList
 //==============================================================
 var _Window_GlossaryList_drawIcon = Window_GlossaryList.prototype.drawIcon;
 Window_GlossaryList.prototype.drawIcon = function(iconIndex, x, y) {
@@ -69,13 +68,23 @@ Window_GlossaryList.prototype.drawIcon = function(iconIndex, x, y) {
 };
 
 //==============================================================
-// ПЕРЕОПРЕДЕЛЕНИЕ drawIcon В Window_Glossary (из оригинального плагина)
+// ПЕРЕОПРЕДЕЛЕНИЕ drawIcon В Window_Glossary
 //==============================================================
 var _Window_Glossary_drawIcon = Window_Glossary.prototype.drawIcon;
 Window_Glossary.prototype.drawIcon = function(iconIndex, x, y) {
     var scale = PluginManager.parameters('SceneGlossary')['IconScale'] || '1.0';
     scale = parseFloat(scale) || 1.0;
     drawIconFixed(this.contents, iconIndex, x, y, scale, 255);
+};
+
+//==============================================================
+// ИНИЦИАЛИЗАЦИЯ ПЕРЕМЕННЫХ ДЛЯ ПЛАВНОГО МИГАНИЯ
+//==============================================================
+const _Window_Glossary_initialize = Window_Glossary.prototype.initialize;
+Window_Glossary.prototype.initialize = function(x, y, width, height) {
+    _Window_Glossary_initialize.call(this, x, y, width, height);
+    this._tabBlinkFrame = 0;       // счётчик кадров анимации
+    this._tabBlinkOpacity = 1;     // текущая прозрачность полоски (0..1)
 };
 
 //==============================================================
@@ -134,7 +143,7 @@ Window_Glossary.prototype.hasSGTabs = function () {
 };
 
 //==============================================================
-// FOOTER ТАБЫ (поддержка простого формата icon)
+// FOOTER ТАБЫ
 //==============================================================
 Window_Glossary.prototype.sgFooterTabs = function () {
     var item = this._itemData;
@@ -228,7 +237,7 @@ Window_Glossary.prototype.contentStartY = function () {
 };
 
 //==============================================================
-// DRAW (защита от рисования чужих страниц)
+// DRAW
 //==============================================================
 const _drawItem = Window_Glossary.prototype.drawItem;
 Window_Glossary.prototype.drawItem = function (index) {
@@ -286,7 +295,7 @@ Window_Glossary.prototype.hideAllArrows = function() {
 const _drawItemSub = Window_Glossary.prototype.drawItemSub;
 Window_Glossary.prototype.drawItemSub = function(bitmap, listIndex, pageIndex) {
     if (this._listIndex !== listIndex || this._pageIndex !== pageIndex) {
-        log('drawItemSub SKIP: index mismatch', 'listIdx', listIndex, 'pageIdx', pageIndex);
+        log('drawItemSub SKIP: index mismatch');
         return;
     }
 
@@ -294,7 +303,6 @@ Window_Glossary.prototype.drawItemSub = function(bitmap, listIndex, pageIndex) {
     var textPos = this.getTextPosition();
     var startY = this.contentStartY();
     var availableH = this.contentAreaHeight();
-    log('drawItemSub listIdx', listIndex, 'pageIdx', pageIndex, 'startY', startY, 'availH', availableH);
 
     var ctx = this.contents._context;
     ctx.save();
@@ -336,7 +344,6 @@ Window_Glossary.prototype.drawItemSub = function(bitmap, listIndex, pageIndex) {
 
 const _drawTextEx = Window_Base.prototype.drawTextEx;
 Window_Glossary.prototype.drawTextEx = function (text, x, y) {
-    log('drawTextEx x', x, 'y', y, 'text:', text.substring(0, 50));
     return _drawTextEx.call(this, text, x, y);
 };
 
@@ -412,7 +419,7 @@ Window_Glossary.prototype.drawFooterSubMenu = function () {
 };
 
 //==============================================================
-// ИКОНКА ТАБА (фикс артефактов + отрисовка)
+// ИКОНКА ТАБА (с плавным миганием подчёркивания)
 //==============================================================
 Window_Glossary.prototype.drawSGTabIcon = function (iconIndex, x, y, active) {
     var size = active ? 52 : 44;
@@ -425,7 +432,6 @@ Window_Glossary.prototype.drawSGTabIcon = function (iconIndex, x, y, active) {
     var sx = (iconIndex % 16) * pw;
     var sy = Math.floor(iconIndex / 16) * ph;
 
-    // Целочисленные координаты
     var dx = Math.floor(x + offset);
     var dy = Math.floor(y + offset);
     var dw = Math.floor(size);
@@ -439,8 +445,10 @@ Window_Glossary.prototype.drawSGTabIcon = function (iconIndex, x, y, active) {
 
     this.contents.blt(bitmap, sx, sy, pw, ph, dx, dy, dw, dh);
 
-    // Подчёркивание активной иконки
+    // Плавно пульсирующая полоска
     if (active) {
+        var blinkAlpha = Math.floor(this._tabBlinkOpacity * 255);
+        this.contents.paintOpacity = blinkAlpha;
         this.contents.fillRect(x, y + 56, 52, 3, this.normalColor());
     }
 
@@ -449,11 +457,36 @@ Window_Glossary.prototype.drawSGTabIcon = function (iconIndex, x, y, active) {
 };
 
 //==============================================================
+// ПЕРЕРИСОВКА ТОЛЬКО ЗОНЫ С ИКОНКАМИ (для анимации)
+//==============================================================
+Window_Glossary.prototype.refreshTabIcons = function() {
+    if (this.hasSGTabs()) {
+        this.contents.clearRect(0, 0, this.contents.width, SG_TABS_HEIGHT + 40);
+        this.drawSGTabs();
+    }
+    if (this.hasFooterTabs() || this._subPages) {
+        var bottomY = this.contents.height - 80;
+        this.contents.clearRect(0, bottomY, this.contents.width, 80);
+        if (this._subPages) {
+            this.drawFooterSubMenu();
+        } else {
+            this.drawFooterTabs();
+        }
+    }
+};
+
+//==============================================================
 // INPUT
 //==============================================================
 const _update = Window_Glossary.prototype.update;
 Window_Glossary.prototype.update = function () {
     _update.call(this);
+
+    // Плавное изменение прозрачности подчёркивания (период ~1 сек)
+    this._tabBlinkFrame++;
+    this._tabBlinkOpacity = 0.5 + 0.5 * Math.cos(this._tabBlinkFrame * 0.08);
+    this.refreshTabIcons();
+
     this.updateSGTabsTouch();
     if (this._subPages) {
         if (Input.isTriggered('left')) {

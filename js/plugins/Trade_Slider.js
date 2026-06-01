@@ -1,6 +1,6 @@
 /*:
- * @plugindesc [v1.8 FIXED] Торговый ползунок поверх карты. Max из переменной. Кастомный заголовок. Корректный switch 65. RPG Maker MV.
- * @author ChatGPT
+ * @plugindesc [v1.8 FIXED + DRAG] Торговый ползунок поверх карты. Max из переменной. Кастомный заголовок. Корректный switch 65. RPG Maker MV.
+ * @author ChatGPT (drag improvement added)
  *
  * @param Price Variable ID
  * @default 141
@@ -109,6 +109,7 @@ function Window_MouseSlider(min, max, step, px, py, iconId, title) {
   this._value = (init >= min && init <= max) ? Math.round(init / step) * step : min;
 
   this._iconId = iconId;
+  this._dragging = false; // <-- NEW: флаг перетаскивания
 
   const w = 400, h = 180;
   const x = px || (Graphics.boxWidth - w) / 2;
@@ -126,20 +127,42 @@ function Window_MouseSlider(min, max, step, px, py, iconId, title) {
 Window_MouseSlider.prototype = Object.create(Window_Base.prototype);
 Window_MouseSlider.prototype.constructor = Window_MouseSlider;
 
+// NEW: обновление значения из координаты мыши (с плавным перетаскиванием)
+Window_MouseSlider.prototype._updateValueFromX = function(mx) {
+  const r = Math.max(0, Math.min(1, (mx - this._sliderX) / this._sliderWidth));
+  let v = this._min + (this._max - this._min) * r;
+  v = Math.max(this._min, Math.min(this._max, Math.round(v / this._step) * this._step));
+  if (v !== this._value) {
+    this._value = v;
+    SoundManager.playCursor();
+    this.refresh();
+  }
+};
+
+// REPLACED: поддержка клика и перетаскивания
 Window_MouseSlider.prototype.update = function () {
   Window_Base.prototype.update.call(this);
+
+  // Начало нажатия (клик или начало перетаскивания)
   if (TouchInput.isTriggered()) {
     const mx = TouchInput.x - this.x - this.padding;
     const my = TouchInput.y - this.y - this.padding;
+    // Увеличенная зона для удобства захвата
+    if (mx >= this._sliderX - 20 && mx <= this._sliderX + this._sliderWidth + 20 &&
+        my >= this._sliderY - 20 && my <= this._sliderY + 40) {
+      this._dragging = true;
+      this._updateValueFromX(mx);
+    }
+  }
 
-    if (mx >= this._sliderX && mx <= this._sliderX + this._sliderWidth &&
-        my >= this._sliderY && my <= this._sliderY + 20) {
-
-      const r = (mx - this._sliderX) / this._sliderWidth;
-      let v = this._min + (this._max - this._min) * r;
-      this._value = Math.max(this._min, Math.min(this._max, Math.round(v / this._step) * this._step));
-      SoundManager.playCursor();
-      this.refresh();
+  // Продолжение перетаскивания
+  if (this._dragging) {
+    if (TouchInput.isPressed()) {
+      const mx = TouchInput.x - this.x - this.padding;
+      this._updateValueFromX(mx);
+    } else {
+      // Кнопка отпущена – конец перетаскивания
+      this._dragging = false;
     }
   }
 };
