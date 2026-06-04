@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v2.7.2 Глоссарий поверх боя (исправлен баг с окном навыков после Esc)
+ * @plugindesc v2.7.10 Глоссарий поверх боя (кнопка скрыта при выборе цели)
  * @author ВашеИмя
  *
  * @param Button Image
@@ -21,7 +21,11 @@
  * Поместите ПОСЛЕ SceneGlossary.js и всех боевых плагинов.
  * Кнопка в бою открывает глоссарий как оверлей.
  * Esc / ПКМ = назад; меню, CTB и MOG-Layouts скрываются.
- * Логи в консоли (F8).
+ * При открытом глоссарии ввод в бой полностью блокируется.
+ * Если активно окно выбора цели (врага или союзника), кнопка
+ * глоссария автоматически скрывается.
+ *
+ * v2.7.10 – кнопка не показывается при выборе цели.
  */
 (function() {
     'use strict';
@@ -44,6 +48,7 @@
         this._savedActiveWindow = null;
         this._savedActiveWindowType = '';
         this._helpWasVisible = false;
+        this._savedPhase = '';
     }
 
     GlossaryOverlay.prototype.show = function(glossaryType) {
@@ -53,6 +58,7 @@
         } else if (!$gameParty._glossarySetting) {
             $gameParty.setSelectedGlossaryType(1);
         }
+        this._savedPhase = BattleManager._phase;
         this._scene._glossaryActive = true;
         this.hideAllBattleWindows();
         this.createWindows();
@@ -71,7 +77,13 @@
         this._scene._glossaryActive = false;
         this.removeGlossaryWindows();
         this.restoreAllBattleWindows();
-        // Принудительно обновить MOG-спрайты после восстановления
+
+        this._scene._glossaryCancelBlock = 10;
+
+        if (this._savedPhase === 'input' && BattleManager._phase !== 'input') {
+            BattleManager._phase = 'input';
+        }
+
         var scene = this._scene;
         if (typeof scene.updateWindowSlideEffect === 'function') {
             scene.updateWindowSlideEffect();
@@ -88,11 +100,9 @@
         var scene = this._scene;
         this._hiddenWindows = [];
 
-        // ---- Сохраняем активное окно (только если оно видимо и активно) ----
         this._savedActiveWindow = null;
         this._savedActiveWindowType = '';
 
-        // Приоритет: окно команды, навыков, предметов, цели
         if (scene._actorCommandWindow && scene._actorCommandWindow.active && scene._actorCommandWindow.visible) {
             this._savedActiveWindow = scene._actorCommandWindow;
             this._savedActiveWindowType = 'command';
@@ -117,10 +127,8 @@
             }
         }
 
-        // Запоминаем, было ли видимо окно помощи
         this._helpWasVisible = scene._helpWindow && scene._helpWindow.visible;
 
-        // Скрываем все видимые окна
         var windows = scene._windows;
         if (windows) {
             for (var i = 0; i < windows.length; i++) {
@@ -129,11 +137,14 @@
                 if (win.visible) {
                     this._hiddenWindows.push(win);
                     win.visible = false;
+                    if (typeof win.deactivate === 'function') {
+                        win.deactivate();
+                    }
+                    win.active = false;
                 }
             }
         }
 
-        // CTB иконки
         if (scene.children) {
             for (var j = 0; j < scene.children.length; j++) {
                 var child = scene.children[j];
@@ -142,6 +153,10 @@
                     if (child.visible) {
                         this._hiddenWindows.push(child);
                         child.visible = false;
+                        if (typeof child.deactivate === 'function') {
+                            child.deactivate();
+                        }
+                        child.active = false;
                     }
                 }
             }
@@ -150,27 +165,22 @@
 
     GlossaryOverlay.prototype.restoreAllBattleWindows = function() {
         var scene = this._scene;
-        // Показываем всё обратно
         this._hiddenWindows.forEach(function(win) {
             win.visible = true;
         });
         this._hiddenWindows = [];
 
-        // Сброс HUD позиции
         if ($gameTemp._bhud_position_active !== undefined) {
             $gameTemp._bhud_position_active = null;
         }
-        // Сброс флага вражеского хода (чтобы HUD поднялся)
         if ($gameTemp._bhud_enemyTurn !== undefined) {
             $gameTemp._bhud_enemyTurn = false;
         }
 
-        // Восстанавливаем видимость окна помощи
         if (this._helpWasVisible && scene._helpWindow) {
             scene._helpWindow.visible = true;
         }
 
-        // Восстанавливаем активное окно
         if (this._savedActiveWindow && this._savedActiveWindowType) {
             switch (this._savedActiveWindowType) {
                 case 'skill':
@@ -218,7 +228,6 @@
                     break;
             }
         } else {
-            // Если не было сохранено активное окно – восстанавливаем стандартное
             if (BattleManager.isInputting()) {
                 if (scene._actorCommandWindow) {
                     scene._actorCommandWindow.visible = true;
@@ -232,7 +241,6 @@
             }
         }
 
-        // Принудительно скрываем окно навыков/предметов, если они не были активны до глоссария
         if (this._savedActiveWindowType !== 'skill' && scene._skillWindow) {
             scene._skillWindow.visible = false;
             scene._skillWindow.deactivate();
@@ -242,13 +250,11 @@
             scene._itemWindow.deactivate();
         }
 
-        // Обновляем HUD и layout-спрайты MOG
         if (typeof scene.updateBattleHud === 'function') {
             scene.updateBattleHud();
         }
     };
 
-    // --- остальные методы GlossaryOverlay (createWindows, removeGlossaryWindows, навигация) без изменений ---
     GlossaryOverlay.prototype.createWindows = function() {
         var scene = this._scene;
         var listWidth = $gameParty.getGlossaryListWidth();
@@ -355,11 +361,15 @@
     };
 
     //=====================================================================
-    // Перехват Cancel и интеграция в сцену
+    // Перехват Cancel и мыши/Touch
     //=====================================================================
+
     var _Window_Selectable_processCancel = Window_Selectable.prototype.processCancel;
     Window_Selectable.prototype.processCancel = function() {
         var battle = SceneManager._scene;
+        if (battle instanceof Scene_Battle && battle._glossaryCancelBlock > 0) {
+            return;
+        }
         if (battle instanceof Scene_Battle && battle._glossaryOverlay && battle._glossaryOverlay._active) {
             if (this._glossaryOverlayWindow) {
                 _Window_Selectable_processCancel.call(this);
@@ -369,8 +379,20 @@
         _Window_Selectable_processCancel.call(this);
     };
 
+    var _Window_Selectable_processTouch = Window_Selectable.prototype.processTouch;
+    Window_Selectable.prototype.processTouch = function() {
+        var battle = SceneManager._scene;
+        if (battle instanceof Scene_Battle && battle._glossaryActive && !this._glossaryOverlayWindow) {
+            return false;
+        }
+        return _Window_Selectable_processTouch.call(this);
+    };
+
     var _Scene_Battle_commandCancel = Scene_Battle.prototype.commandCancel;
     Scene_Battle.prototype.commandCancel = function() {
+        if (this._glossaryCancelBlock > 0) {
+            return;
+        }
         if (this._glossaryOverlay && this._glossaryOverlay._active) {
             var overlay = this._glossaryOverlay;
             var list = overlay._windows.list;
@@ -389,6 +411,8 @@
     Scene_Battle.prototype.createSpriteset = function() {
         _Scene_Battle_createSpriteset.call(this);
         this.createGlossaryButton();
+        this._glossaryCancelBlock = 0;
+        this._glossaryActive = false;
     };
 
     Scene_Battle.prototype.createGlossaryButton = function() {
@@ -413,8 +437,10 @@
     var _Scene_Battle_update = Scene_Battle.prototype.update;
     Scene_Battle.prototype.update = function() {
         _Scene_Battle_update.call(this);
+        if (this._glossaryCancelBlock > 0) {
+            this._glossaryCancelBlock--;
+        }
         this.updateGlossaryButton();
-
         if (this._glossaryActive) {
             this.hideCTBWindows();
             this.hideAllOverlaySprites();
@@ -434,13 +460,30 @@
         }
     };
 
+    // Единственное существенное изменение – здесь
     Scene_Battle.prototype.updateGlossaryButton = function() {
         if (!this._glossaryBtn || !$gameParty.inBattle()) return;
         if (!this._glossaryBtn.bitmap.isReady()) return;
+
         var overlayActive = this._glossaryOverlay && this._glossaryOverlay._active;
-        var canUse = BattleManager.isInputting() && !$gameMessage.isBusy() && !overlayActive;
+
+        // Проверка, что никакое окно выбора цели не активно
+        var targetWindowActive = false;
+        if (this._actorWindow && this._actorWindow.active && this._actorWindow.visible) {
+            targetWindowActive = true;
+        }
+        if (this._enemyWindow && this._enemyWindow.active && this._enemyWindow.visible) {
+            targetWindowActive = true;
+        }
+
+        var canUse = BattleManager.isInputting() &&
+                     !$gameMessage.isBusy() &&
+                     !overlayActive &&
+                     !targetWindowActive;   // <-- вот ключевая проверка
+
         this._glossaryBtn.visible = canUse;
         if (!canUse) return;
+
         var s = this._glossaryBtn;
         var bx = s.x - s.width / 2;
         var by = s.y - s.height / 2;
@@ -475,7 +518,6 @@
         return _Scene_Battle_isAnyInputWindowActive.call(this);
     };
 
-    // Лог выбора навыка
     if (typeof Window_BattleSkill !== 'undefined') {
         var _Window_BattleSkill_processOk = Window_BattleSkill.prototype.processOk;
         Window_BattleSkill.prototype.processOk = function() {
