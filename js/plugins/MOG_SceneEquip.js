@@ -220,7 +220,7 @@
  * - Исправлен цвет названий предметов в слотах (белый).
  * - Настраиваемый заголовок "Equipment" (текст, размер, позиция).
  * - Настройки позиции лица и имени персонажа в окне статуса.
- * - В пустом слоте доступных предметов отображается надпись "снять".
+ * - Надпись "Снять" по центру, только если слот не пуст (оружие снять нельзя).
  */
 
 var Imported = Imported || {};
@@ -461,7 +461,6 @@ Window_EquipSlot.prototype.slotIconId = function(index) {
         var wtypeId = item.wtypeId;
         return Moghunter.scEquip_WeaponTypeIcons[wtypeId] || Moghunter.scEquip_SlotIcons[0];
     } else {
-        // ИСПРАВЛЕНО: заменён несуществующий метод equippableWeaponTypes на equipWeaponTypes
         var types = this._actor.equipWeaponTypes();
         for (var i = 0; i < types.length; i++) {
             var icon = Moghunter.scEquip_WeaponTypeIcons[types[i]];
@@ -630,8 +629,7 @@ Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
     }
 };
 
-// Модификация: в пустом слоте выводим "снять"
-var _mog_scEquip_WindowEquipItem_drawItem = Window_EquipItem.prototype.drawItem;
+// Отображение надписи "Снять" по центру для пустого элемента (если он присутствует)
 Window_EquipItem.prototype.drawItem = function(index) {
     if (this._actor) {
         var rect = this.itemRectForText(index);
@@ -642,9 +640,24 @@ Window_EquipItem.prototype.drawItem = function(index) {
             this.drawItemName(item, rect.x, rect.y, rect.width);
         } else {
             this.changeTextColor(this.normalColor());
-            this.drawText('снять', rect.x, rect.y, rect.width);
+            this.drawText('Снять', rect.x, rect.y, rect.width, 'center');
         }
         this.changePaintOpacity(true);
+    }
+};
+
+// Управление наличием опции "Снять"
+var _mog_WindowEquipItem_makeItemList = Window_EquipItem.prototype.makeItemList;
+Window_EquipItem.prototype.makeItemList = function() {
+    _mog_WindowEquipItem_makeItemList.call(this);
+    // Для оружия (slot 0) опцию "Снять" не показываем никогда
+    if (this._slotId === 0) {
+        this._data = this._data.filter(function(item) { return item !== null; });
+    } else {
+        // Для остальных слотов: если слот пуст, убираем null (нечего снимать)
+        if (!this._actor.equips()[this._slotId]) {
+            this._data = this._data.filter(function(item) { return item !== null; });
+        }
     }
 };
 
