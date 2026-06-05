@@ -220,6 +220,7 @@
  * - Исправлен цвет названий предметов в слотах (белый).
  * - Настраиваемый заголовок "Equipment" (текст, размер, позиция).
  * - Настройки позиции лица и имени персонажа в окне статуса.
+ * - В пустом слоте доступных предметов отображается надпись "снять".
  */
 
 var Imported = Imported || {};
@@ -460,7 +461,8 @@ Window_EquipSlot.prototype.slotIconId = function(index) {
         var wtypeId = item.wtypeId;
         return Moghunter.scEquip_WeaponTypeIcons[wtypeId] || Moghunter.scEquip_SlotIcons[0];
     } else {
-        var types = this._actor.equippableWeaponTypes();
+        // ИСПРАВЛЕНО: заменён несуществующий метод equippableWeaponTypes на equipWeaponTypes
+        var types = this._actor.equipWeaponTypes();
         for (var i = 0; i < types.length; i++) {
             var icon = Moghunter.scEquip_WeaponTypeIcons[types[i]];
             if (icon > 0) return icon;
@@ -625,6 +627,24 @@ Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
         this.drawText(item.name, x + pw + 8, y, width - pw - 8);
     } else {
         this.drawText("", x, y, width);
+    }
+};
+
+// Модификация: в пустом слоте выводим "снять"
+var _mog_scEquip_WindowEquipItem_drawItem = Window_EquipItem.prototype.drawItem;
+Window_EquipItem.prototype.drawItem = function(index) {
+    if (this._actor) {
+        var rect = this.itemRectForText(index);
+        this.resetTextColor();
+        this.changePaintOpacity(this.isEnabled(index));
+        var item = this._data && this._data[index] ? this._data[index] : null;
+        if (item) {
+            this.drawItemName(item, rect.x, rect.y, rect.width);
+        } else {
+            this.changeTextColor(this.normalColor());
+            this.drawText('снять', rect.x, rect.y, rect.width);
+        }
+        this.changePaintOpacity(true);
     }
 };
 
