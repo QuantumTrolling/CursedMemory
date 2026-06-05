@@ -4305,3 +4305,5 @@ Window_BattleEnemy.prototype.getEnemyLetter = function(battler) {
     var indexAmong = enemies.indexOf(battler);
     return String.fromCharCode(65 + indexAmong); // 65 = 'A'
 };
+
+

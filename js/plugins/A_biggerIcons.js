@@ -31,6 +31,8 @@
 
     // --- Функция для определения размера иконки в текущем окне и контексте ---
     function getIconSize(window) {
+        // Окно описания (Window_Help / Window_BattleHelp) всегда с маленькой иконкой
+        if (window instanceof Window_Help) return 32;
         var isBattle = SceneManager._scene instanceof Scene_Battle;
         return (isBattle && !isTargetWindow(window) && !isWeaknessWindow(window)) ? 64 : 32;
     }
@@ -77,33 +79,33 @@
     }
 
     if (Window_BattleSkill.prototype.itemRect) {
-		Window_BattleSkill.prototype.itemRect = function(index) {
-			var rect = new Rectangle();
+        Window_BattleSkill.prototype.itemRect = function(index) {
+            var rect = new Rectangle();
 
-			var cols = this.maxCols();
-			var iconSize = this.itemWidth();
-			var itemH = this.itemHeight();
-			var innerWidth = this.contentsWidth();
+            var cols = this.maxCols();
+            var iconSize = this.itemWidth();
+            var itemH = this.itemHeight();
+            var innerWidth = this.contentsWidth();
 
-			var gap = 0;
-			if (cols > 1) {
-				gap = Math.floor((innerWidth - cols * iconSize) / (cols + 1));
-			} else {
-				gap = Math.floor((innerWidth - iconSize) / 2);
-			}
+            var gap = 0;
+            if (cols > 1) {
+                gap = Math.floor((innerWidth - cols * iconSize) / (cols + 1));
+            } else {
+                gap = Math.floor((innerWidth - iconSize) / 2);
+            }
 
-			var col = index % cols;
-			var row = Math.floor(index / cols);
+            var col = index % cols;
+            var row = Math.floor(index / cols);
 
-			rect.x = gap + col * (iconSize + gap);
-			rect.y = row * itemH + 2; // отступ сверху 2 пикселя
-			rect.width = iconSize;
+            rect.x = gap + col * (iconSize + gap);
+            rect.y = row * itemH + 2; // отступ сверху 2 пикселя
+            rect.width = iconSize;
 
-			// *** ИЗМЕНЕНИЕ ЗДЕСЬ ***
-			rect.height = iconSize; // запас для рамки, текст остаётся вне выделения
+            // *** ИЗМЕНЕНИЕ ЗДЕСЬ ***
+            rect.height = iconSize; // запас для рамки, текст остаётся вне выделения
 
-			return rect;
-		};
+            return rect;
+        };
     }
 
     if (Window_BattleSkill.prototype.drawItemName) {
@@ -217,60 +219,60 @@
         };
     }
 
-	// ========== ИСПРАВЛЕНИЕ КУРСОРА: ПОВЕРХ И РОВНО ПОД ИКОНКУ ==========
+    // ========== ИСПРАВЛЕНИЕ КУРСОРА: ПОВЕРХ И РОВНО ПОД ИКОНКУ ==========
 
-	// 1. Меняем порядок слоёв в окнах навыков и предметов, чтобы курсор был над содержимым
-	var _Window_BattleSkill_initialize = Window_BattleSkill.prototype.initialize;
-	Window_BattleSkill.prototype.initialize = function(rect) {
-		_Window_BattleSkill_initialize.call(this, rect);
-		// Перемещаем курсор выше содержимого
-		var cursorIndex = this.getChildIndex(this._windowCursorSprite);
-		var contentsIndex = this.getChildIndex(this._windowContentsSprite);
-		if (cursorIndex < contentsIndex) {
-			this.setChildIndex(this._windowCursorSprite, contentsIndex);
-		}
-	};
+    // 1. Меняем порядок слоёв в окнах навыков и предметов, чтобы курсор был над содержимым
+    var _Window_BattleSkill_initialize = Window_BattleSkill.prototype.initialize;
+    Window_BattleSkill.prototype.initialize = function(rect) {
+        _Window_BattleSkill_initialize.call(this, rect);
+        // Перемещаем курсор выше содержимого
+        var cursorIndex = this.getChildIndex(this._windowCursorSprite);
+        var contentsIndex = this.getChildIndex(this._windowContentsSprite);
+        if (cursorIndex < contentsIndex) {
+            this.setChildIndex(this._windowCursorSprite, contentsIndex);
+        }
+    };
 
-	var _Window_BattleItem_initialize = Window_BattleItem.prototype.initialize;
-	Window_BattleItem.prototype.initialize = function(rect) {
-		_Window_BattleItem_initialize.call(this, rect);
-		var cursorIndex = this.getChildIndex(this._windowCursorSprite);
-		var contentsIndex = this.getChildIndex(this._windowContentsSprite);
-		if (cursorIndex < contentsIndex) {
-			this.setChildIndex(this._windowCursorSprite, contentsIndex);
-		}
-	};
+    var _Window_BattleItem_initialize = Window_BattleItem.prototype.initialize;
+    Window_BattleItem.prototype.initialize = function(rect) {
+        _Window_BattleItem_initialize.call(this, rect);
+        var cursorIndex = this.getChildIndex(this._windowCursorSprite);
+        var contentsIndex = this.getChildIndex(this._windowContentsSprite);
+        if (cursorIndex < contentsIndex) {
+            this.setChildIndex(this._windowCursorSprite, contentsIndex);
+        }
+    };
 
-	// 2. Задаём точные размеры и позицию курсора (64x64, по координатам иконки)
-	Window_BattleSkill.prototype.cursorWidth = function() {
-		return 30;
-	};
-	Window_BattleSkill.prototype.cursorHeight = function() {
-		return 30;
-	};
-	Window_BattleSkill.prototype.cursorX = function() {
-		var rect = this.itemRect(this.index());
-		return rect.x;
-	};
-	Window_BattleSkill.prototype.cursorY = function() {
-		var rect = this.itemRect(this.index());
-		return rect.y;
-	};
+    // 2. Задаём точные размеры и позицию курсора (64x64, по координатам иконки)
+    Window_BattleSkill.prototype.cursorWidth = function() {
+        return 30;
+    };
+    Window_BattleSkill.prototype.cursorHeight = function() {
+        return 30;
+    };
+    Window_BattleSkill.prototype.cursorX = function() {
+        var rect = this.itemRect(this.index());
+        return rect.x;
+    };
+    Window_BattleSkill.prototype.cursorY = function() {
+        var rect = this.itemRect(this.index());
+        return rect.y;
+    };
 
-	Window_BattleItem.prototype.cursorWidth = function() {
-		return 30;
-	};
-	Window_BattleItem.prototype.cursorHeight = function() {
-		return 30;
-	};
-	Window_BattleItem.prototype.cursorX = function() {
-		var rect = this.itemRect(this.index());
-		return rect.x;
-	};
-	Window_BattleItem.prototype.cursorY = function() {
-		var rect = this.itemRect(this.index());
-		return rect.y;
-	};
+    Window_BattleItem.prototype.cursorWidth = function() {
+        return 30;
+    };
+    Window_BattleItem.prototype.cursorHeight = function() {
+        return 30;
+    };
+    Window_BattleItem.prototype.cursorX = function() {
+        var rect = this.itemRect(this.index());
+        return rect.x;
+    };
+    Window_BattleItem.prototype.cursorY = function() {
+        var rect = this.itemRect(this.index());
+        return rect.y;
+    };
 
     // ========== СПЕЦИАЛЬНАЯ ОБРАБОТКА ДЛЯ ЩИТА (Olivia OctoBattle) ==========
     if (typeof Window_WeaknessDisplay !== 'undefined' && 
