@@ -163,6 +163,16 @@
  * @text SE при покупке
  * @desc Имя файла SE (без расширения), воспроизводимого при успешной покупке. Оставьте пустым для стандартного звука Shop.
  * @default Shop
+ *
+ * ============================
+ * КОМАНДЫ ПЛАГИНА
+ * ============================
+ * FixShopBG [имя_файла]
+ *   Устанавливает фон магазина (без расширения). Если не указан, сбрасывает на стандартный.
+ * FixShopTrader [имя_персонажа]
+ *   Устанавливает торговца (имя из VW-системы). Если не указан, сбрасывает на стандартного.
+ * FixShopTraderPos [X] [Y]
+ *   Устанавливает координаты торговца (X и Y). Если значения не указаны или некорректны, сбрасывает на стандартные.
  */
 
 var Imported = Imported || {};
@@ -207,6 +217,39 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     var coinIconIndex = params.coinIcon !== 0 ? params.coinIcon : ($dataSystem ? $dataSystem.currencyIcon || 313 : 313);
+
+    // Инициализация переменных сохранения при новой игре
+    var _DataManager_createGameObjects = DataManager.createGameObjects;
+    DataManager.createGameObjects = function() {
+        _DataManager_createGameObjects.call(this);
+        $gameSystem._shopBG = params.bgDefault;
+        $gameSystem._shopTrader = params.traderDefault;
+        $gameSystem._shopTraderX = params.traderX;
+        $gameSystem._shopTraderY = params.traderY;
+    };
+
+    // Обработка плагинных команд
+    var _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
+    Game_Interpreter.prototype.pluginCommand = function(command, args) {
+        _Game_Interpreter_pluginCommand.call(this, command, args);
+        if (command === 'FixShopBG') {
+            var bgName = args[0] && args[0].trim() ? args[0] : params.bgDefault;
+            $gameSystem._shopBG = bgName;
+        } else if (command === 'FixShopTrader') {
+            var traderName = args[0] && args[0].trim() ? args[0] : params.traderDefault;
+            $gameSystem._shopTrader = traderName;
+        } else if (command === 'FixShopTraderPos') {
+            // Если переданы два аргумента и оба являются числами, записываем их.
+            // Иначе сбрасываем на стандартные координаты.
+            if (args.length >= 2 && !isNaN(Number(args[0])) && !isNaN(Number(args[1]))) {
+                $gameSystem._shopTraderX = Number(args[0]);
+                $gameSystem._shopTraderY = Number(args[1]);
+            } else {
+                $gameSystem._shopTraderX = params.traderX;
+                $gameSystem._shopTraderY = params.traderY;
+            }
+        }
+    };
 
     //=============================================================================
     // Window_ShopItemName
@@ -669,7 +712,7 @@ if (!Imported.YEP_ShopMenuCore) {
     var _Scene_Shop_create = Scene_Shop.prototype.create;
     Scene_Shop.prototype.create = function() {
         this._vwStorage = {};
-        this._popups = []; // массив всплывающих подсказок
+        this._popups = [];
         _Scene_Shop_create.call(this);
 
         if (this._statusWindow) { this._statusWindow.hide(); this._statusWindow.visible = false; }
@@ -697,11 +740,10 @@ if (!Imported.YEP_ShopMenuCore) {
     var _Scene_Shop_update = Scene_Shop.prototype.update;
     Scene_Shop.prototype.update = function() {
         _Scene_Shop_update.call(this);
-        // обновляем всплывающие подписи
         if (this._popups) {
             for (var i = this._popups.length - 1; i >= 0; i--) {
                 var p = this._popups[i];
-                p.y -= 1; // скорость подъёма
+                p.y -= 1;
                 p._life--;
                 p.opacity = Math.max(0, Math.floor(p._life / 60 * 255));
                 if (p._life <= 0) {
@@ -733,7 +775,11 @@ if (!Imported.YEP_ShopMenuCore) {
         if (!traderName) return;
         var vm = new VWSprite(traderName);
         vm.setLoop(); vm.create();
-        vm.x = params.traderX; vm.y = params.traderY;
+        // Используем сохранённые координаты, если доступны, иначе из параметров
+        var tx = ($gameSystem._shopTraderX !== undefined) ? $gameSystem._shopTraderX : params.traderX;
+        var ty = ($gameSystem._shopTraderY !== undefined) ? $gameSystem._shopTraderY : params.traderY;
+        vm.x = tx;
+        vm.y = ty;
         this.addChildAt(vm, 2);
         this._vwStorage['shopTrader'] = vm;
     };
@@ -852,7 +898,6 @@ if (!Imported.YEP_ShopMenuCore) {
         _Scene_Shop_terminate.call(this);
     };
 
-    // Показываем всплывающую надпись "+Название предмета"
     Scene_Shop.prototype.showBuyPopup = function(itemName) {
         var popup = new Sprite();
         var bitmap = new Bitmap(400, 48);
@@ -864,7 +909,7 @@ if (!Imported.YEP_ShopMenuCore) {
         popup.bitmap = bitmap;
         popup.x = (Graphics.boxWidth - 400) / 2;
         popup.y = Graphics.boxHeight / 2 - 24;
-        popup._life = 60; // кадры жизни
+        popup._life = 60;
         this.addChild(popup);
         this._popups.push(popup);
     };
@@ -874,7 +919,6 @@ if (!Imported.YEP_ShopMenuCore) {
         if (item) {
             var price = this._buyWindow.price(item);
             if ($gameParty.gold() >= price) {
-                // Воспроизводим SE (пользовательский или стандартный Shop)
                 if (params.buySe && params.buySe.trim() !== '') {
                     AudioManager.playSe({ name: params.buySe, volume: 90, pitch: 100, pan: 0 });
                 } else {
@@ -890,7 +934,6 @@ if (!Imported.YEP_ShopMenuCore) {
                 this.updateActionEnabled();
                 this._buyWindow.activate();
 
-                // Показываем всплывающую надпись
                 this.showBuyPopup(item.name);
             } else {
                 SoundManager.playBuzzer();
