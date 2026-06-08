@@ -1,84 +1,101 @@
 /*:
- * @plugindesc Состояния: динамические бонусы от параметров и HP
+ * @plugindesc Состояния: динамические бонусы от параметров, HP и щита
  * @author Помощник
  *
  * @help
+ * ============================================================================
  * Примеры тегов:
+ * ============================================================================
  *
- * <MAT Bonus from DEF: 50%>
- * <LUK Bonus from ATK: 30%>
+ * 1. Плоская прибавка:
+ *    <DEF Bonus from Current Shield: 10%>
+ *    <MAT Bonus from DEF: 50%>
  *
- * <AGI Bonus from Missing HP: 5%>
- * <DEF Bonus from Missing HP: 10%>
+ * 2. Процент от базового параметра за каждую единицу источника:
+ *    <DEF Bonus per Shield: 10%>
+ *    <ATK Bonus per Missing HP: 2%>
+ *    <MAT Bonus per Current HP: 1%>
  *
- * <AGI Bonus from Current HP: 2%>
- * <LUK Bonus from Current HP: 1%>
- *
- * Поддержка:
- * MAT, ATK, DEF, AGI, LUK
+ * ============================================================================
  * Источники:
- * ATK, DEF, MAT, AGI, LUK, Current HP, Missing HP
+ * ATK, DEF, MAT, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
+ * ============================================================================
  */
 
 (function() {
 
     const PARAM_MAP = {
-        MHP: 0,
-        MMP: 1,
-        ATK: 2,
-        DEF: 3,
-        MAT: 4,
-        MDF: 5,
-        AGI: 6,
-        LUK: 7
+        MHP: 0, MMP: 1, ATK: 2, DEF: 3, MAT: 4, MDF: 5, AGI: 6, LUK: 7
     };
 
     const _Game_BattlerBase_param = Game_BattlerBase.prototype.param;
 
     Game_BattlerBase.prototype.param = function(paramId) {
-        let baseValue = _Game_BattlerBase_param.call(this, paramId);
-        let value = baseValue;
-
+        const baseValue = _Game_BattlerBase_param.call(this, paramId);
         const states = this.states();
-        if (!states) return value;
+        if (!states) return baseValue;
+
+        let bonusFlat = 0;
+        let bonusPercent = 0;
 
         for (let i = 0; i < states.length; i++) {
             const note = states[i].note;
 
-            const regex = /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
-            let match;
-
-            while ((match = regex.exec(note)) !== null) {
-                let target = match[1].toUpperCase();
-                let source = match[2].toUpperCase();
-                let mult = parseFloat(match[3]);
-
-                if (match[0].includes('%')) mult /= 100;
-
+            // Старый тег: <PARAM Bonus from SOURCE: X%>
+            const regexFlat = /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+            let matchFlat;
+            while ((matchFlat = regexFlat.exec(note)) !== null) {
+                const target = matchFlat[1].toUpperCase();
+                const source = matchFlat[2].toUpperCase().trim();
+                let mult = parseFloat(matchFlat[3]);
+                if (matchFlat[0].includes('%')) mult /= 100;
                 if (PARAM_MAP[target] !== paramId) continue;
+                bonusFlat += Math.floor(this.getSourceValue(source) * mult);
+            }
 
-                let sourceValue = 0;
-
-                // 📌 Источник = параметр
-                if (PARAM_MAP[source] !== undefined) {
-                    sourceValue = _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
-                }
-
-                // 📌 Текущий HP
-                else if (source === "CURRENT HP") {
-                    sourceValue = this.hp || 0;
-                }
-
-                // 📌 Недостающее HP
-                else if (source === "MISSING HP") {
-                    sourceValue = (this.mhp || 0) - (this.hp || 0);
-                }
-
-                value += Math.floor(sourceValue * mult);
+            // Новый тег: <PARAM Bonus per SOURCE: X%>
+            const regexPer = /<(\w+)[ _]?BONUS[ _]?PER[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+            let matchPer;
+            while ((matchPer = regexPer.exec(note)) !== null) {
+                const target = matchPer[1].toUpperCase();
+                const source = matchPer[2].toUpperCase().trim();
+                let mult = parseFloat(matchPer[3]);
+                if (matchPer[0].includes('%')) mult /= 100;
+                if (PARAM_MAP[target] !== paramId) continue;
+                // Для per-бонуса: baseValue * (процент * величина_источника)
+                bonusPercent += mult * this.getSourceValue(source);
             }
         }
 
-        return value;
+        return baseValue + Math.floor(baseValue * bonusPercent) + bonusFlat;
+    };
+
+    // Вспомогательный метод: получить числовое значение источника
+    Game_BattlerBase.prototype.getSourceValue = function(source) {
+        // Базовые параметры
+        if (PARAM_MAP[source] !== undefined) {
+            return _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
+        }
+
+        // Текущее HP
+        if (source === "CURRENT HP") {
+            return this.hp || 0;
+        }
+
+        // Недостающее HP
+        if (source === "MISSING HP") {
+            return (this.mhp || 0) - (this.hp || 0);
+        }
+
+        // Текущий запас щита (Break Shield) – работает и с "CURRENT SHIELD", и с "SHIELD"
+        if (source === "CURRENT SHIELD" || source === "SHIELD") {
+            if (typeof this.currentBreakShield === 'function') {
+                return this.currentBreakShield();
+            }
+            return 0;
+        }
+
+        return 0;
     };
 
 })();
