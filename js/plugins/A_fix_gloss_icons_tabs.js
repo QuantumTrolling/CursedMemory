@@ -15,7 +15,7 @@
 (function () {
 'use strict';
 
-const SG_TABS_HEIGHT = 170;
+const SG_TABS_HEIGHT = 50;
 const HITBOX_PADDING = 12;
 const DEBUG = false;
 
