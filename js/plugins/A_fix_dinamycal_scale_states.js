@@ -25,73 +25,128 @@
 (function() {
 
     const PARAM_MAP = {
-        MHP: 0, MMP: 1, ATK: 2, DEF: 3, MAT: 4, MDF: 5, AGI: 6, LUK: 7
+        MHP: 0,
+        MMP: 1,
+        ATK: 2,
+        DEF: 3,
+        MAT: 4,
+        MDF: 5,
+        AGI: 6,
+        LUK: 7
     };
 
     const _Game_BattlerBase_param = Game_BattlerBase.prototype.param;
 
     Game_BattlerBase.prototype.param = function(paramId) {
         const baseValue = _Game_BattlerBase_param.call(this, paramId);
+
         const states = this.states();
-        if (!states) return baseValue;
+        if (!states || states.length === 0) {
+            return baseValue;
+        }
 
         let bonusFlat = 0;
         let bonusPercent = 0;
 
         for (let i = 0; i < states.length; i++) {
-            const note = states[i].note;
+            const note = states[i].note || "";
 
-            // Старый тег: <PARAM Bonus from SOURCE: X%>
-            const regexFlat = /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+            // <PARAM Bonus from SOURCE: X%>
+            const regexFlat =
+                /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+
             let matchFlat;
             while ((matchFlat = regexFlat.exec(note)) !== null) {
+
                 const target = matchFlat[1].toUpperCase();
                 const source = matchFlat[2].toUpperCase().trim();
+
                 let mult = parseFloat(matchFlat[3]);
-                if (matchFlat[0].includes('%')) mult /= 100;
-                if (PARAM_MAP[target] !== paramId) continue;
-                bonusFlat += Math.floor(this.getSourceValue(source) * mult);
+
+                if (matchFlat[0].includes('%')) {
+                    mult /= 100;
+                }
+
+                if (PARAM_MAP[target] !== paramId) {
+                    continue;
+                }
+
+                bonusFlat += Math.floor(
+                    this.getSourceValue(source) * mult
+                );
             }
 
-            // Новый тег: <PARAM Bonus per SOURCE: X%>
-            const regexPer = /<(\w+)[ _]?BONUS[ _]?PER[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+            // <PARAM Bonus per SOURCE: X%>
+            const regexPer =
+                /<(\w+)[ _]?BONUS[ _]?PER[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+
             let matchPer;
             while ((matchPer = regexPer.exec(note)) !== null) {
+
                 const target = matchPer[1].toUpperCase();
                 const source = matchPer[2].toUpperCase().trim();
+
                 let mult = parseFloat(matchPer[3]);
-                if (matchPer[0].includes('%')) mult /= 100;
-                if (PARAM_MAP[target] !== paramId) continue;
-                // Для per-бонуса: baseValue * (процент * величина_источника)
+
+                if (matchPer[0].includes('%')) {
+                    mult /= 100;
+                }
+
+                if (PARAM_MAP[target] !== paramId) {
+                    continue;
+                }
+
                 bonusPercent += mult * this.getSourceValue(source);
             }
         }
 
-        return baseValue + Math.floor(baseValue * bonusPercent) + bonusFlat;
+        return (
+            baseValue +
+            Math.floor(baseValue * bonusPercent) +
+            bonusFlat
+        );
     };
 
-    // Вспомогательный метод: получить числовое значение источника
     Game_BattlerBase.prototype.getSourceValue = function(source) {
-        // Базовые параметры
+
+        // Параметры
         if (PARAM_MAP[source] !== undefined) {
             return _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
         }
 
-        // Текущее HP
+        // Current HP
         if (source === "CURRENT HP") {
             return this.hp || 0;
         }
 
-        // Недостающее HP
+        // Missing HP
         if (source === "MISSING HP") {
             return (this.mhp || 0) - (this.hp || 0);
         }
 
-        // Текущий запас щита (Break Shield) – работает и с "CURRENT SHIELD", и с "SHIELD"
+        // Shield / Current Shield
         if (source === "CURRENT SHIELD" || source === "SHIELD") {
-            if (typeof this.currentBreakShield === 'function') {
+
+            // Olivia Octo Battle:
+            // во время Break считаем щиты равными 0
+            if (typeof this.isStateAffected === "function") {
+
+                const breakStateId =
+                    Olivia &&
+                    Olivia.OctoBattle &&
+                    Olivia.OctoBattle.BreakShield ?
+                    Olivia.OctoBattle.BreakShield.StunStateId :
+                    4;
+
+                if (this.isStateAffected(breakStateId)) {
+                    return 0;
+                }
+            }
+
+            if (typeof this.currentBreakShield === "function") {
                 return this.currentBreakShield();
             }
+
             return 0;
         }
 

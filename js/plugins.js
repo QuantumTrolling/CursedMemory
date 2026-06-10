@@ -149,7 +149,7 @@ var $plugins =
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
 {"name":"A_glossary_inbattle_fix","status":false,"description":"v2.0 Глоссарий поверх боя (исправление кнопки).","parameters":{}},
 {"name":"A_fix_state_tp_cost","status":true,"description":"Состояние-множитель стоимости TP","parameters":{}},
-{"name":"A_fix_dinamycal_scale_states","status":true,"description":"Состояние: бонус MAT от DEF","parameters":{}},
+{"name":"A_fix_dinamycal_scale_states","status":true,"description":"Состояния: динамические бонусы от параметров, HP и щита","parameters":{}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
 {"name":"A_fix_shops","status":true,"description":"Магазин с настраиваемыми колонками и скроллом","parameters":{"bgDefault":"fon_taverna","traderDefault":"velrand_with_bag","traderX":"480","traderY":"60","coinIcon":"313\r","listX":"-15","listY":"15","listWidth":"600","listHeight":"500","listColumns":"4","listMaxRows":"3","listFontSize":"18\r","descX":"3","descY":"495","descWidth":"1275","descHeight":"225","descFontSize":"24","descLines":"6","buyBtnX":"380","buyBtnY":"426","nameX":"0","nameY":"425","nameWidth":"380","goldY":"0","fillMode":"row","buySe":"coins"}},
 {"name":"A_fix_gloss_icons_tabs","status":true,"description":"","parameters":{}},
