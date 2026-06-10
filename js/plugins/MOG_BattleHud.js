@@ -4257,13 +4257,21 @@ Window_BattleEnemy.prototype.update = function() {
 };
 
 // ==============================
-// * Auto-skip target selection for All Enemies
+// * Auto-skip target selection for All (Enemies + Allies)
 // ==============================
 var _mog_bhud_needsSelection = Game_Action.prototype.needsSelection;
 Game_Action.prototype.needsSelection = function() {
+    // Действие направлено на всех противников
     if (this.isForOpponent() && this.isForAll()) {
-        return false; // действие на всех противников — не требует выбора цели
+        return false;
     }
+    // Действие направлено на всех союзников (лечение, баффы и т.д.)
+    if (this.isForFriend() && this.isForAll()) {
+        return false;
+    }
+    // Если вы используете предметы с областью "на всех" – тоже можно пропускать
+    // if (this.isItem() && this.isForAll()) return false;
+
     return _mog_bhud_needsSelection.call(this);
 };
 
