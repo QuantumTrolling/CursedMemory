@@ -1,185 +1,176 @@
-/*:
- * @plugindesc v1.2 State On Heal Trigger (YEP Compatible)
- * @author ChatGPT
- *
- * @help
- * ============================================================================
- * Нотетег состояния
- * ============================================================================
- *
- * <On Heal>
- * user.addState(239);
- * </On Heal>
- *
- * Выполняется каждый раз, когда владелец состояния получает лечение.
- *
- * ============================================================================
- * Доступные переменные
- * ============================================================================
- *
- * user      - владелец состояния
- * healValue - фактически восстановленное HP
- * stateId   - ID текущего состояния
- * state     - объект состояния
- *
- * ============================================================================
- * Отладка
- * ============================================================================
- *
- * F8 -> Console
- *
- */
+// =============================================================================
+// Heal State Triggers
+// For RPG Maker MV
+// Requires YEP_BuffsStatesCore
+// =============================================================================
+var Imported = Imported || {};
+Imported.HealStateTriggers = true;
 
 (function() {
 
-"use strict";
-
-var DEBUG = true;
-
-function log() {
-    if (!DEBUG) return;
-    console.log.apply(console, arguments);
-}
-
-//=============================================================================
-// DataManager
-//=============================================================================
-
-const _DM_isDatabaseLoaded = DataManager.isDatabaseLoaded;
-
-DataManager.isDatabaseLoaded = function() {
-
-    if (!_DM_isDatabaseLoaded.call(this)) {
-        return false;
+  //=============================================================================
+  // DataManager
+  //=============================================================================
+  var _DataManager_isDatabaseLoaded = DataManager.isDatabaseLoaded;
+  DataManager.isDatabaseLoaded = function() {
+    if (!_DataManager_isDatabaseLoaded.call(this)) return false;
+    if (!DataManager._HealStateTriggersLoaded) {
+      this.processHealStateNotetags($dataStates);
+      DataManager._HealStateTriggersLoaded = true;
     }
-
-    if (!this._OnHealLoaded) {
-
-        this.processOnHealNotetags();
-        this._OnHealLoaded = true;
-
-    }
-
     return true;
-};
+  };
 
-DataManager.processOnHealNotetags = function() {
+  DataManager.processHealStateNotetags = function(group) {
+    for (var n = 1; n < group.length; n++) {
+      var obj = group[n];
+      if (!obj) continue;
+      obj.customHealEffect = "";
+      obj.customAllyHealEffect = "";
+      obj.customPartyHealEffect = "";
+      var notedata = obj.note.split(/[\r\n]+/);
+      var mode = "";
+      for (var i = 0; i < notedata.length; i++) {
+        var line = notedata[i];
+        if (/<CUSTOM HEAL EFFECT>/i.test(line)) {
+          mode = "heal";
+          continue;
+        }
+        if (/<\/CUSTOM HEAL EFFECT>/i.test(line)) {
+          mode = "";
+          continue;
+        }
+        if (/<CUSTOM ALLY HEAL EFFECT>/i.test(line)) {
+          mode = "allyheal";
+          continue;
+        }
+        if (/<\/CUSTOM ALLY HEAL EFFECT>/i.test(line)) {
+          mode = "";
+          continue;
+        }
+        if (/<CUSTOM PARTY HEAL EFFECT>/i.test(line)) {
+          mode = "partyheal";
+          continue;
+        }
+        if (/<\/CUSTOM PARTY HEAL EFFECT>/i.test(line)) {
+          mode = "";
+          continue;
+        }
+        if (mode === "heal") {
+          obj.customHealEffect += line + "\n";
+        }
+        if (mode === "allyheal") {
+          obj.customAllyHealEffect += line + "\n";
+        }
+        if (mode === "partyheal") {
+          obj.customPartyHealEffect += line + "\n";
+        }
+      }
+    }
+  };
 
-    log("[OnHeal] Parsing state notetags...");
+  //=============================================================================
+  // BattleManager healer tracking
+  //=============================================================================
+  var _BattleManager_startAction = BattleManager.startAction;
+  BattleManager.startAction = function() {
+    this._healStateSubject = this._subject;
+    _BattleManager_startAction.call(this);
+  };
 
-    for (var i = 1; i < $dataStates.length; i++) {
+  //=============================================================================
+  // Healing Detection — перехватываем setHp (прямые изменения здоровья)
+  //=============================================================================
+  var _Game_BattlerBase_setHp = Game_BattlerBase.prototype.setHp;
+  Game_BattlerBase.prototype.setHp = function(hp) {
+    var oldHp = this.hp;
+    _Game_BattlerBase_setHp.call(this, hp);
+    var healAmount = this.hp - oldHp;
+    if (healAmount <= 0) return;
+    if (this.processHealStateEffects) {
+      var healer = BattleManager._healStateSubject || this;
+      this.processHealStateEffects(healAmount, healer);
+    }
+  };
 
-        var state = $dataStates[i];
+  //=============================================================================
+  // Healing Detection — дополняем gainHp (лечение через навыки/скрипты)
+  //=============================================================================
+  var _Game_Battler_gainHp = Game_Battler.prototype.gainHp;
+  Game_Battler.prototype.gainHp = function(value) {
+    _Game_Battler_gainHp.call(this, value);
+    if (value > 0 && this.processHealStateEffects) {
+      var healer = BattleManager._healStateSubject || this;
+      this.processHealStateEffects(value, healer);
+    }
+  };
 
+  //=============================================================================
+  // Heal Processing
+  //=============================================================================
+  Game_Battler.prototype.processHealStateEffects = function(value, healer) {
+    var target = this; // получатель лечения
+
+    // Общие переменные для всех eval
+    var s = $gameSwitches._data;
+    var v = $gameVariables._data;
+
+    //----------------------------------------------------------------------
+    // SELF HEAL EFFECT
+    //----------------------------------------------------------------------
+    var states = target.states();
+    for (var i = 0; i < states.length; i++) {
+      var state = states[i];
+      if (!state) continue;
+      if (!state.customHealEffect) continue;
+      if (state.customHealEffect.length <= 0) continue;
+
+      var user = target;   // для SELF: user = получатель = носитель
+      var stateId = state.id;
+
+      try {
+        eval(state.customHealEffect);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    //----------------------------------------------------------------------
+    // PARTY / ALLY EFFECTS
+    //----------------------------------------------------------------------
+    var unit = target.isActor() ? $gameParty : $gameTroop;
+    var members = unit.members();
+    for (var m = 0; m < members.length; m++) {
+      var battler = members[m];
+      if (!battler) continue;
+      var battlerStates = battler.states();
+      for (var j = 0; j < battlerStates.length; j++) {
+        var state = battlerStates[j];
         if (!state) continue;
 
-        state._onHealCode = null;
-
-        var notedata = state.note || "";
-
-        var match = notedata.match(
-            /<On Heal>([\s\S]*?)<\/On Heal>/im
-        );
-
-        if (match) {
-
-            state._onHealCode = match[1].trim();
-
-            log(
-                "[OnHeal] Found tag in State",
-                state.id,
-                state.name
-            );
-        }
-    }
-};
-
-//=============================================================================
-// gainHp Hook
-//=============================================================================
-
-const _Game_Battler_gainHp =
-    Game_Battler.prototype.gainHp;
-
-Game_Battler.prototype.gainHp = function(value) {
-
-    var beforeHp = this.hp;
-
-    _Game_Battler_gainHp.call(this, value);
-
-    var afterHp = this.hp;
-    var healValue = afterHp - beforeHp;
-
-    var battlerName =
-        this.name ? this.name() : "Unknown";
-
-    log("========================================");
-    log("[OnHeal] gainHp()");
-    log("[OnHeal] Battler:", battlerName);
-    log("[OnHeal] Incoming:", value);
-    log("[OnHeal] Before:", beforeHp);
-    log("[OnHeal] After :", afterHp);
-    log("[OnHeal] Delta :", healValue);
-
-    if (healValue <= 0) {
-
-        log("[OnHeal] Not healing.");
-        return;
-    }
-
-    var user = this;
-    var states = this.states();
-
-    log(
-        "[OnHeal] Active States:",
-        states.map(function(s) {
-            return s.id + ":" + s.name;
-        })
-    );
-
-    for (var i = 0; i < states.length; i++) {
-
-        var state = states[i];
-
-        log("----------------------------------------");
-        log(
-            "[OnHeal] Checking State",
-            state.id,
-            state.name
-        );
-
-        if (!state._onHealCode) {
-
-            log("[OnHeal] No tag.");
-            continue;
-        }
-
+        var user = battler;       // носитель состояния
         var stateId = state.id;
+        // target уже определён выше — получатель лечения
 
-        log("[OnHeal] Tag found.");
-        log("[OnHeal] Executing:");
-        log(state._onHealCode);
-
-        try {
-
-            eval(state._onHealCode);
-
-            log(
-                "[OnHeal] Success State",
-                stateId
-            );
-
-        } catch (e) {
-
-            console.error(
-                "[OnHeal] ERROR State " + stateId
-            );
-
+        // PARTY (включая самого получателя)
+        if (state.customPartyHealEffect && state.customPartyHealEffect.length > 0) {
+          try {
+            eval(state.customPartyHealEffect);
+          } catch (e) {
             console.error(e);
+          }
         }
-    }
 
-    log("========================================");
-};
+        // ALLY (только если носитель НЕ является получателем)
+        if (battler !== target && state.customAllyHealEffect && state.customAllyHealEffect.length > 0) {
+          try {
+            eval(state.customAllyHealEffect);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+    }
+  };
 
 })();

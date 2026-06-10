@@ -157,5 +157,6 @@ var $plugins =
 {"name":"EnemyLetterDisplay","status":true,"description":"","parameters":{}},
 {"name":"A_settings_fix","status":true,"description":"v1.0.0 Replaces volume steps with interactive sliders in Options menu.","parameters":{"animSpeed":"0.2"}},
 {"name":"EDamageIcons","status":true,"description":"v1.0 Отображает иконки элементов (стихий) рядом с цифрами урона.","parameters":{"Icon Mapping":"{\"1\": 205, \"2\": 207, \"3\": 186, \"4\": 188, \"5\": 191, \"6\": 190, \"7\": 187, \"8\": 189, \"9\": 206}","Icon Position":"right","Icon Offset X":"-10","Icon Offset Y":"40","Icon Scale":"1.00","Max Icons":"9"}},
-{"name":"ShieldSE","status":true,"description":"Play SE when enemy's Break Shield decreases in battle.","parameters":{"seName":"M_shield_damage","volume":"70","pitch":"100","pan":"0"}}
+{"name":"ShieldSE","status":true,"description":"Play SE when enemy's Break Shield decreases in battle.","parameters":{"seName":"M_shield_damage","volume":"70","pitch":"100","pan":"0"}},
+{"name":"A_states_heal","status":true,"description":"","parameters":{}}
 ];
