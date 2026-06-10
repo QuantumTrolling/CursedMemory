@@ -1990,6 +1990,18 @@ Game_Battler.prototype.ctbAlterTurnOrder = function(value) {
     if (!battler) battler = this;
     var ticksTarget = battler.ctbTicksToReady();
     var ticksCurrent = this.ctbTicksToReady();
+
+    // --- ГАРАНТИРОВАННАЯ ЗАДЕРЖКА ---
+    // Если боец уже готов, а сдвиг положительный — заставляем ждать минимум 1 тик
+    if (ticksCurrent <= 0 && value > 0) {
+        // Устанавливаем скорость так, чтобы ticksToReady стал равен 1
+        var target = BattleManager.ctbTarget();
+        var tick = this.ctbSpeedTick();
+        this._ctbSpeed = target - tick;
+        return;
+    }
+    // ---------------------------------
+
     var ticksChange = ticksTarget - ticksCurrent;
     ticksChange += sign * Math.abs(this.minorCTBOffset());
     this._ctbSpeed -= this.ctbSpeedTick() * ticksChange;

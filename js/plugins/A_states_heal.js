@@ -3,6 +3,7 @@
 // For RPG Maker MV
 // Requires YEP_BuffsStatesCore
 // =============================================================================
+
 var Imported = Imported || {};
 Imported.HealStateTriggers = true;
 
@@ -28,6 +29,7 @@ Imported.HealStateTriggers = true;
       obj.customHealEffect = "";
       obj.customAllyHealEffect = "";
       obj.customPartyHealEffect = "";
+      obj.customAllyActionEffect = "";   // новый тип
       var notedata = obj.note.split(/[\r\n]+/);
       var mode = "";
       for (var i = 0; i < notedata.length; i++) {
@@ -56,6 +58,15 @@ Imported.HealStateTriggers = true;
           mode = "";
           continue;
         }
+        // Новый тег действия на союзника
+        if (/<CUSTOM ALLY ACTION EFFECT>/i.test(line)) {
+          mode = "allyaction";
+          continue;
+        }
+        if (/<\/CUSTOM ALLY ACTION EFFECT>/i.test(line)) {
+          mode = "";
+          continue;
+        }
         if (mode === "heal") {
           obj.customHealEffect += line + "\n";
         }
@@ -64,6 +75,9 @@ Imported.HealStateTriggers = true;
         }
         if (mode === "partyheal") {
           obj.customPartyHealEffect += line + "\n";
+        }
+        if (mode === "allyaction") {
+          obj.customAllyActionEffect += line + "\n";
         }
       }
     }
@@ -106,28 +120,22 @@ Imported.HealStateTriggers = true;
   };
 
   //=============================================================================
-  // Heal Processing
+  // Heal Processing (оставляем без изменений)
   //=============================================================================
   Game_Battler.prototype.processHealStateEffects = function(value, healer) {
-    var target = this; // получатель лечения
-
-    // Общие переменные для всех eval
+    var target = this;
     var s = $gameSwitches._data;
     var v = $gameVariables._data;
 
-    //----------------------------------------------------------------------
     // SELF HEAL EFFECT
-    //----------------------------------------------------------------------
     var states = target.states();
     for (var i = 0; i < states.length; i++) {
       var state = states[i];
       if (!state) continue;
       if (!state.customHealEffect) continue;
       if (state.customHealEffect.length <= 0) continue;
-
-      var user = target;   // для SELF: user = получатель = носитель
+      var user = target;
       var stateId = state.id;
-
       try {
         eval(state.customHealEffect);
       } catch (e) {
@@ -135,9 +143,7 @@ Imported.HealStateTriggers = true;
       }
     }
 
-    //----------------------------------------------------------------------
     // PARTY / ALLY EFFECTS
-    //----------------------------------------------------------------------
     var unit = target.isActor() ? $gameParty : $gameTroop;
     var members = unit.members();
     for (var m = 0; m < members.length; m++) {
@@ -147,12 +153,9 @@ Imported.HealStateTriggers = true;
       for (var j = 0; j < battlerStates.length; j++) {
         var state = battlerStates[j];
         if (!state) continue;
-
-        var user = battler;       // носитель состояния
+        var user = battler;
         var stateId = state.id;
-        // target уже определён выше — получатель лечения
 
-        // PARTY (включая самого получателя)
         if (state.customPartyHealEffect && state.customPartyHealEffect.length > 0) {
           try {
             eval(state.customPartyHealEffect);
@@ -161,7 +164,6 @@ Imported.HealStateTriggers = true;
           }
         }
 
-        // ALLY (только если носитель НЕ является получателем)
         if (battler !== target && state.customAllyHealEffect && state.customAllyHealEffect.length > 0) {
           try {
             eval(state.customAllyHealEffect);
@@ -169,6 +171,44 @@ Imported.HealStateTriggers = true;
             console.error(e);
           }
         }
+      }
+    }
+  };
+
+  //=============================================================================
+  // Ally Action Detection — перехватываем выполнение действий
+  //=============================================================================
+  var _Game_Action_apply = Game_Action.prototype.apply;
+  Game_Action.prototype.apply = function(target) {
+    _Game_Action_apply.call(this, target);   // выполняем оригинал
+    this.processAllyActionEffect(target);    // затем кастомный эффект
+  };
+
+  Game_Action.prototype.processAllyActionEffect = function(target) {
+    var user = this.subject();
+    if (!user || !target) return;
+
+    // Проверяем, что цель — союзник и не сам пользователь
+    if (target === user) return;
+    if (user.isActor() !== target.isActor()) return; // оба в одной команде
+    if (!user.isAlive() || !target.isAlive()) return;
+
+    // Проверяем состояния пользователя
+    var states = user.states();
+    for (var i = 0; i < states.length; i++) {
+      var state = states[i];
+      if (!state) continue;
+      if (!state.customAllyActionEffect) continue;
+      if (state.customAllyActionEffect.length <= 0) continue;
+
+      var stateId = state.id;
+      var s = $gameSwitches._data;
+      var v = $gameVariables._data;
+      var item = this.item();  // навык или предмет
+      try {
+        eval(state.customAllyActionEffect);
+      } catch (e) {
+        console.error(e);
       }
     }
   };
