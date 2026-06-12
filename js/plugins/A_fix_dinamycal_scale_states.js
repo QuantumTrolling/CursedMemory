@@ -7,18 +7,22 @@
  * Примеры тегов:
  * ============================================================================
  *
- * 1. Плоская прибавка:
+ * 1. Плоская прибавка (значение источника умножается на % и добавляется к параметру):
  *    <DEF Bonus from Current Shield: 10%>
  *    <MAT Bonus from DEF: 50%>
  *
- * 2. Процент от базового параметра за каждую единицу источника:
- *    <DEF Bonus per Shield: 10%>
- *    <ATK Bonus per Missing HP: 2%>
- *    <MAT Bonus per Current HP: 1%>
+ * 2. Бонус от абсолютных единиц источника:
+ *    <DEF Bonus per Shield: 10%>           // +10% базовой защиты за каждую единицу щита
+ *    <ATK Bonus per Missing HP: 2%>       // +2% базовой атаки за каждую единицу недостающего HP
+ *
+ * 3. Бонус от процентного значения источника (добавьте % после названия):
+ *    <DEF Bonus per Missing HP%: -1%>     // –1% базовой защиты за каждый процент недостающего HP
+ *    <MAT Bonus per Current HP%: 0.5%>    // +0.5% базовой магии за каждый процент текущего HP
  *
  * ============================================================================
  * Источники:
  * ATK, DEF, MAT, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
+ * (процентные версии: Current HP%, Missing HP%)
  * ============================================================================
  */
 
@@ -51,17 +55,17 @@
         for (let i = 0; i < states.length; i++) {
             const note = states[i].note || "";
 
-            // <PARAM Bonus from SOURCE: X%>
+            // <PARAM Bonus from SOURCE: X%>  (поддерживает % у источника)
             const regexFlat =
-                /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+                /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+?)(\s*%)?\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
 
             let matchFlat;
             while ((matchFlat = regexFlat.exec(note)) !== null) {
 
                 const target = matchFlat[1].toUpperCase();
-                const source = matchFlat[2].toUpperCase().trim();
-
-                let mult = parseFloat(matchFlat[3]);
+                let source = matchFlat[2].toUpperCase().trim();
+                const isPercent = !!matchFlat[3];
+                let mult = parseFloat(matchFlat[4]);
 
                 if (matchFlat[0].includes('%')) {
                     mult /= 100;
@@ -72,21 +76,21 @@
                 }
 
                 bonusFlat += Math.floor(
-                    this.getSourceValue(source) * mult
+                    this.getSourceValue(source, isPercent) * mult
                 );
             }
 
-            // <PARAM Bonus per SOURCE: X%>
+            // <PARAM Bonus per SOURCE: X%>  (поддерживает % у источника)
             const regexPer =
-                /<(\w+)[ _]?BONUS[ _]?PER[ _]?([\w ]+):[ _]?(\d+\.?\d*)\s*%?>/gi;
+                /<(\w+)[ _]?BONUS[ _]?PER[ _]?([\w ]+?)(\s*%)?\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
 
             let matchPer;
             while ((matchPer = regexPer.exec(note)) !== null) {
 
                 const target = matchPer[1].toUpperCase();
-                const source = matchPer[2].toUpperCase().trim();
-
-                let mult = parseFloat(matchPer[3]);
+                let source = matchPer[2].toUpperCase().trim();
+                const isPercent = !!matchPer[3];
+                let mult = parseFloat(matchPer[4]);
 
                 if (matchPer[0].includes('%')) {
                     mult /= 100;
@@ -96,7 +100,7 @@
                     continue;
                 }
 
-                bonusPercent += mult * this.getSourceValue(source);
+                bonusPercent += mult * this.getSourceValue(source, isPercent);
             }
         }
 
@@ -107,7 +111,7 @@
         );
     };
 
-    Game_BattlerBase.prototype.getSourceValue = function(source) {
+    Game_BattlerBase.prototype.getSourceValue = function(source, isPercent) {
 
         // Параметры
         if (PARAM_MAP[source] !== undefined) {
@@ -116,11 +120,19 @@
 
         // Current HP
         if (source === "CURRENT HP") {
+            if (isPercent) {
+                const mhp = this.mhp || 1;
+                return (this.hp || 0) / mhp * 100;   // 0..100
+            }
             return this.hp || 0;
         }
 
         // Missing HP
         if (source === "MISSING HP") {
+            if (isPercent) {
+                const mhp = this.mhp || 1;
+                return ((this.mhp || 0) - (this.hp || 0)) / mhp * 100;   // 0..100
+            }
             return (this.mhp || 0) - (this.hp || 0);
         }
 
