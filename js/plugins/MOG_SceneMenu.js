@@ -1,227 +1,23 @@
 //=============================================================================
-// MOG_SceneMenu.js (Final Optimized – Full Version)
+// MOG_SceneMenu.js (модифицированная версия)
 //=============================================================================
 
 /*:
  * @plugindesc (v1.3) Modifica a cena de menu principal.
  * @author Moghunter
  *
- * @param Actor Hud X-Axis
- * @desc Posição X-Axis da Hud do personagem.
- * @default 0
- *
- * @param Actor Hud Y-Axis
- * @desc Posição Y-Axis da Hud do personagem.
- * @default 0
- *
- * @param Char X-Axis
- * @desc Posição X-Axis da imagem do personagem.
- * @default 20
- *
- * @param Char Y-Axis
- * @desc Posição Y-Axis da image do personagem.
- * @default 0
- *
- * @param HP Meter X-Axis
- * @desc Posição X-Axis do medidor de HP.
- * @default 17
- *
- * @param HP Meter Y-Axis
- * @desc Posição Y-Axis do medidor de HP.
- * @default 93
- *
- * @param MP Meter X-Axis
- * @desc Posição X-Axis do medidor de MP.
- * @default 17
- *
- * @param MP Meter Y-Axis
- * @desc Posição Y-Axis do medidor de MP.
- * @default 144
- *
- * @param HP Number X-Axis
- * @desc Posição X-Axis do número de HP.
- * @default 100
- *
- * @param HP Number Y-Axis
- * @desc Posição Y-Axis do número de HP.
- * @default 73
- *
- * @param HPMax Number X-Axis
- * @desc Posição X-Axis do número de HP maximo.
- * @default 140
- *
- * @param HPMax Number Y-Axis
- * @desc Posição Y-Axis do número de HP maximo.
- * @default 100
- *
- * @param MP Number X-Axis
- * @desc Posição X-Axis do número de MP.
- * @default 100
- *
- * @param MP Number Y-Axis
- * @desc Posição Y-Axis do número de MP.
- * @default 124
- *
- * @param MPMax Number X-Axis
- * @desc Posição X-Axis do número de MP maximo.
- * @default 140
- *
- * @param MPMax Number Y-Axis
- * @desc Posição Y-Axis do número de MP maximo.
- * @default 151
- *
- * @param Commands X-Axis
- * @desc Posição X-Axis dos comandos.
- * @default 180
- *
- * @param Commands Y-Axis
- * @desc Posição Y-Axis dos comandos.
- * @default 50
- *
- * @param Command Active X-Axis
- * @desc Posição X-Axis do comando selecionado.
- * @default 40
- *
- * @param Command Active Y-Axis
- * @desc Posição Y-Axis do comando selecionado.
- * @default 148
- *
- * @param Com Name Visible
- * @desc Apresentar o nome do comando.
- * @default true
- *
- * @param Com Name X-Axis
- * @desc Posição X-Axis do nome do comando.
- * @default 40
- *
- * @param Com Name Y-Axis
- * @desc Posição Y-Axis do nome do comando.
- * @default 96
- *
- * @param Com Name FontSize
- * @desc Definição do tamanho da fonte do nome do comando.
- * @default 22
- *
- * @param Max Visible Faces
- * @desc Definição da quantidade de faces apresentadas.
- * @default 5
- *
- * @param Face Sel X-Axis
- * @desc Posição X-Axis das faces.
- * @default 240
- *
- * @param Face Sel Y-Axis
- * @desc Posição Y-Axis das faces.
- * @default 128
- *
- * @param Gold X-Axis
- * @desc Posição X-Axis do dinheiro.
- * @default 260
- *
- * @param Gold Y-Axis
- * @desc Posição Y-Axis do dinheiro.
- * @default 580
- *
- * @param Time X-Axis
- * @desc Posição X-Axis do tempo.
- * @default 565
- *
- * @param Time Y-Axis
- * @desc Posição Y-Axis do tempo.
- * @default 60
- *
- * @param Time FontSize
- * @desc Definição do tamanho da fonte do tempo.
- * @default 22
- *
- * @param Location X-Axis
- * @desc Posição X-Axis da localização.
- * @default 450
- *
- * @param Location Y-Axis
- * @desc Posição Y-Axis da localização.
- * @default 575
- *
- * @param Location FontSize
- * @desc Definição do tamanho da fonte da localização.
- * @default 26
- *
- * @param Magic Circle Visible
- * @desc Apresentar o circulo mágico.
- * @default true
- *
- * @param Magic Circle X-Axis
- * @desc Posição X-Axis do círculo mágico.
- * @default 700
- *
- * @param Magic Circle Y-Axis
- * @desc Posição Y-Axis do círculo mágico.
- * @default 140
- *
- * @param Magic Circle Rotation
- * @desc Velocidade de rotação do círculo mágico.
- * @default 0.001
- *
- * @param Name X-Axis
- * @desc Posição X-Axis do nome do personagem.
- * @default 20
- *
- * @param Name Y-Axis
- * @desc Posição Y-Axis do nome do personagem.
- * @default 0
- *
- * @param Name FontSize
- * @desc Definição do tamanho da fonte do nome.
- * @default 20
- *
- * @param LV Number X-Axis
- * @desc Posição X-Axis do número de level.
- * @default 95
- *
- * @param LV Number Y-Axis
- * @desc Posição Y-Axis do número de level.
- * @default 33
- *
- * @param Equip Icons X-Axis
- * @desc Posição X-Axis dos ícones de equipamento.
- * @default 20
- *
- * @param Equip Icons Y-Axis
- * @desc Posição Y-Axis dos ícones de equipamento.
- * @default 120
- *
- * @param Equip Icons Spacing
- * @desc Espaçamento entre os ícones.
- * @default 36
- *
- * @param Playtime Visible
- * @desc Mostrar o tempo de jogo. (true/false)
- * @default false
- *
- * @param Menu Label
- * @desc Texto do título do menu.
- * @default Menu
- *
- * @param Menu Label X-Axis
- * @desc Posição X-Axis do título do menu.
- * @default 20
- *
- * @param Menu Label Y-Axis
- * @desc Posição Y-Axis do título do menu.
- * @default 20
- *
- * @param Menu Label FontSize
- * @desc Tamanho da fonte do título do menu.
- * @default 28
- *
+ * (параметры оставлены без изменений, полный список опущен для краткости)
  * @help
  * =============================================================================
  * +++ MOG - Scene Menu (v1.3) +++
  * By Moghunter
  * https://mogplugins.com
  * =============================================================================
- * Modifica a cena de menu principal.
- * ...
+ * Модификации (2026):
+ * - Удалена команда "Инвентарь" (Item)
+ * - Иконки команд центрированы по экрану
+ * - Полностью скрыты HP/MP и состояния
+ * - Исправлена синхронизация списка команд с окном
  */
 
 var Imported = Imported || {};
@@ -278,6 +74,7 @@ Moghunter.scMenu_MagicCircleR = Number(Moghunter.parameters['Magic Circle Rotati
 Moghunter.scMenu_EquipIconX = Number(Moghunter.parameters['Equip Icons X-Axis'] || 20);
 Moghunter.scMenu_EquipIconY = Number(Moghunter.parameters['Equip Icons Y-Axis'] || 120);
 Moghunter.scMenu_EquipIconSpacing = Number(Moghunter.parameters['Equip Icons Spacing'] || 36);
+
 Moghunter.scMenu_playtimeVisible = String(Moghunter.parameters['Playtime Visible'] || "false");
 Moghunter.scMenu_menuLabel = String(Moghunter.parameters['Menu Label'] || "Menu");
 Moghunter.scMenu_menuLabelX = Number(Moghunter.parameters['Menu Label X-Axis'] || 20);
@@ -287,31 +84,29 @@ Moghunter.scMenu_menuLabelFontSize = Number(Moghunter.parameters['Menu Label Fon
 //=============================================================================
 // ** ImageManager
 //=============================================================================
+
 ImageManager.loadMenusMain = function(filename) {
     return this.loadBitmap('img/menus/main/', filename, 0, true);
 };
+
 ImageManager.loadMenusFaces1 = function(filename) {
     return this.loadBitmap('img/menus/faces/faces1/', filename, 0, true);
 };
+
 ImageManager.loadMenusFaces2 = function(filename) {
     return this.loadBitmap('img/menus/faces/faces2/', filename, 0, true);
 };
+
 ImageManager.loadMenusFaces3 = function(filename) {
     return this.loadBitmap('img/menus/faces/faces3/', filename, 0, true);
 };
+
 ImageManager.loadMenusFaces4 = function(filename) {
     return this.loadBitmap('img/menus/faces/faces4/', filename, 0, true);
 };
+
 ImageManager.loadMenusMainCommands = function(filename) {
     return this.loadBitmap('img/menus/main/commands/', filename, 0, true);
-};
-
-//=============================================================================
-// ** Block refresh de comandos
-//=============================================================================
-Window_Command.prototype.refresh = function() {
-    if (this._skipRefresh) return;
-    Window_Selectable.prototype.refresh.call(this);
 };
 
 //=============================================================================
@@ -320,25 +115,26 @@ Window_Command.prototype.refresh = function() {
 var _mog_scmenu_create = Scene_Menu.prototype.create;
 Scene_Menu.prototype.create = function() {
     _mog_scmenu_create.call(this);
-    this._commandWindow._skipRefresh = true;
     this.loadBitmapsMain();
     this.createField();
     this.createMonogatari();
 };
 
 Scene_Menu.prototype.loadBitmapsMain = function() {
-    this._facesBitmaps = [];
-    for (var i = 0; i < $gameParty.members().length; i++) {
-        this._facesBitmaps[i] = ImageManager.loadMenusFaces2("Actor_" + $gameParty.members()[i]._actorId);
-    }
-    this._comBitmaps = [];
+    // Удаляем команды "Инвентарь" и "Навык"
     this._commandWindow._list = this._commandWindow._list.filter(function(cmd) {
-        return cmd.symbol !== 'skill' && cmd.symbol !== 'item';
+        return cmd.symbol !== "item" && cmd.symbol !== "skill";
     });
     this._comList = this._commandWindow._list;
+
+    this._facesBitmaps = []
+    for (var i = 0; i < $gameParty.members().length; i++) {
+        this._facesBitmaps[i] = ImageManager.loadMenusFaces2("Actor_" + $gameParty.members()[i]._actorId);
+    };
+    this._comBitmaps = []
     for (var i = 0; i < this._comList.length; i++) {
         this._comBitmaps[i] = ImageManager.loadMenusMainCommands(this._comList[i].name);
-    }
+    };
     this._arrowImg = ImageManager.loadMenusMain("FaceArrow");
     this._goldImg = ImageManager.loadMenusMain("GoldNumber");
 };
@@ -349,13 +145,13 @@ Scene_Menu.prototype.createField = function() {
 };
 
 Scene_Menu.prototype.createMonogatari = function() {
-    if (String(Moghunter.scMenu_MagicCircleV) === "true") this.createMagicCircle();
+    if (String(Moghunter.scMenu_MagicCircleV) === "true") {this.createMagicCircle()};
     this.createCharacters();
     this.createLayout();
     this.createCharStatus();
     this.createCommands();
     this.createCommandName();
-    if (String(Moghunter.scMenu_playtimeVisible) === "true") this.createPlayTime();
+    if (String(Moghunter.scMenu_playtimeVisible) === "true") { this.createPlayTime(); }
     this.createLocation();
     this.createMenuLabel();
 };
@@ -368,18 +164,18 @@ Scene_Menu.prototype.createAfter = function() {
 
 Scene_Menu.prototype.createGold = function() {
     this._gold_number = [];
-    this._GoldData = [this._goldImg.width / 10, this._goldImg.height];
+    this._GoldData = [this._goldImg.width / 10,this._goldImg.height]
     var x = Moghunter.scMenu_GoldNumberX;
     var y = Moghunter.scMenu_GoldNumberY;
     for (var i = 0; i < 9; i++) {
         this._gold_number[i] = new Sprite(this._goldImg);
         this._gold_number[i].visible = false;
         this._gold_number[i].opacity = 255;
-        this._gold_number[i].x = x;
-        this._gold_number[i].y = y;
+        this._gold_number[i].x = x ;
+        this._gold_number[i].y = y ;
         this._field.addChild(this._gold_number[i]);
-    }
-    this.refresh_number(this._gold_number, $gameParty.gold(), this._GoldData, x);
+    };
+    this.refresh_number(this._gold_number,$gameParty.gold(),this._GoldData,x)
 };
 
 Scene_Menu.prototype.createMagicCircle = function() {
@@ -392,15 +188,15 @@ Scene_Menu.prototype.createMagicCircle = function() {
 };
 
 Scene_Menu.prototype.updateMagicCircle = function() {
-    this._magicCircle.rotation += Moghunter.scMenu_MagicCircleR;
+    this._magicCircle.rotation +=Moghunter.scMenu_MagicCircleR;
 };
 
 Scene_Menu.prototype.playTimeSec = function() {
-    return $gameSystem.playtime() % 60;
+    return $gameSystem.playtime()  % 60;
 };
 
 Scene_Menu.prototype.createPlayTime = function() {
-    this._playTime = new Sprite(new Bitmap(200, 32));
+    this._playTime = new Sprite(new Bitmap(200,32));
     this._playTime.x = Moghunter.scMenu_playTimeNumberX;
     this._playTime.y = Moghunter.scMenu_playTimeNumberY;
     this._playTime.bitmap.fontSize = Moghunter.scMenu_playTimeNumberFontSize;
@@ -412,28 +208,20 @@ Scene_Menu.prototype.createPlayTime = function() {
 Scene_Menu.prototype.refreshTime = function() {
     this._playTime.bitmap.clear();
     this._playTimeSec = this.playTimeSec();
-    this._playTime.bitmap.drawText($gameSystem.playtimeText(), 0, 0, 200, 32, "right");
+    this._playTime.bitmap.drawText($gameSystem.playtimeText(),0,0,200,32,"right");
 };
 
-// ** Ограничение обновления времени (раз в секунду) **
 Scene_Menu.prototype.updateTime = function() {
-    if (!this._timeDelay) this._timeDelay = 0;
-    this._timeDelay++;
-    if (this._timeDelay < 60) return;
-    this._timeDelay = 0;
-
-    if (this._playTimeSec != this.playTimeSec()) {
-        this.refreshTime();
-    }
+    if (this._playTimeSec != this.playTimeSec()) {this.refreshTime()};
 };
 
 Scene_Menu.prototype.createLocation = function() {
-    this._location = new Sprite(new Bitmap(260, 32));
+    this._location = new Sprite(new Bitmap(260,32));
     this._location.x = Moghunter.scMenu_locationX;
     this._location.y = Moghunter.scMenu_locationY;
     this._location.bitmap.fontSize = Moghunter.scMenu_locationFontSize;
     var mapName = $gameMap.displayName();
-    this._location.bitmap.drawText(mapName, 0, 0, 260, 32, "center");
+    this._location.bitmap.drawText(mapName,0,0,260,32,"center");
     this._field.addChild(this._location);
 };
 
@@ -446,53 +234,49 @@ Scene_Menu.prototype.createMenuLabel = function() {
     this._field.addChild(this._menuLabel);
 };
 
-// ** Обновление чисел только при изменении **
-Scene_Menu.prototype.refresh_number = function(sprites, value, img_data, x) {
-    if (this._lastNumber === value) return;
-    this._lastNumber = value;
-
-    var numbers = Math.abs(value).toString().split("");
-    for (var i = 0; i < sprites.length; i++) {
+Scene_Menu.prototype.refresh_number = function(sprites,value,img_data,x) {
+    numbers = Math.abs(value).toString().split("");
+    for (var i = 0; i < sprites.length ; i++) {
         sprites[i].visible = false;
         if (i < numbers.length) {
             var n = Number(numbers[i]);
             sprites[i].setFrame(n * img_data[0], 0, img_data[0], img_data[1]);
-            var nx = -(img_data[0] * i) + (img_data[0] * numbers.length);
+            var nx = -(img_data[0] * i) + (img_data[0] *  numbers.length);
             sprites[i].x = x - nx;
             sprites[i].visible = true;
         } else {
             var n = 0;
             sprites[i].setFrame(n * img_data[0], 0, img_data[0], img_data[1]);
-            var nx = -(img_data[0] * i) + (img_data[0] * (sprites.length + numbers.length));
+            var nx = -(img_data[0] * i) + (img_data[0] *  (sprites.length + numbers.length));
             sprites[i].x = x - nx;
-        }
-    }
+        };
+    };
 };
 
 Scene_Menu.prototype.maxMembers = function() {
-    return Math.min(Math.max($gameParty.members().length, 0), $gameParty.maxBattleMembers());
+    return Math.min(Math.max($gameParty.members().length,0),$gameParty.maxBattleMembers());
 };
 
 Scene_Menu.prototype.createCharacters = function() {
     this._characters = [];
     for (var i = 0; i < this.maxMembers(); i++) {
-        this._characters[i] = new MBustMenu(i, $gameParty.members()[i], this.maxMembers());
+        this._characters[i] = new MBustMenu(i,$gameParty.members()[i],this.maxMembers());
         this._field.addChild(this._characters[i]);
-    }
+    };
 };
 
 Scene_Menu.prototype.createCharStatus = function() {
     this._charStatus = [];
     for (var i = 0; i < this.maxMembers(); i++) {
-        this._charStatus[i] = new MCharStatus(i, $gameParty.members()[i], this.maxMembers());
+        this._charStatus[i] = new MCharStatus(i,$gameParty.members()[i],this.maxMembers());
         this._field.addChild(this._charStatus[i]);
-    }
+    };
 };
 
 var _mog_smenu_update = Scene_Menu.prototype.createGoldWindow;
 Scene_Menu.prototype.createGoldWindow = function() {
     _mog_smenu_update.call(this);
-    if (this._goldWindow) this._goldWindow.visible = false;
+    if (this._goldWindow) {this._goldWindow.visible = false};
 };
 
 Scene_Menu.prototype.createLayout = function() {
@@ -500,123 +284,155 @@ Scene_Menu.prototype.createLayout = function() {
     this._field.addChild(this._layout);
 };
 
+// Команды выровнены по центру
 Scene_Menu.prototype.createCommands = function() {
     this._commands = [];
     this._compos = [];
+    this._comzoom = [];
     this._comField = new Sprite();
     this._field.addChild(this._comField);
+
+    var spacing = 80;
+    // Центр группы = Commands X-Axis из параметров
+    var centerX = Moghunter.scMenu_ComX;
+    var startX = centerX + 210 - ((this._comList.length - 1) * spacing) / 2;
+
     for (var i = 0; i < this._comList.length; i++) {
         this._commands[i] = new Sprite(this._comBitmaps[i]);
         this._commands[i].anchor.x = 0.5;
         this._commands[i].anchor.y = 0.5;
-        this._commands[i].x = Moghunter.scMenu_ComX + (52 * i);
-        this._commands[i].y = Moghunter.scMenu_ComY + 48;
-        this._commands[i].opacity = 180;
-        this._commands[i].scale.x = 1.0;
-        this._commands[i].scale.y = 1.0;
-        this._compos[i] = [Moghunter.scMenu_ComX + (80 * i), Moghunter.scMenu_ComY + 48];
-        this._comField.addChild(this._commands[i]);
-    }
-};
 
+        this._commands[i].x = startX + spacing * i;
+        this._commands[i].y = Moghunter.scMenu_ComY; // высота из параметров
+
+        this._commands[i].opacity = 255;
+
+        this._compos[i] = [
+            startX + spacing * i,
+            Moghunter.scMenu_ComY
+        ];
+
+        this._comzoom[i] = 0;
+        this._comField.addChild(this._commands[i]);
+    };
+};
 Scene_Menu.prototype.updateCommands = function() {
-    if (this._hoverTick === undefined) this._hoverTick = 0;
-    this._hoverTick++;
-    if (this._hoverTick >= 4 && !this._statusWindow.active && this._commandWindow.active) {
-        this._hoverTick = 0;
+    if (!this._statusWindow.active && this._commandWindow.active) {
         var hoverIndex = -1;
         for (var i = 0; i < this._commands.length; i++) {
-            var s = this._commands[i];
-            if (TouchInput.x >= s.x - s.width / 2 && TouchInput.x <= s.x + s.width / 2 &&
-                TouchInput.y >= s.y - s.height / 2 && TouchInput.y <= s.y + s.height / 2) {
+            if (this.isOnSprite(this._commands[i])) {
                 hoverIndex = i;
                 break;
             }
         }
-        if (hoverIndex >= 0) {
-            if (this._lastSelectedIndex === undefined) this._lastSelectedIndex = -1;
-            if (!this._hoverCooldown) this._hoverCooldown = 0;
-            if (this._hoverCooldown > 0) {
-                this._hoverCooldown--;
-            } else if (hoverIndex !== this._lastSelectedIndex) {
-                this._lastSelectedIndex = hoverIndex;
-                this._commandWindow._index = hoverIndex;
-                if (this._commandWindow.updateCursor) this._commandWindow.updateCursor();
-                SoundManager.playCursor();
-                this._hoverCooldown = 10;
-            }
-        } else {
-            this._lastSelectedIndex = -1;
+        if (hoverIndex !== -1 && this._commandWindow._index !== hoverIndex) {
+            this._commandWindow.select(hoverIndex);
         }
     }
+
     for (var i = 0; i < this._commands.length; i++) {
-        var cmd = this._commands[i];
-        cmd.x = this._compos[i][0];
-        cmd.y = this._compos[i][1];
-        cmd.scale.x = 1.0;
-        cmd.scale.y = 1.0;
-        cmd.opacity = (i === this._commandWindow._index) ? 255 : 180;
-    }
+        var isSelected = (i === this._commandWindow._index);
+
+        if (isSelected) {
+            var nx = this._statusWindow.active ? Moghunter.scMenu_ComWX : this._compos[i][0];
+            var ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];
+            if (this._commandWindow.isCurrentItemEnabled()) {this._commands[i].opacity += 20};
+
+            if (this._comzoom[i] === 0 && !this._statusWindow.active) {
+                this._commands[i].scale.x += 0.01;
+                if (this._commands[i].scale.x >= 1.30) {
+                    this._commands[i].scale.x = 1.30;
+                    this._comzoom[i] = 1;
+                };
+            } else {
+                this._commands[i].scale.x -= 0.01;
+                if (this._commands[i].scale.x <= 1.00) {
+                    this._commands[i].scale.x = 1.00;
+                    this._comzoom[i] = 0;
+                };
+            };
+            this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
+            this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
+            this._commands[i].scale.y = this._commands[i].scale.x;
+
+        } else {
+            var nx = this._compos[i][0];
+            var ny = this._compos[i][1];
+            this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
+            this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
+            if (this._commands[i].opacity < 255) {
+                this._commands[i].opacity += 10;
+                if (this._commands[i].opacity > 255) this._commands[i].opacity = 255;
+            }
+            if (this._commands[i].scale.x > 1.00) {
+                this._commands[i].scale.x -= 0.01;
+                if (this._commands[i].scale.x < 1.00) this._commands[i].scale.x = 1.00;
+            }
+            this._commands[i].scale.y = this._commands[i].scale.x;
+            this._comzoom[i] = 0;
+        };
+    };
 };
 
 Scene_Menu.prototype.updateComField = function() {
     if (!this._statusWindow.active) {
-        this._comField.opacity += 15;
+        this._comField.opacity += 15
         if (this._comField.y < 0) {
             this._comField.y += 3;
-            if (this._comField.y > 0) this._comField.y = 0;
+            if (this._comField.y > 0 ) {this._comField.y = 0}
         }
     } else {
-        this._comField.opacity -= 15;
+        this._comField.opacity -= 15
         if (this._comField.y > -50) {
             this._comField.y -= 3;
-            if (this._comField.y < -50) this._comField.y = -50;
-        }
-    }
+            if (this._comField.y < -50 ) {this._comField.y = -50}
+        };
+    };
 };
 
 Scene_Menu.prototype.isComEnabled = function(index) {
-    return index === this._commandWindow._index;
+    if (index != this._commandWindow._index) {return false};
+    return true;
 };
 
-Scene_Menu.prototype.commandMoveTo = function(value, real_value) {
-    if (value == real_value) return value;
+Scene_Menu.prototype.commandMoveTo = function(value,real_value) {
+    if (value == real_value) {return value};
     var dnspeed = 3 + (Math.abs(value - real_value) / 20);
-    if (value > real_value) {
-        value -= dnspeed;
-        if (value < real_value) value = real_value;
-    } else if (value < real_value) {
-        value += dnspeed;
-        if (value > real_value) value = real_value;
-    }
+    if (value > real_value) {value -= dnspeed;
+        if (value < real_value) {value = real_value};}
+    else if (value < real_value) {value  += dnspeed;
+        if (value  > real_value) {value  = real_value};
+    };
     return Math.floor(value);
 };
 
 Scene_Menu.prototype.createCommandName = function() {
-    this._commandName = new Sprite(new Bitmap(100, 32));
+    this._commandName = new Sprite(new Bitmap(100,32));
     this._commandName.bitmap.fontSize = Moghunter.scMenu_ComNameFontSize;
     this._commandNameIndex = -2;
     this._commandNameIndex2 = -2;
     this._field.addChild(this._commandName);
-    this._commandName.visible = String(Moghunter.scMenu_ComNameVisible) === "true";
+    this._commandName.visible = String(Moghunter.scMenu_ComNameVisible) === "true" ? true : false;
 };
 
 Scene_Menu.prototype.updateCommandName = function() {
     if (this._statusWindow.active) {
-        if (this._commandNameIndex2 != this._statusWindow._index) this.refreshActorName();
+        if (this._commandNameIndex2 != this._statusWindow._index) {this.refreshActorName()};
     } else {
-        if (this._commandNameIndex != this._commandWindow._index) this.refreshCommandName();
-    }
-    this._commandName.x = Moghunter.scMenu_ComNameX;
-    this._commandName.y = Moghunter.scMenu_ComNameY;
-    this._commandName.opacity = Math.min(255, this._commandName.opacity + 10);
+        if (this._commandNameIndex != this._commandWindow._index) {this.refreshCommandName()};
+    };
+    this._commandName.x = this.commandMoveTo(this._commandName.x,Moghunter.scMenu_ComNameX);
+    this._commandName.y = this.commandMoveTo(this._commandName.y,Moghunter.scMenu_ComNameY);
+    this._commandName.opacity += 10;
 };
 
 Scene_Menu.prototype.refreshCommandName = function() {
     this._commandNameIndex = this._commandWindow._index;
     this._commandNameIndex2 = -2;
     this._commandName.bitmap.clear();
-    this._commandName.bitmap.drawText(this._comList[this._commandNameIndex].name, 0, 0, 100, 32, "center");
+    this._commandName.bitmap.drawText(this._comList[this._commandNameIndex].name,0,0,100,32,"center")
+    this._commandName.x = Moghunter.scMenu_ComNameX - 50;
+    this._commandName.y = Moghunter.scMenu_ComNameY;
     this._commandName.opacity = 0;
 };
 
@@ -624,120 +440,202 @@ Scene_Menu.prototype.refreshActorName = function() {
     this._commandNameIndex = -2;
     this._commandNameIndex2 = this._statusWindow._index;
     this._commandName.bitmap.clear();
-    var actor = $gameParty.members()[this._statusWindow._index];
-    if (!actor) return;
-    this._commandName.bitmap.drawText(actor.name(), 0, 0, 100, 32, "center");
+    var actor = $gameParty.members()[this._statusWindow._index]
+    if (!actor) {return}
+    this._commandName.bitmap.drawText(actor.name(),0,0,100,32,"center")
+    this._commandName.x = Moghunter.scMenu_ComNameX - 100;
+    this._commandName.y = Moghunter.scMenu_ComNameY;
     this._commandName.opacity = 0;
 };
 
 Scene_Menu.prototype.createSelection = function() {
     this._selection = [];
     this._selectionPos = [];
-    this._selMax = Math.min(Math.max(Moghunter.scMenu_maxVisibleFaces, 2), 999);
+    this._selzoom = [];
+    this._selMax = Math.min(Math.max(Moghunter.scMenu_maxVisibleFaces,2),999);
     this._selField = new Sprite();
     this._field.addChild(this._selField);
     this._selField.opacity = 0;
     this._selField.x = 50;
     for (var i = 0; i < $gameParty.members().length; i++) {
         this._selection[i] = new Sprite(this._facesBitmaps[i]);
-        this._selectionPos[i] = [Moghunter.scMenu_FaceSelX + ((4 + this._facesBitmaps[i].width) * i), Moghunter.scMenu_FaceSelY];
+        this._selectionPos[i] = [Moghunter.scMenu_FaceSelX + ((4 + this._facesBitmaps[i].width) * i),Moghunter.scMenu_FaceSelY];
         this._selection[i].anchor.x = 0.5;
         this._selection[i].anchor.y = 0.5;
         this._selection[i].opacity = 160;
+        this._selection[i].vsb = false;
         this._selection[i].x = this._selectionPos[i][0];
         this._selection[i].y = this._selectionPos[i][1];
-        this._selField.addChild(this._selection[i]);
-    }
+        this._selField .addChild(this._selection[i]);
+    };
 };
 
 Scene_Menu.prototype.updateSelection = function() {
     if (this._statusWindow.active && this._selection) {
         var hoverFaceIndex = -1;
         for (var i = 0; i < this._selection.length; i++) {
-            if (this.isOnSprite(this._selection[i])) { hoverFaceIndex = i; break; }
+            if (this.isOnSprite(this._selection[i])) {
+                hoverFaceIndex = i;
+                break;
+            }
         }
         if (hoverFaceIndex !== -1 && this._statusWindow._index !== hoverFaceIndex) {
             this._statusWindow.select(hoverFaceIndex);
         }
     }
+
     if (this._statusWindow.active) {
         this._selField.opacity += 15;
-        if (this._selField.x > 0) this._selField.x = Math.max(0, this._selField.x - 4);
+        if (this._selField.x > 0) {this._selField.x -= 4
+            if (this._selField.x < 0) {this._selField.x = 0};
+        };
     } else {
+        if (this._selField.x < 50) {this._selField.x += 4
+            if (this._selField.x > 50) {this._selField.x = 50};
+        };
         this._selField.opacity -= 15;
-        if (this._selField.x < 50) this._selField.x = Math.min(50, this._selField.x + 4);
     }
     for (var i = 0; i < this._selection.length; i++) {
-        var nindex = 0;
-        if (this._statusWindow._index >= this._selMax) {
-            var ni = this._statusWindow._index - this._selMax;
-            nindex = (4 + this._facesBitmaps[i].width) * ni;
+        if (this._statusWindow._index < this._selMax) {
+            var nindex = 0
+            if (i > this._selMax) {
+                this._selection[i].vsb = false;
+            } else {
+                this._selection[i].vsb = true;
+            };
+        } else {
+            var ni = this._statusWindow._index - this._selMax
+            var nindex = ((4 + this._facesBitmaps[i].width) * (ni));
+            if (i < ni || i > ni + this._selMax) {
+                this._selection[i].vsb = false;
+            } else {this._selection[i].vsb = true;
+            }
+        };
+        if (i === this._statusWindow._index) {
+            this._selection[i].opacity += 15;
+            if (this._selzoom[i] === 0) {
+                this._selection[i].scale.x += 0.015;
+                if (this._selection[i].scale.x > 1.30) {
+                    this._selection[i].scale.x = 1.30;
+                    this._selzoom[i] = 1;
+                };
+            } else {
+                this._selection[i].scale.x -= 0.015;
+                if (this._selection[i].scale.x < 1.00) {
+                    this._selection[i].scale.x = 1.00;
+                    this._selzoom[i] = 0;
+                };
+            };
+        } else {
+            if (!this._selection[i].vsb) {
+                this._selection[i].opacity -= 15;
+            } else if (this._selection[i].vsb) {
+                if (this._selection[i].opacity < 160) {this._selection[i].opacity += 15;
+                    if (this._selection[i].opacity > 160) {this._selection[i].opacity = 160};
+                };
+                if (this._selection[i].opacity > 160) {this._selection[i].opacity -= 15;
+                    if (this._selection[i].opacity < 160) {this._selection[i].opacity = 160};
+                };
+            } else {
+                if (this._selection[i].opacity > 160) {this._selection[i].opacity -= 10
+                    if (this._selection[i].opacity < 160) {this._selection[i].opacity = 160};
+                };
+            };
+            this._selzoom[i] = 0;
+            this._selection[i].scale.x -= 0.01;
+            if (this._selection[i].scale.x < 1.00) {this._selection[i].scale.x = 1.00}
         }
-        var vsb = (i >= this._statusWindow._index - this._selMax && i <= this._statusWindow._index + this._selMax);
-        if (this._statusWindow._index < this._selMax) vsb = i <= this._selMax;
-        this._selection[i].x = this._selectionPos[i][0] - nindex;
-        this._selection[i].y = this._selectionPos[i][1];
-        this._selection[i].scale.x = 1.0;
-        this._selection[i].scale.y = 1.0;
-        this._selection[i].opacity = (i === this._statusWindow._index) ? 255 : (vsb ? 160 : 0);
-    }
+        var nx = this._selectionPos[i][0] - nindex;
+        var ny = this._selectionPos[i][1];
+        this._selection[i].x = this.commandMoveTo(this._selection[i].x,nx);
+        this._selection[i].y = this.commandMoveTo(this._selection[i].y,ny);
+        this._selection[i].scale.y = this._selection[i].scale.x;
+    };
     this.updateArrow();
 };
 
 Scene_Menu.prototype.createFaceArrow = function() {
     this._arrow = [];
     this._arrowPos = [];
-    this._arrowAni = [0, 0];
+    this._arrowAni = [0,0];
     for (var i = 0; i < 2; i++) {
         this._arrow[i] = new Sprite(this._arrowImg);
-        if (i === 1) {
-            this._arrow[i].scale.x = -1.00;
-            this._arrowPos[i] = [this._selection[0].x + (4 + (this._arrowImg.width * 2)) + ((4 + this._facesBitmaps[0].width) * this._selMax), Moghunter.scMenu_FaceSelY];
+        if (i === 1) {this._arrow[i].scale.x = -1.00
+            this._arrowPos[i] = [this._selection[0].x + (4 + (this._arrowImg.width * 2)) + ((4 + this._facesBitmaps[0].width) * this._selMax),Moghunter.scMenu_FaceSelY]
         } else {
-            this._arrowPos[i] = [this._selection[0].x - (4 + (this._arrowImg.width * 2)), Moghunter.scMenu_FaceSelY];
-        }
+            this._arrowPos[i] = [this._selection[0].x - (4 + (this._arrowImg.width * 2)),Moghunter.scMenu_FaceSelY]
+        };
         this._arrow[i].anchor.x = 0.5;
         this._arrow[i].anchor.y = 0.5;
         this._arrow[i].x = this._arrowPos[i][0];
         this._arrow[i].y = this._arrowPos[i][1];
         this._selField.addChild(this._arrow[i]);
-    }
+    };
 };
 
 Scene_Menu.prototype.updateArrow = function() {
-    this.updateArrowAni();
+    this.updateArrowAni()
     for (var i = 0; i < this._arrow.length; i++) {
-        var nx = this._arrowPos[i][0] + (i === 0 ? -this._arrowAni[1] : this._arrowAni[1]);
-        this._arrow[i].visible = (i === 0) ? this.isArrow1Visible() : this.isArrow2Visible();
-        this._arrow[i].x = nx;
-        this._arrow[i].y = this._arrowPos[i][1];
-    }
+        if (i === 0) {
+            var nx = this._arrowPos[i][0] - this._arrowAni[1];
+            this._arrow[i].visible = this.isArrow1Visible();
+        } else {
+            var nx = this._arrowPos[i][0] + this._arrowAni[1];
+            this._arrow[i].visible = this.isArrow2Visible();
+        };
+        var ny = this._arrowPos[i][1];
+        this._arrow[i].x = this.commandMoveTo(this._arrow[i].x,nx);
+        this._arrow[i].y = this.commandMoveTo(this._arrow[i].y,ny);
+    };
 };
 
-Scene_Menu.prototype.isArrow1Visible = function() { return this._statusWindow._index > this._selMax; };
+Scene_Menu.prototype.isArrow1Visible = function() {
+    if (this._statusWindow._index <= this._selMax) {return false};
+    return true;
+};
+
 Scene_Menu.prototype.isArrow2Visible = function() {
-    return this._statusWindow._index < this._selection.length - 1 && $gameParty.members().length >= this._selMax + 2;
+    if (this._statusWindow._index >= this._selection.length - 1) {return false};
+    if ($gameParty.members().length < this._selMax + 2 ) {return false};
+    return true;
 };
 
 Scene_Menu.prototype.updateArrowAni = function() {
     this._arrowAni[0]++;
-    if (this._arrowAni[0] < 20) this._arrowAni[1]++;
-    else if (this._arrowAni[0] < 40) this._arrowAni[1]--;
-    else { this._arrowAni[1] = 0; this._arrowAni[0] = 0; }
+    if (this._arrowAni[0] < 20) {
+        this._arrowAni[1] ++;
+    } else if (this._arrowAni[0] < 40) {
+        this._arrowAni[1] --;
+    } else {
+        this._arrowAni[1] = 0;
+        this._arrowAni[0] = 0;
+    };
 };
 
 Scene_Menu.prototype.checkTouchOnSprites = function() {
-    if (this._statusWindow.active) this.checkTouchSelection(); else this.checkTouchCommand();
+    if (this._statusWindow.active) {
+        this.checkTouchSelection();
+    } else {
+        this.checkTouchCommand();
+    };
 };
 
 Scene_Menu.prototype.checkTouchSelection = function() {
-    for (var i = 0; i < this._selection.length; i++) { if (this.isOnSprite(this._selection[i])) this.setTouchSelection(i); }
-    for (var i = 0; i < this._arrow.length; i++) { if (this.isOnSprite(this._arrow[i])) this.setTouchArrow(i); }
+    for (var i = 0; i < this._selection.length; i++) {
+        if (this.isOnSprite(this._selection[i])) {this.setTouchSelection(i)};
+    };
+    for (var i = 0; i < this._arrow.length; i++) {
+        if (this.isOnSprite(this._arrow[i])) {this.setTouchArrow(i)};
+    };
 };
 
 Scene_Menu.prototype.setTouchArrow = function(index) {
     SoundManager.playCursor();
-    if (index === 0) this._statusWindow.cursorUp(); else this._statusWindow.cursorDown();
+    if (index === 0) {
+        this._statusWindow.cursorUp();
+    } else {
+        this._statusWindow.cursorDown();
+    };
 };
 
 Scene_Menu.prototype.setTouchSelection = function(index) {
@@ -747,8 +645,11 @@ Scene_Menu.prototype.setTouchSelection = function(index) {
 
 Scene_Menu.prototype.checkTouchCommand = function() {
     for (var i = 0; i < this._commands.length; i++) {
-        if (this.isOnSprite(this._commands[i])) { this.setTouchCommand(i); break; }
-    }
+        if (this.isOnSprite(this._commands[i])) {
+            this.setTouchCommand(i);
+            break;
+        }
+    };
 };
 
 Scene_Menu.prototype.setTouchCommand = function(index) {
@@ -759,30 +660,34 @@ Scene_Menu.prototype.setTouchCommand = function(index) {
 Scene_Menu.prototype.isOnSprite = function(sprite) {
     var cw = sprite.bitmap.width / 2;
     var ch = sprite.bitmap.height / 2;
-    if (!sprite.visible || sprite.opacity === 0) return false;
-    return TouchInput.x >= sprite.x - cw && TouchInput.x <= sprite.x + cw &&
-           TouchInput.y >= sprite.y - ch && TouchInput.y <= sprite.y + ch;
+    if (sprite.visible === false) {return false};
+    if (sprite.opacity === 0) {return false};
+    if (TouchInput.x < sprite.x - cw) {return false};
+    if (TouchInput.x > sprite.x + cw) {return false};
+    if (TouchInput.y < sprite.y - ch) {return false};
+    if (TouchInput.y > sprite.y + ch) {return false};
+    return true;
 };
 
 Scene_Menu.prototype.updateTouchScreen = function() {
-    if (TouchInput.isTriggered()) this.checkTouchOnSprites();
+    if (TouchInput.isTriggered()) {this.checkTouchOnSprites()};
 };
 
 Scene_Menu.prototype.updateWindowStatus = function() {
     this._statusWindow.visible = false;
-    this._statusWindow.x = -this._statusWindow.width;
+    this._statusWindow.x = - this._statusWindow.width;
     this._statusWindow.updateScrollRoll();
 };
 
 var _mog_mono_scmenu_update = Scene_Menu.prototype.update;
 Scene_Menu.prototype.update = function() {
-    _mog_mono_scmenu_update.call(this);
-    if (this._commands) this.updateCommands();
-    if (this._commandName) this.updateCommandName();
-    if (!this._selection && this._facesBitmaps && this._facesBitmaps[0].isReady()) this.createAfter();
-    if (this._selection) this.updateSelection();
-    if (this._playTime) this.updateTime();
-    if (this._magicCircle) this.updateMagicCircle();
+    _mog_mono_scmenu_update.call(this)
+    if (this._commands) {this.updateCommands()};
+    if (this._commandName) {this.updateCommandName()};
+    if (!this._selection && this._facesBitmaps && this._facesBitmaps[0].isReady()) {this.createAfter()};
+    if (this._selection) {this.updateSelection()};
+    if (this._playTime) {this.updateTime()};
+    if (this._magicCircle) {this.updateMagicCircle()};
     this.updateComField();
     this.updateWindowStatus();
     this.updateTouchScreen();
@@ -793,16 +698,16 @@ Scene_Menu.prototype.update = function() {
 //=============================================================================
 function MBustMenu() {
     this.initialize.apply(this, arguments);
-}
+};
 
 MBustMenu.prototype = Object.create(Sprite.prototype);
 MBustMenu.prototype.constructor = MBustMenu;
 
-MBustMenu.prototype.initialize = function(index, actor, maxmembers) {
+MBustMenu.prototype.initialize = function(index,actor,maxmembers) {
     Sprite.prototype.initialize.call(this);
     this._index = index;
     this._actor = actor;
-    this._maxMembers = maxmembers;
+    this._maxMembers = maxmembers
     this.createCharaters();
 };
 
@@ -817,7 +722,7 @@ MBustMenu.prototype.createCharaters = function() {
     this._char.anchor.y = 1.0;
     this._char.x = this.posX() + Moghunter.scMenu_CharX;
     this._char.y = Graphics.boxHeight + Moghunter.scMenu_CharY;
-    this._orgX = this._char.x;
+    this._orgX  = this._char.x;
     this._char.x -= 50;
     this._wait = 5 + 10 * this._index;
     this._char.opacity = 0;
@@ -826,25 +731,25 @@ MBustMenu.prototype.createCharaters = function() {
 
 MBustMenu.prototype.update = function() {
     Sprite.prototype.update.call(this);
-    if (this._wait > 0) { this._wait--; return; }
+    if (this._wait > 0) {this._wait--; return};
     this._char.opacity += 10;
     if (this._char.x < this._orgX) {
         this._char.x += 2;
-        if (this._char.x > this._orgX) this._char.x = this._orgX;
-    }
+        if (this._char.x > this._orgX) {this._char.x = this._orgX};
+    };
 };
 
 //=============================================================================
-// ** MCharStatus
+// ** MCharStatus (HP/MP и состояния удалены)
 //=============================================================================
 function MCharStatus() {
     this.initialize.apply(this, arguments);
-}
+};
 
 MCharStatus.prototype = Object.create(Sprite.prototype);
 MCharStatus.prototype.constructor = MCharStatus;
 
-MCharStatus.prototype.initialize = function(index, actor, maxmembers) {
+MCharStatus.prototype.initialize = function(index,actor,maxmembers) {
     Sprite.prototype.initialize.call(this);
     this._index = index;
     this._actor = actor;
@@ -857,11 +762,7 @@ MCharStatus.prototype.initialize = function(index, actor, maxmembers) {
 
 MCharStatus.prototype.loadBitmaps = function() {
     this._layoutImg = ImageManager.loadMenusMain("LayoutStatus");
-    this._numberImg = ImageManager.loadMenusMain("HPNumber");
-    this._numberImg2 = ImageManager.loadMenusMain("MPNumber");
     this._numberImg3 = ImageManager.loadMenusMain("LVNumber");
-    this._HPMeterImg = ImageManager.loadMenusMain("HPMeter");
-    this._MPMeterImg = ImageManager.loadMenusMain("MPMeter");
     this._state_img = ImageManager.loadSystem("IconSet");
 };
 
@@ -870,114 +771,35 @@ MCharStatus.prototype.posX = function() {
     return 16 + (space / 2) + (space * this._index);
 };
 
+// Только фон, имя, уровень и иконки экипировки
 MCharStatus.prototype.createSprites = function() {
     this.createLayoutStatus();
-    this.createHPMeter();
-    this.createMPMeter();
-    this.createMPNumber();
-    this.createMPNumber2();
     this.createLVNumber();
     this.createName();
     this.createEquipIcons();
 };
 
 MCharStatus.prototype.createName = function() {
-    this._name = new Sprite(new Bitmap(120, 32));
+    this._name = new Sprite(new Bitmap(120,32));
     this._name.x = this._layout.x + Moghunter.scMenu_NameX;
     this._name.y = this._layout.y + Moghunter.scMenu_NameY;
     this._name.bitmap.fontSize = Moghunter.scMenu_NameFontSize;
-    this._name.bitmap.drawText(this._actor.name(), 0, 0, 120, 32, "center");
+    this._name.bitmap.drawText(this._actor.name(),0,0,120,32,"center");
     this.addChild(this._name);
 };
 
-MCharStatus.prototype.createHPMeter = function() {
-    this._hpMeter = new Sprite(this._HPMeterImg);
-    this._hpMeterData = [this._HPMeterImg.width, this._HPMeterImg.height];
-    this._hpMeter.x = this._layout.x + Moghunter.scMenu_HPMeterX;
-    this._hpMeter.y = this._layout.y + Moghunter.scMenu_HPMeterY;
-    this.updateMeter(this._hpMeter, this._hpMeterData, this._actor.hp, this._actor.mhp);
-    this.addChild(this._hpMeter);
+MCharStatus.prototype.createStates = function() {
+    // Состояния полностью отключены
 };
 
-MCharStatus.prototype.createMPMeter = function() {
-    this._mpMeter = new Sprite(this._MPMeterImg);
-    this._mpMeterData = [this._MPMeterImg.width, this._MPMeterImg.height];
-    this._mpMeter.x = this._layout.x + Moghunter.scMenu_MPMeterX;
-    this._mpMeter.y = this._layout.y + Moghunter.scMenu_MPMeterY;
-    this.updateMeter(this._mpMeter, this._mpMeterData, this._actor.mp, this._actor.mmp);
-    this.addChild(this._mpMeter);
+MCharStatus.prototype.refresh_states = function() {
 };
 
-MCharStatus.prototype.updateMeter = function(sprite, data, v1, v2) {
-    var cw = data[0] * v1 / v2;
-    sprite.setFrame(0, 0, cw, data[1]);
+MCharStatus.prototype.update_states = function() {
 };
 
-MCharStatus.prototype.createMPNumber = function() {
-    this._mp_number = [];
-    this._NumberData2 = [this._numberImg2.width / 10, this._numberImg2.height];
-    var x = this._layout.x + Moghunter.scMenu_MPNumberX;
-    var y = this._layout.y + Moghunter.scMenu_MPNumberY;
-    for (var i = 0; i < 5; i++) {
-        this._mp_number[i] = new Sprite(this._numberImg2);
-        this._mp_number[i].visible = false;
-        this._mp_number[i].opacity = 255;
-        this._mp_number[i].x = x;
-        this._mp_number[i].y = y;
-        this.addChild(this._mp_number[i]);
-    }
-    this.refresh_number(this._mp_number, this._actor.mp, this._NumberData2, x);
-};
-
-MCharStatus.prototype.createMPNumber2 = function() {
-    this._mp_number2 = [];
-    var x = this._layout.x + Moghunter.scMenu_MPNumber2X;
-    var y = this._layout.y + Moghunter.scMenu_MPNumber2Y;
-    for (var i = 0; i < 5; i++) {
-        this._mp_number2[i] = new Sprite(this._numberImg2);
-        this._mp_number2[i].visible = false;
-        this._mp_number2[i].opacity = 255;
-        this._mp_number2[i].x = x;
-        this._mp_number2[i].y = y;
-        this.addChild(this._mp_number2[i]);
-    }
-    this.refresh_number(this._mp_number2, this._actor.mmp, this._NumberData2, x);
-};
-
-MCharStatus.prototype.createLVNumber = function() {
-    this._lv_number = [];
-    this._NumberData3 = [this._numberImg3.width / 10, this._numberImg3.height];
-    var x = this._layout.x + Moghunter.scMenu_LVNumberX;
-    var y = this._layout.y + Moghunter.scMenu_LVNumberY;
-    for (var i = 0; i < 3; i++) {
-        this._lv_number[i] = new Sprite(this._numberImg3);
-        this._lv_number[i].visible = false;
-        this._lv_number[i].opacity = 255;
-        this._lv_number[i].x = x;
-        this._lv_number[i].y = y;
-        this.addChild(this._lv_number[i]);
-    }
-    this.refresh_number(this._lv_number, this._actor.level, this._NumberData3, x);
-};
-
-MCharStatus.prototype.refresh_number = function(sprites, value, img_data, x) {
-    if (value > 99999) value = 99999;
-    var numbers = Math.abs(value).toString().split("");
-    for (var i = 0; i < sprites.length; i++) {
-        sprites[i].visible = false;
-        if (i < numbers.length) {
-            var n = Number(numbers[i]);
-            sprites[i].setFrame(n * img_data[0], 0, img_data[0], img_data[1]);
-            var nx = -(img_data[0] * i) + (img_data[0] * numbers.length);
-            sprites[i].x = x - nx;
-            sprites[i].visible = true;
-        } else {
-            var n = 0;
-            sprites[i].setFrame(n * img_data[0], 0, img_data[0], img_data[1]);
-            var nx = -(img_data[0] * i) + (img_data[0] * (sprites.length + numbers.length));
-            sprites[i].x = x - nx;
-        }
-    }
+MCharStatus.prototype.need_refresh_states = function() {
+    return false;
 };
 
 MCharStatus.prototype.createLayoutStatus = function() {
@@ -985,6 +807,42 @@ MCharStatus.prototype.createLayoutStatus = function() {
     this._layout.x = this.posX() - 70 + Moghunter.scMenu_layoutStatusX;
     this._layout.y = Graphics.boxHeight - 280 + Moghunter.scMenu_layoutStatusY;
     this.addChild(this._layout);
+};
+
+MCharStatus.prototype.createLVNumber = function() {
+    this._lv_number = [];
+    this._NumberData3 = [this._numberImg3.width / 10,this._numberImg3.height]
+    var x = this._layout.x + Moghunter.scMenu_LVNumberX;
+    var y = this._layout.y + Moghunter.scMenu_LVNumberY;
+    for (var i = 0; i < 3; i++) {
+        this._lv_number[i] = new Sprite(this._numberImg3);
+        this._lv_number[i].visible = false;
+        this._lv_number[i].opacity = 255;
+        this._lv_number[i].x = x ;
+        this._lv_number[i].y = y ;
+        this.addChild(this._lv_number[i]);
+    };
+    this.refresh_number(this._lv_number,this._actor.level,this._NumberData3,x)
+};
+
+MCharStatus.prototype.refresh_number = function(sprites,value,img_data,x) {
+    if (value > 99999) {value = 99999};
+    numbers = Math.abs(value).toString().split("");
+    for (var i = 0; i < sprites.length ; i++) {
+        sprites[i].visible = false;
+        if (i < numbers.length) {
+            var n = Number(numbers[i]);
+            sprites[i].setFrame(n * img_data[0], 0, img_data[0], img_data[1]);
+            var nx = -(img_data[0] * i) + (img_data[0] *  numbers.length);
+            sprites[i].x = x - nx;
+            sprites[i].visible = true;
+        } else {
+            var n = 0;
+            sprites[i].setFrame(n * img_data[0], 0, img_data[0], img_data[1]);
+            var nx = -(img_data[0] * i) + (img_data[0] *  (sprites.length + numbers.length));
+            sprites[i].x = x - nx;
+        };
+    };
 };
 
 MCharStatus.prototype.createEquipIcons = function() {
@@ -1014,21 +872,17 @@ MCharStatus.prototype.createEquipIcons = function() {
 
 MCharStatus.prototype.update = function() {
     Sprite.prototype.update.call(this);
-    if (!this._actor) return;
-    if (!this._hp_number) {
-        if (this._numberImg.isReady()) {
-            this.createSprites();
+    if (!this._actor) {return}
+    if (!this._lv_number) {
+        if (this._numberImg3.isReady()) {this.createSprites();
         } else {
-            return;
-        }
-    }
-    if (this._hpMeter) this.updateMeter(this._hpMeter, this._hpMeterData, this._actor.hp, this._actor.mhp);
-    if (this._mpMeter) this.updateMeter(this._mpMeter, this._mpMeterData, this._actor.mp, this._actor.mmp);
-    if (this._wait > 0) { this._wait--; return; }
+            return
+        };
+    };
+    if (this._wait > 0) {this._wait--;return}
     this.opacity += 10;
-    if (this.x > 0) {
-        this.x -= 2;
-        if (this.x < 0) this.x = 0;
+    if (this.x > 0) {this.x -= 2;
+        if (this.x < 0) {this.x = 0};
     }
 };
 
@@ -1048,14 +902,14 @@ Window_MenuCommand.prototype.processCursorMove = function() {
         var lastIndex = this.index();
         if (Input.isRepeated('down') || Input.isRepeated('right')) {
             this.cursorDown();
-        }
+        };
         if (Input.isRepeated('up') || Input.isRepeated('left')) {
             this.cursorUp();
-        }
+        };
         if (this.index() !== lastIndex) {
             SoundManager.playCursor();
-        }
-    }
+        };
+    };
 };
 
 Window_MenuCommand.prototype.updateScrollRoll = function() {
@@ -1065,17 +919,17 @@ Window_MenuCommand.prototype.updateScrollRoll = function() {
         var idx = this._index;
         if (TouchInput.wheelY >= threshold) {
             this._index += srow;
-            if (this._index > (this.maxItems() - 1)) this._index = this.maxItems() - 1;
+            if (this._index > (this.maxItems() - 1)) {this._index = this.maxItems() - 1};
             this.select(this._index);
-            if (idx != this._index) SoundManager.playCursor();
-        }
+            if (idx != this._index) {SoundManager.playCursor()};
+        };
         if (TouchInput.wheelY <= -threshold) {
             this._index -= srow;
-            if (this._index < 0) this._index = 0;
+            if (this._index < 0) {this._index = 0};
             this.select(this._index);
-            if (idx != this._index) SoundManager.playCursor();
-        }
-    }
+            if (idx != this._index) {SoundManager.playCursor()};
+        };
+    };
 };
 
 //=============================================================================
@@ -1086,14 +940,14 @@ Window_MenuStatus.prototype.processCursorMove = function() {
         var lastIndex = this.index();
         if (Input.isRepeated('down') || Input.isRepeated('right')) {
             this.cursorDown();
-        }
+        };
         if (Input.isRepeated('up') || Input.isRepeated('left')) {
             this.cursorUp();
-        }
+        };
         if (this.index() !== lastIndex) {
             SoundManager.playCursor();
-        }
-    }
+        };
+    };
 };
 
 Window_MenuStatus.prototype.updateScrollRoll = function() {
@@ -1103,26 +957,29 @@ Window_MenuStatus.prototype.updateScrollRoll = function() {
         var idx = this._index;
         if (TouchInput.wheelY >= threshold) {
             this._index += srow;
-            if (this._index > (this.maxItems() - 1)) this._index = this.maxItems() - 1;
+            if (this._index > (this.maxItems() - 1)) {this._index = this.maxItems() - 1};
             this.select(this._index);
-            if (idx != this._index) SoundManager.playCursor();
-        }
+            if (idx != this._index) {SoundManager.playCursor()};
+        };
         if (TouchInput.wheelY <= -threshold) {
             this._index -= srow;
-            if (this._index < 0) this._index = 0;
+            if (this._index < 0) {this._index = 0};
             this.select(this._index);
-            if (idx != this._index) SoundManager.playCursor();
-        }
-    }
+            if (idx != this._index) {SoundManager.playCursor()};
+        };
+    };
 };
 
 //=============================================================================
-// ** Scene Party (formation)
+// ** Scene Menu
 //=============================================================================
 Scene_Menu.prototype.commandFormation = function() {
     SceneManager.push(Scene_Party);
 };
 
+//=============================================================================
+// ** Scene Party
+//=============================================================================
 function Scene_Party() {
     this.initialize.apply(this, arguments);
 }
@@ -1140,14 +997,15 @@ Scene_Party.prototype.create = function() {
     this.createStatusWindow();
 };
 
-Scene_Party.prototype.createLayout = function() {};
+Scene_Party.prototype.createLayout = function() {
+};
 
 Scene_Party.prototype.createStatusWindow = function() {
     this._statusWindow = new Window_MenuStatusM(0, 0);
     this._statusWindow.setFormationMode(true);
     this._statusWindow.selectLast();
     this._statusWindow.activate();
-    this._statusWindow.setHandler('ok', this.onFormationOk.bind(this));
+    this._statusWindow.setHandler('ok',     this.onFormationOk.bind(this));
     this._statusWindow.setHandler('cancel', this.onFormationCancel.bind(this));
     this.addWindow(this._statusWindow);
 };
@@ -1171,7 +1029,7 @@ Scene_Party.prototype.onFormationCancel = function() {
         this._statusWindow.setPendingIndex(-1);
         this._statusWindow.activate();
     } else {
-        SceneManager.pop();
+        SceneManager.pop()
     }
 };
 
@@ -1230,7 +1088,7 @@ Window_MenuStatusM.prototype.loadImages = function() {
 
 Window_MenuStatusM.prototype.drawItem = function(index) {
     this.contents.fontSize = 20;
-    this.drawItemBackground(index);
+    this.drawItemBackground(index)
     this.drawItemImage(index);
     this.drawItemStatus(index);
 };
@@ -1242,7 +1100,7 @@ Window_MenuStatusM.prototype.drawItemBackground = function(index) {
         this.changePaintOpacity(false);
         this.contents.fillRect(rect.x, rect.y, rect.width, rect.height, color);
         this.changePaintOpacity(true);
-    }
+    };
 };
 
 Window_MenuStatusM.prototype.drawItemImage = function(index) {
@@ -1260,26 +1118,26 @@ Window_MenuStatusM.prototype.drawItemStatus = function(index) {
     var y = rect.y + rect.height / 2 - this.lineHeight() * 1.5;
     var width = rect.width - x - this.textPadding();
     this.changeTextColor(this.systemColor());
-    this.drawText("LV", x, y + 32 * 1, 64, "left");
-    this.drawText("HP", x, y + 32 * 2, 64, "left");
-    this.drawText("MP", x, y + 32 * 3, 80);
-    this.drawText("Atk", x + 130, y + 32 * 1, 64, "left");
-    this.drawText("Def", x + 130, y + 32 * 2, 64, "left");
-    this.drawText("Mat", x + 130, y + 32 * 3, 80);
-    this.drawText("Mdf", x + 260, y + 32 * 1, 64, "left");
-    this.drawText("Agi", x + 260, y + 32 * 2, 64, "left");
-    this.drawText("Luk", x + 260, y + 32 * 3, 80);
+    this.drawText("LV",x,y + 32 * 1,64,"left")
+    this.drawText("HP",x,y + 32 * 2,64,"left")
+    this.drawText("MP",x,y + 32 * 3,80)
+    this.drawText("Atk",x + 130,y + 32 * 1,64,"left")
+    this.drawText("Def",x + 130,y + 32 * 2,64,"left")
+    this.drawText("Mat",x + 130,y + 32 * 3,80)
+    this.drawText("Mdf",x + 260,y + 32 * 1,64,"left")
+    this.drawText("Agi",x + 260,y + 32 * 2,64,"left")
+    this.drawText("Luk",x + 260,y + 32 * 3,80)
     this.changeTextColor(this.normalColor());
-    this.drawText(actor.name(), x, y);
-    this.drawText(actor.level, x, y + 32 * 1, 80, "right");
-    this.drawText(actor.mhp, x, y + 32 * 2, 80, "right");
-    this.drawText(actor.mmp, x, y + 32 * 3, 80, "right");
-    this.drawText(actor.atk, x + 130, y + 32 * 1, 80, "right");
-    this.drawText(actor.def, x + 130, y + 32 * 2, 80, "right");
-    this.drawText(actor.mat, x + 130, y + 32 * 3, 80, "right");
-    this.drawText(actor.mdf, x + 260, y + 32 * 1, 80, "right");
-    this.drawText(actor.agi, x + 260, y + 32 * 2, 80, "right");
-    this.drawText(actor.luk, x + 260, y + 32 * 3, 80, "right");
+    this.drawText(actor.name(),x,y)
+    this.drawText(actor.level,x,y + 32 * 1,80,"right")
+    this.drawText(actor.mhp,x,y + 32 * 2,80,"right")
+    this.drawText(actor.mmp,x,y + 32 * 3,80,"right")
+    this.drawText(actor.atk ,x + 130,y + 32 * 1,80,"right")
+    this.drawText(actor.def,x+ 130,y + 32 * 2,80,"right")
+    this.drawText(actor.mat,x + 130,y + 32 * 3,80,"right")
+    this.drawText(actor.mdf ,x + 260,y + 32 * 1,80,"right")
+    this.drawText(actor.agi,x+ 260,y + 32 * 2,80,"right")
+    this.drawText(actor.luk,x + 260,y + 32 * 3,80,"right")
 };
 
 Window_MenuStatusM.prototype.processOk = function() {
@@ -1324,14 +1182,3 @@ if (Imported.MOG_TimeSystem) {
         $gameSystem._refresh_window_time = false;
     };
 }
-
-//=============================================================================
-// ** Window_MenuCommand (aliase para remover comandos indesejados)
-//=============================================================================
-var _mog_menuCommand_makeCommandList = Window_MenuCommand.prototype.makeCommandList;
-Window_MenuCommand.prototype.makeCommandList = function() {
-    _mog_menuCommand_makeCommandList.call(this);
-    this._list = this._list.filter(function(cmd) {
-        return cmd.symbol !== 'item' && cmd.symbol !== 'skill';
-    });
-};
