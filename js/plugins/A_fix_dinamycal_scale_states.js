@@ -19,10 +19,15 @@
  *    <DEF Bonus per Missing HP%: -1%>     // –1% базовой защиты за каждый процент недостающего HP
  *    <MAT Bonus per Current HP%: 0.5%>    // +0.5% базовой магии за каждый процент текущего HP
  *
+ * 4. Бонус от параметра другого актёра:
+ *    <ATK Bonus from Actor: 3, 50%, MDF>  // +50% от маг. защиты актёра с ID 3 к атаке
+ *    <DEF Bonus from Actor: 1, 100%, ATK> // +100% от атаки актёра 1 к защите
+ *
  * ============================================================================
  * Источники:
- * ATK, DEF, MAT, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
+ * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
  * (процентные версии: Current HP%, Missing HP%)
+ * Для Actor-тега: параметры из PARAM_MAP (ATK, DEF, MAT, MDF, AGI, LUK)
  * ============================================================================
  */
 
@@ -101,6 +106,42 @@
                 }
 
                 bonusPercent += mult * this.getSourceValue(source, isPercent);
+            }
+
+            // <PARAM Bonus from Actor: ID, %, SOURCE>
+            const regexActor =
+                /<(\w+)\s+BONUS\s+FROM\s+ACTOR\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)%\s*,\s*(\w+)\s*>/gi;
+
+            let matchActor;
+            while ((matchActor = regexActor.exec(note)) !== null) {
+
+                const target = matchActor[1].toUpperCase();
+                const actorId = Number(matchActor[2]);
+                const percent = Number(matchActor[3]) / 100;
+                const sourceParam = matchActor[4].toUpperCase();
+
+                if (PARAM_MAP[target] !== paramId) {
+                    continue;
+                }
+
+                const actor = $gameActors.actor(actorId);
+
+                if (!actor) {
+                    continue;
+                }
+
+                if (PARAM_MAP[sourceParam] === undefined) {
+                    continue;
+                }
+
+                // Используем оригинальный param, чтобы избежать рекурсии
+                const sourceValue =
+                    _Game_BattlerBase_param.call(
+                        actor,
+                        PARAM_MAP[sourceParam]
+                    );
+
+                bonusFlat += Math.floor(sourceValue * percent);
             }
         }
 
