@@ -2,24 +2,24 @@
 // Element Damage Icons
 // EDamageIcons.js
 //=============================================================================
-// Плагин добавляет иконки элементов к попапам урона.
+// v1.2 – Полная поддержка иконок состояний из YEP_BuffsStatesCore.
 // Требуется: YEP_ElementCore и LGP_BetterDamagePopup.
-// Разместите этот плагин НИЖЕ LGP_BetterDamagePopup в списке плагинов.
+// Разместите этот плагин НИЖЕ LGP_BetterDamagePopup.
 //=============================================================================
 
 var Imported = Imported || {};
 Imported.EDamageIcons = true;
 
 var EDamageIcons = EDamageIcons || {};
-EDamageIcons.version = '1.0';
+EDamageIcons.version = '1.2';
 
 /*:
- * @plugindesc v1.0 Отображает иконки элементов (стихий) рядом с цифрами урона.
+ * @plugindesc v1.2 Иконки элементов и состояний в попапах урона.
  * @author YourName
  *
  * @param Icon Mapping
  * @type text
- * @desc JSON-объект: ID элемента → индекс иконки. Пример: {"3":120, "4":121}
+ * @desc JSON: ID элемента → индекс иконки. Пример: {"3":120, "4":121}
  * @default {}
  *
  * @param Icon Position
@@ -53,53 +53,39 @@ EDamageIcons.version = '1.0';
  *
  * @param Max Icons
  * @type number
- * @desc Максимальное количество отображаемых иконок (0 = все).
+ * @desc Максимальное количество иконок стихий (0 = все).
  * @default 3
  *
  * @help
  * ============================================================================
  * Введение
  * ============================================================================
+ * Дополняет Better Damage Popup (LGP).
+ * Показывает иконки стихий (из Icon Mapping) или иконку состояния,
+ * вызвавшего урон/лечение через YEP_BuffsStatesCore.
  *
- * Этот плагин дополняет Better Damage Popup от Azel, добавляя к числам
- * урона маленькие иконки элементов, которыми была совершена атака.
- * Для работы необходимы:
- *   - YEP_ElementCore (или ваша модифицированная версия)
- *   - LGP_BetterDamagePopup
- *
- * Разместите плагин **после** LGP_BetterDamagePopup в списке плагинов.
- *
- * ============================================================================
- * Настройка
- * ============================================================================
- *
- * В параметре «Icon Mapping» укажите JSON-строку, связывающую ID элементов
- * (из вкладки "Типы" в базе данных) с индексами иконок (из набора IconSet).
- * Например:
- *   {"1":64, "2":65, "3":120}
- *
- * Остальные параметры управляют расположением и масштабом иконок.
+ * Для состояний: добавьте в заметки <State Damage Icon>.
+ * Тогда при срабатывании Custom Turn/Regen/Action End Effect
+ * в попапе появится иконка именно этого состояния.
  */
 //=============================================================================
 
 (function() {
     'use strict';
 
-    // Проверяем, что нужные плагины загружены
     if (!Imported.LGP_BetterDamagePopup || !Imported.YEP_ElementCore) return;
 
     //=============================================================================
-    // Parameter Parsing
+    // Параметры плагина
     //=============================================================================
 
     var parameters = PluginManager.parameters('EDamageIcons');
 
-    var iconMappingStr = parameters['Icon Mapping'] || '{}';
     var iconMapping = {};
     try {
-        iconMapping = JSON.parse(iconMappingStr);
+        iconMapping = JSON.parse(parameters['Icon Mapping'] || '{}');
     } catch (e) {
-        console.error('EDamageIcons: Ошибка парсинга Icon Mapping. Используется пустой объект.', e);
+        console.error('EDamageIcons: Ошибка Icon Mapping.', e);
     }
 
     var iconPosition = parameters['Icon Position'] || 'right';
@@ -109,24 +95,156 @@ EDamageIcons.version = '1.0';
     var maxIcons = Number(parameters['Max Icons']) || 3;
 
     //=============================================================================
-    // Sprite_Damage - добавляем иконки к стандартному отображению числа
+    // Предварительный парсинг нотетега состояний при загрузке базы
+    //=============================================================================
+
+    var _DataManager_isDatabaseLoaded = DataManager.isDatabaseLoaded;
+    DataManager.isDatabaseLoaded = function() {
+        if (!_DataManager_isDatabaseLoaded.call(this)) return false;
+        // Обрабатываем все состояния один раз
+        if (!this._EDamageIcons_parsed) {
+            for (var i = 1; i < $dataStates.length; i++) {
+                var state = $dataStates[i];
+                if (state && state.note && state.note.match(/<State Damage Icon>/i)) {
+                    state._stateDamageIcon = true;
+                }
+            }
+            this._EDamageIcons_parsed = true;
+        }
+        return true;
+    };
+
+    //=============================================================================
+	// Интеграция с YEP_BuffsStatesCore (FIX)
+	//=============================================================================
+
+	if (Imported.YEP_BuffsStatesCore) {
+
+	var _EDI_customEffectEval =
+	Game_Battler.prototype.customEffectEval;
+
+	Game_Battler.prototype.customEffectEval =
+	function(stateId, type) {
+
+		var state = $dataStates[stateId];
+
+		if (
+			state &&
+			state._stateDamageIcon &&
+			state.customEffectEval &&
+			state.customEffectEval[type] !== ''
+		) {
+			this._stateDamageIconSource = state.iconIndex;
+		}
+
+		_EDI_customEffectEval.call(this, stateId, type);
+
+	};
+
+	}
+
+    //=============================================================================
+    // Перехват startDamagePopup — запись иконки в результат
+    //=============================================================================
+
+	var _Game_Battler_startDamagePopup =
+	Game_Battler.prototype.startDamagePopup;
+
+	Game_Battler.prototype.startDamagePopup =
+	function() {
+
+		if (
+			this._stateDamageIconSource !== undefined &&
+			this._stateDamageIconSource !== null
+		) {
+
+			if (!this._result) {
+				this._result =
+					new Game_ActionResult();
+			}
+
+			this._result._stateDamageIcon =
+				this._stateDamageIconSource;
+
+			delete this._stateDamageIconSource;
+		}
+
+		_Game_Battler_startDamagePopup.call(this);
+	};
+
+    //=============================================================================
+    // Sprite_Damage — отрисовка иконок
     //=============================================================================
 
     var _Sprite_Damage_drawDefaultNumber = Sprite_Damage.prototype.drawDefaultNumber;
 
     Sprite_Damage.prototype.drawDefaultNumber = function() {
-        // Вызываем оригинальный метод отрисовки числа (из LGP)
         _Sprite_Damage_drawDefaultNumber.call(this);
 
-        // Если есть элементы – добавляем иконки
-        if (this._result && this._result.itemElements && this._result.itemElements.length > 0) {
+        if (this._result && this._result._stateDamageIcon) {
+            this._addStateIcon();
+        } else if (this._result && this._result.itemElements && this._result.itemElements.length > 0) {
             this._addElementIcons();
         }
     };
 
-    /**
-     * Создаёт контейнер с иконками элементов и добавляет его к спрайту числа.
-     */
+    Sprite_Damage.prototype._addStateIcon = function() {
+        var numberSprite = this.getChild('number');
+        if (!numberSprite) return;
+
+        if (numberSprite._elementIconContainer) {
+            numberSprite.removeChild(numberSprite._elementIconContainer);
+        }
+
+        var container = new Sprite();
+        numberSprite._elementIconContainer = container;
+        numberSprite.addChild(container);
+
+        var iconBitmap = ImageManager.loadSystem('IconSet');
+        var pw = Window_Base._iconWidth;
+        var ph = Window_Base._iconHeight;
+        var iconIndex = this._result._stateDamageIcon;
+
+        var bw = numberSprite.bitmap.width;
+        var bh = numberSprite.bitmap.height;
+        var startX, startY;
+        var totalWidth = pw * iconScale;
+
+        switch (iconPosition) {
+            case 'right':
+                startX = bw / 2 + iconOffsetX;
+                startY = -bh / 2 + iconOffsetY - (ph * iconScale) / 2;
+                break;
+            case 'left':
+                startX = -bw / 2 - totalWidth - iconOffsetX;
+                startY = -bh / 2 + iconOffsetY - (ph * iconScale) / 2;
+                break;
+            case 'top':
+                startX = -totalWidth / 2 + iconOffsetX;
+                startY = -bh - iconOffsetY - ph * iconScale;
+                break;
+            case 'bottom':
+                startX = -totalWidth / 2 + iconOffsetX;
+                startY = iconOffsetY;
+                break;
+        }
+
+        container.x = startX;
+        container.y = startY;
+
+        var iconSprite = new Sprite();
+        iconSprite.bitmap = new Bitmap(pw, ph);
+        var sx = iconIndex % 16 * pw;
+        var sy = Math.floor(iconIndex / 16) * ph;
+        iconSprite.bitmap.blt(iconBitmap, sx, sy, pw, ph, 0, 0);
+        iconSprite.scale.x = iconScale;
+        iconSprite.scale.y = iconScale;
+        container.addChild(iconSprite);
+
+        // Удаляем иконку из результата, чтобы избежать повторного использования
+        delete this._result._stateDamageIcon;
+    };
+
     Sprite_Damage.prototype._addElementIcons = function() {
         var result = this._result;
         var elements = result.itemElements.filter(function(elId) {
@@ -134,23 +252,18 @@ EDamageIcons.version = '1.0';
         });
         if (elements.length === 0) return;
 
-        // Применяем ограничение по количеству
         if (maxIcons > 0 && elements.length > maxIcons) {
             elements = elements.slice(0, maxIcons);
         }
 
-        // Спрайт числа (создан в оригинальном методе)
         var numberSprite = this.getChild('number');
         if (!numberSprite) return;
 
-        // Удаляем старый контейнер с иконками, если был
         if (numberSprite._elementIconContainer) {
             numberSprite.removeChild(numberSprite._elementIconContainer);
         }
 
         var container = new Sprite();
-        container.anchor.x = 0;
-        container.anchor.y = 0;
         numberSprite._elementIconContainer = container;
         numberSprite.addChild(container);
 
@@ -158,10 +271,6 @@ EDamageIcons.version = '1.0';
         var pw = Window_Base._iconWidth;
         var ph = Window_Base._iconHeight;
 
-        // Вычисляем начальную позицию контейнера относительно спрайта числа
-        // Спрайт числа имеет anchor (0.5, 1), т.е. локальные координаты:
-        //   левый верхний угол: (-bitmap.width/2, -bitmap.height)
-        //   центр низа: (0, 0)
         var bw = numberSprite.bitmap.width;
         var bh = numberSprite.bitmap.height;
         var totalIconsWidth = elements.length * pw * iconScale;
@@ -189,7 +298,6 @@ EDamageIcons.version = '1.0';
         container.x = startX;
         container.y = startY;
 
-        // Создаём иконки
         for (var i = 0; i < elements.length; i++) {
             var iconIndex = iconMapping[elements[i]];
             var iconSprite = new Sprite();
@@ -200,7 +308,6 @@ EDamageIcons.version = '1.0';
             iconSprite.scale.x = iconScale;
             iconSprite.scale.y = iconScale;
             iconSprite.x = i * pw * iconScale;
-            iconSprite.y = 0;
             container.addChild(iconSprite);
         }
     };
