@@ -23,6 +23,10 @@
  *    <ATK Bonus from Actor: 3, 50%, MDF>  // +50% от маг. защиты актёра с ID 3 к атаке
  *    <DEF Bonus from Actor: 1, 100%, ATK> // +100% от атаки актёра 1 к защите
  *
+ * 5. Бонус от параметра другого актёра при полном HP владельца:
+ *    <LUK Bonus from Actor Full HP: 3, 50%>  // +50% от удачи актёра 3 к удаче, только если HP = MHP
+ *    <ATK Bonus from Actor Full HP: 2, 30%>  // +30% от атаки актёра 2 к атаке, только если HP = MHP
+ *
  * ============================================================================
  * Источники:
  * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
@@ -140,6 +144,37 @@
                         actor,
                         PARAM_MAP[sourceParam]
                     );
+
+                bonusFlat += Math.floor(sourceValue * percent);
+            }
+
+            // <STAT Bonus from Actor Full HP: actorId, X%>
+            const regexActorFullHP =
+                /<(\w+)\s+BONUS\s+FROM\s+ACTOR\s+FULL\s+HP\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)%\s*>/gi;
+
+            let matchFullHP;
+            while ((matchFullHP = regexActorFullHP.exec(note)) !== null) {
+
+                const target = matchFullHP[1].toUpperCase();
+                const actorId = Number(matchFullHP[2]);
+                const percent = Number(matchFullHP[3]) / 100;
+
+                // 1. Проверяем, что запрашивается именно этот параметр
+                if (PARAM_MAP[target] !== paramId) {
+                    continue;
+                }
+
+                // 2. Проверяем полное здоровье (hp < mhp → не активно)
+                if (this.hp < this.mhp) {
+                    continue;
+                }
+
+                const actor = $gameActors.actor(actorId);
+                if (!actor) continue;
+
+                // Базовое значение того же параметра актёра-источника
+                const sourceValue =
+                    _Game_BattlerBase_param.call(actor, PARAM_MAP[target]);
 
                 bonusFlat += Math.floor(sourceValue * percent);
             }
