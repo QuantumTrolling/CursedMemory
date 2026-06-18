@@ -115,62 +115,54 @@ EDamageIcons.version = '1.2';
     };
 
     //=============================================================================
-	// Интеграция с YEP_BuffsStatesCore (FIX)
-	//=============================================================================
-
-	if (Imported.YEP_BuffsStatesCore) {
-
-	var _EDI_customEffectEval =
-	Game_Battler.prototype.customEffectEval;
-
-	Game_Battler.prototype.customEffectEval =
-	function(stateId, type) {
-
-		var state = $dataStates[stateId];
-
-		if (
-			state &&
-			state._stateDamageIcon &&
-			state.customEffectEval &&
-			state.customEffectEval[type] !== ''
-		) {
-			this._stateDamageIconSource = state.iconIndex;
-		}
-
-		_EDI_customEffectEval.call(this, stateId, type);
-
-	};
-
-	}
-
-    //=============================================================================
-    // Перехват startDamagePopup — запись иконки в результат
+    // Интеграция с YEP_BuffsStatesCore (ИСПРАВЛЕНО)
     //=============================================================================
 
-	var _Game_Battler_startDamagePopup =
-	Game_Battler.prototype.startDamagePopup;
+    if (Imported.YEP_BuffsStatesCore) {
 
-	Game_Battler.prototype.startDamagePopup =
-	function() {
+        var _EDI_customEffectEval = Game_Battler.prototype.customEffectEval;
 
-		if (
-			this._stateDamageIconSource !== undefined &&
-			this._stateDamageIconSource !== null
-		) {
+        Game_Battler.prototype.customEffectEval = function(stateId, type) {
+            var state = $dataStates[stateId];
 
-			if (!this._result) {
-				this._result =
-					new Game_ActionResult();
-			}
+            // Помечаем, что следующий попап должен показать иконку этого состояния
+            if (
+                state &&
+                state._stateDamageIcon &&
+                state.customEffectEval &&
+                state.customEffectEval[type] !== ''
+            ) {
+                this._pendingStateDamageIcon = state.iconIndex;
+            }
 
-			this._result._stateDamageIcon =
-				this._stateDamageIconSource;
+            // Выполняем оригинальный эффект
+            _EDI_customEffectEval.call(this, stateId, type);
 
-			delete this._stateDamageIconSource;
-		}
+            // Если попап урона так и не появился (урон 0 и т.п.) – сбрасываем флаг
+            if (this._pendingStateDamageIcon !== undefined) {
+                delete this._pendingStateDamageIcon;
+            }
+        };
+    }
 
-		_Game_Battler_startDamagePopup.call(this);
-	};
+    //=============================================================================
+    // Перехват startDamagePopup — запись иконки в результат (ИСПРАВЛЕНО)
+    //=============================================================================
+
+    var _Game_Battler_startDamagePopup = Game_Battler.prototype.startDamagePopup;
+
+    Game_Battler.prototype.startDamagePopup = function() {
+        // Если именно сейчас ожидается иконка состояния
+        if (this._pendingStateDamageIcon !== undefined && this._pendingStateDamageIcon !== null) {
+            if (!this._result) {
+                this._result = new Game_ActionResult();
+            }
+            this._result._stateDamageIcon = this._pendingStateDamageIcon;
+            delete this._pendingStateDamageIcon;
+        }
+
+        _Game_Battler_startDamagePopup.call(this);
+    };
 
     //=============================================================================
     // Sprite_Damage — отрисовка иконок
