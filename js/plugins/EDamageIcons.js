@@ -2,7 +2,7 @@
 // Element Damage Icons
 // EDamageIcons.js
 //=============================================================================
-// v1.2 – Полная поддержка иконок состояний из YEP_BuffsStatesCore.
+// v1.4 – Полный перехват startDamagePopup из LGP для точной привязки иконок
 // Требуется: YEP_ElementCore и LGP_BetterDamagePopup.
 // Разместите этот плагин НИЖЕ LGP_BetterDamagePopup.
 //=============================================================================
@@ -11,10 +11,10 @@ var Imported = Imported || {};
 Imported.EDamageIcons = true;
 
 var EDamageIcons = EDamageIcons || {};
-EDamageIcons.version = '1.2';
+EDamageIcons.version = '1.4';
 
 /*:
- * @plugindesc v1.2 Иконки элементов и состояний в попапах урона.
+ * @plugindesc v1.4 Иконки элементов и состояний в попапах урона.
  * @author YourName
  *
  * @param Icon Mapping
@@ -81,9 +81,18 @@ EDamageIcons.version = '1.2';
 
     var parameters = PluginManager.parameters('EDamageIcons');
 
+    // Нормализуем ключи iconMapping — переводим строковые ключи в числа
     var iconMapping = {};
     try {
-        iconMapping = JSON.parse(parameters['Icon Mapping'] || '{}');
+        var rawMapping = JSON.parse(parameters['Icon Mapping'] || '{}');
+        for (var key in rawMapping) {
+            if (rawMapping.hasOwnProperty(key)) {
+                var numKey = Number(key);
+                if (!isNaN(numKey)) {
+                    iconMapping[numKey] = rawMapping[key];
+                }
+            }
+        }
     } catch (e) {
         console.error('EDamageIcons: Ошибка Icon Mapping.', e);
     }
@@ -101,7 +110,6 @@ EDamageIcons.version = '1.2';
     var _DataManager_isDatabaseLoaded = DataManager.isDatabaseLoaded;
     DataManager.isDatabaseLoaded = function() {
         if (!_DataManager_isDatabaseLoaded.call(this)) return false;
-        // Обрабатываем все состояния один раз
         if (!this._EDamageIcons_parsed) {
             for (var i = 1; i < $dataStates.length; i++) {
                 var state = $dataStates[i];
@@ -115,12 +123,11 @@ EDamageIcons.version = '1.2';
     };
 
     //=============================================================================
-    // Интеграция с YEP_BuffsStatesCore (ИСПРАВЛЕНО + ДОБАВЛЕН РЕАКТИВНЫЙ ЭФФЕКТ)
+    // Интеграция с YEP_BuffsStatesCore
     //=============================================================================
 
     if (Imported.YEP_BuffsStatesCore) {
 
-        // Перехват обычных пользовательских эффектов (turn, regen, action end и т.д.)
         var _EDI_customEffectEval = Game_Battler.prototype.customEffectEval;
         Game_Battler.prototype.customEffectEval = function(stateId, type) {
             var state = $dataStates[stateId];
@@ -133,12 +140,12 @@ EDamageIcons.version = '1.2';
                 this._pendingStateDamageIcon = state.iconIndex;
             }
             _EDI_customEffectEval.call(this, stateId, type);
+            // Если иконка не была использована в startDamagePopup, удаляем её
             if (this._pendingStateDamageIcon !== undefined) {
                 delete this._pendingStateDamageIcon;
             }
         };
 
-        // Перехват РЕАКТИВНЫХ эффектов (Custom React Effect)
         if (Game_Battler.prototype.reactEffectEval) {
             var _EDI_reactEffectEval = Game_Battler.prototype.reactEffectEval;
             Game_Battler.prototype.reactEffectEval = function(stateId) {
@@ -155,19 +162,87 @@ EDamageIcons.version = '1.2';
     }
 
     //=============================================================================
-    // Перехват startDamagePopup — запись иконки в результат
+    // Переопределяем startDamagePopup, чтобы иконка попадала только в нужный тип урона
+    // Копируем код из LGP_BetterDamagePopup и добавляем вставку _stateDamageIcon
     //=============================================================================
 
-    var _Game_Battler_startDamagePopup = Game_Battler.prototype.startDamagePopup;
     Game_Battler.prototype.startDamagePopup = function() {
-        if (this._pendingStateDamageIcon !== undefined && this._pendingStateDamageIcon !== null) {
-            if (!this._result) {
-                this._result = new Game_ActionResult();
-            }
-            this._result._stateDamageIcon = this._pendingStateDamageIcon;
-            delete this._pendingStateDamageIcon;
+        var result = this.result();
+        if (result.missed || result.evaded) {
+            var copyResult = JsonEx.makeDeepCopy(result);
+            copyResult.hpAffected = false;
+            copyResult.mpDamage = 0;
+            copyResult.tpDamage = 0;
+            copyResult.addedStates = [];
+            copyResult.removedStates = [];
+            copyResult.addedBuffs = [];
+            copyResult.addedDebuffs = [];
+            copyResult.removedBuffs = [];
+            this._damagePopup.push(copyResult);
         }
-        _Game_Battler_startDamagePopup.call(this);
+        if (result.hpAffected) {
+            var copyResult = JsonEx.makeDeepCopy(result);
+            copyResult.mpDamage = 0;
+            copyResult.tpDamage = 0;
+            copyResult.missed = false;
+            copyResult.evaded = false;
+            copyResult.addedStates = [];
+            copyResult.removedStates = [];
+            copyResult.addedBuffs = [];
+            copyResult.addedDebuffs = [];
+            copyResult.removedBuffs = [];
+            // Вставляем иконку состояния, если она ожидает
+            if (this._pendingStateDamageIcon !== undefined && this._pendingStateDamageIcon !== null) {
+                copyResult._stateDamageIcon = this._pendingStateDamageIcon;
+                delete this._pendingStateDamageIcon;
+            }
+            this._damagePopup.push(copyResult);
+        }
+        if (result.mpDamage !== 0) {
+            var copyResult = JsonEx.makeDeepCopy(result);
+            copyResult.hpAffected = false;
+            copyResult.tpDamage = 0;
+            copyResult.missed = false;
+            copyResult.evaded = false;
+            copyResult.addedStates = [];
+            copyResult.removedStates = [];
+            copyResult.addedBuffs = [];
+            copyResult.addedDebuffs = [];
+            copyResult.removedBuffs = [];
+            if (this._pendingStateDamageIcon !== undefined && this._pendingStateDamageIcon !== null) {
+                copyResult._stateDamageIcon = this._pendingStateDamageIcon;
+                delete this._pendingStateDamageIcon;
+            }
+            this._damagePopup.push(copyResult);
+        }
+        if (result.tpDamage !== 0) {
+            var copyResult = JsonEx.makeDeepCopy(result);
+            copyResult.hpAffected = false;
+            copyResult.mpDamage = 0;
+            copyResult.missed = false;
+            copyResult.evaded = false;
+            copyResult.addedStates = [];
+            copyResult.removedStates = [];
+            copyResult.addedBuffs = [];
+            copyResult.addedDebuffs = [];
+            copyResult.removedBuffs = [];
+            if (this._pendingStateDamageIcon !== undefined && this._pendingStateDamageIcon !== null) {
+                copyResult._stateDamageIcon = this._pendingStateDamageIcon;
+                delete this._pendingStateDamageIcon;
+            }
+            this._damagePopup.push(copyResult);
+        }
+        if (result.isStatusAffected()) {
+            var copyResult = JsonEx.makeDeepCopy(result);
+            copyResult.clear();
+            copyResult.addedStates = result.addedStates;
+            copyResult.removedStates = result.removedStates;
+            copyResult.addedBuffs = result.addedBuffs;
+            copyResult.addedDebuffs = result.addedDebuffs;
+            copyResult.removedBuffs = result.removedBuffs;
+            // Иконку состояния в статусные попапы не добавляем
+            this._damagePopup.push(copyResult);
+        }
     };
 
     //=============================================================================
