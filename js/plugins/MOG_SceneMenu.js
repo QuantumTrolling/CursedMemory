@@ -427,10 +427,13 @@ Scene_Menu.prototype.updateCommandName = function() {
 };
 
 Scene_Menu.prototype.refreshCommandName = function() {
-    this._commandNameIndex = this._commandWindow._index;
+    var index = this._commandWindow._index;
+    // Выходим, если индекс некорректен (окно неактивно)
+    if (index < 0 || index >= this._comList.length) return;
+    this._commandNameIndex = index;
     this._commandNameIndex2 = -2;
     this._commandName.bitmap.clear();
-    this._commandName.bitmap.drawText(this._comList[this._commandNameIndex].name,0,0,100,32,"center")
+    this._commandName.bitmap.drawText(this._comList[index].name, 0, 0, 100, 32, "center");
     this._commandName.x = Moghunter.scMenu_ComNameX - 50;
     this._commandName.y = Moghunter.scMenu_ComNameY;
     this._commandName.opacity = 0;
