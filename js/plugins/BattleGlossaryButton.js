@@ -115,6 +115,10 @@
         } else if (scene._actorWindow && scene._actorWindow.active && scene._actorWindow.visible) {
             this._savedActiveWindow = scene._actorWindow;
             this._savedActiveWindowType = 'target';
+		} else if (scene._enemyWindow && scene._enemyWindow.active && scene._enemyWindow.visible) {
+			this._savedActiveWindow = scene._enemyWindow;
+			this._savedActiveWindowType = 'enemyTarget';
+
         } else {
             var windows = scene._windows || [];
             for (var i = 0; i < windows.length; i++) {
@@ -183,26 +187,32 @@
 
         if (this._savedActiveWindow && this._savedActiveWindowType) {
             switch (this._savedActiveWindowType) {
-                case 'skill':
-                    if (scene._actorCommandWindow) {
-                        scene._actorCommandWindow.visible = true;
-                        scene._actorCommandWindow.deactivate();
-                    }
-                    if (scene._skillWindow) {
-                        scene._skillWindow.visible = true;
-                        scene._skillWindow.activate();
-                    }
-                    break;
-                case 'item':
-                    if (scene._actorCommandWindow) {
-                        scene._actorCommandWindow.visible = true;
-                        scene._actorCommandWindow.deactivate();
-                    }
-                    if (scene._itemWindow) {
-                        scene._itemWindow.visible = true;
-                        scene._itemWindow.activate();
-                    }
-                    break;
+				case 'skill':
+					if (scene._actorCommandWindow) {
+						scene._actorCommandWindow.show();
+						scene._actorCommandWindow.open();
+						scene._actorCommandWindow.deactivate();
+					}
+
+					if (scene._skillWindow) {
+						scene._skillWindow.show();
+						scene._skillWindow.open();
+						scene._skillWindow.activate();
+					}
+					break;
+				case 'item':
+					if (scene._actorCommandWindow) {
+						scene._actorCommandWindow.show();
+						scene._actorCommandWindow.open();
+						scene._actorCommandWindow.deactivate();
+					}
+
+					if (scene._itemWindow) {
+						scene._itemWindow.show();
+						scene._itemWindow.open();
+						scene._itemWindow.activate();
+					}
+					break;
                 case 'target':
                     if (scene._actorCommandWindow) scene._actorCommandWindow.visible = false;
                     if (scene._skillWindow) scene._skillWindow.visible = false;
@@ -226,6 +236,16 @@
                         this._savedActiveWindow.activate();
                     }
                     break;
+				case 'enemyTarget':
+					if (scene._actorCommandWindow) scene._actorCommandWindow.visible = false;
+					if (scene._skillWindow) scene._skillWindow.visible = false;
+					if (scene._itemWindow) scene._itemWindow.visible = false;
+
+					if (scene._enemyWindow) {
+						scene._enemyWindow.visible = true;
+						scene._enemyWindow.activate();
+					}
+					break;
             }
         } else {
             if (BattleManager.isInputting()) {
@@ -476,10 +496,16 @@
             targetWindowActive = true;
         }
 
-        var canUse = BattleManager.isInputting() &&
-                     !$gameMessage.isBusy() &&
-                     !overlayActive &&
-                     !targetWindowActive;   // <-- вот ключевая проверка
+		var inputWindowActive =
+			(this._actorCommandWindow && this._actorCommandWindow.active) ||
+			(this._skillWindow && this._skillWindow.active) ||
+			(this._itemWindow && this._itemWindow.active);
+
+		var canUse =
+			inputWindowActive &&
+			!$gameMessage.isBusy() &&
+			!overlayActive &&
+			!targetWindowActive;
 
         this._glossaryBtn.visible = canUse;
         if (!canUse) return;
