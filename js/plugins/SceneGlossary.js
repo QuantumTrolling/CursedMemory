@@ -2825,6 +2825,18 @@ Window_Glossary.prototype.getDescription = function(index) {
         var equip = actor.equips()[parseInt(slotId)];
         return equip ? `\x1bi[${equip.iconIndex}]` : '';
     });
+	// \EQP_DESC_LINE[actorId, slotId, lineIndex] – строка lineIndex описания экипировки
+	text = text.replace(/\x1bEQP_DESC_LINE\[(\d+),\s*(\d+),\s*(\d+)\]/gi, function(match, actorId, slotId, lineIdx) {
+		var actor = $gameActors.actor(parseInt(actorId));
+		if (!actor) return '';
+		var equip = actor.equips()[parseInt(slotId)];
+		if (!equip) return '';
+		var desc = equip.description.replace(/\\n/g, '\n');
+		var lines = desc.split('\n');
+		var idx = parseInt(lineIdx);
+		// если индексация с 1, то: return lines[idx - 1] || '';
+		return lines[idx] || '';
+	}); 
     return text;
 };
 

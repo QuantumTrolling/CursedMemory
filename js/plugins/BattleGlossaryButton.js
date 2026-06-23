@@ -91,6 +91,7 @@
         if (typeof scene.updateLayoutWindow === 'function') {
             scene.updateLayoutWindow();
         }
+
         if (typeof scene.updateBattleHud === 'function') {
             scene.updateBattleHud();
         }
@@ -165,6 +166,38 @@
                 }
             }
         }
+		//==================================================
+		// Скрыть MOG HUD и оверлеи, НЕ трогать поле боя
+		//==================================================
+
+		this._hiddenSprites = [];
+
+		var keep = [
+			scene._spriteset,
+			scene._windowLayer,
+			scene._glossaryBtn
+		];
+
+		(scene.children || []).forEach(function(child){
+
+			if (!child) return;
+
+			if (keep.indexOf(child) >= 0) {
+				return;
+			}
+
+			if (child.visible) {
+				this._hiddenSprites.push(child);
+				child.visible = false;
+			}
+
+		}, this);
+
+		// отдельно скрыть layout MOG
+		if (scene._layoutField && scene._layoutField.visible) {
+			this._hiddenSprites.push(scene._layoutField);
+			scene._layoutField.visible = false;
+		}
     };
 
     GlossaryOverlay.prototype.restoreAllBattleWindows = function() {
@@ -173,6 +206,19 @@
             win.visible = true;
         });
         this._hiddenWindows = [];
+		if (this._hiddenSprites) {
+
+			this._hiddenSprites.forEach(function(sprite){
+
+				if (sprite) {
+					sprite.visible = true;
+				}
+
+			});
+
+			this._hiddenSprites = [];
+
+		}
 
         if ($gameTemp._bhud_position_active !== undefined) {
             $gameTemp._bhud_position_active = null;
