@@ -1,13 +1,17 @@
 //=============================================================================
 // OctoBattle_ShieldSE.js
 //=============================================================================
- /*:
+/*:
  * @plugindesc Play SE when enemy's Break Shield decreases in battle.
  * @author YourName
  *
  * @help This plugin requires Olivia_OctoBattle.js for the Break Shield system.
  * It plays a sound effect whenever an enemy's Break Shield value decreases.
  * Place it BELOW Olivia_OctoBattle in the Plugin Manager.
+ *
+ * To suppress the SE when calling setBreakShield directly from script,
+ * pass true as the second argument:
+ *   $gameTroop.members()[1].setBreakShield(10, true);
  *
  * @param seName
  * @desc SE filename (without extension) played when shield decreases.
@@ -54,11 +58,15 @@ Imported.Olivia_OctoBattle_ShieldSE = true;
 
     // Alias setBreakShield to detect decreases on enemies
     var _Game_Battler_setBreakShield = Game_Battler.prototype.setBreakShield;
-    Game_Battler.prototype.setBreakShield = function(value) {
+    Game_Battler.prototype.setBreakShield = function(value, skipSE) {
         var oldShield = this._currentBreakShield;
+        // Вызываем оригинальный метод с одним аргументом (оригинал не знает про skipSE)
         _Game_Battler_setBreakShield.call(this, value);
-        // Only play SE if this is an enemy and the shield actually decreased
-        if (this.isEnemy() && this._currentBreakShield < oldShield) {
+        // Играем звук только если:
+        // - это враг
+        // - щит уменьшился
+        // - НЕ передан skipSE = true
+        if (this.isEnemy() && this._currentBreakShield < oldShield && !skipSE) {
             AudioManager.playSe({
                 name: seName,
                 volume: volume,
