@@ -590,10 +590,16 @@
         return _Scene_Battle_isAnyInputWindowActive.call(this);
     };
 
-    if (typeof Window_BattleSkill !== 'undefined') {
-        var _Window_BattleSkill_processOk = Window_BattleSkill.prototype.processOk;
-        Window_BattleSkill.prototype.processOk = function() {
-            _Window_BattleSkill_processOk.call(this);
-        };
-    }
+    // Блокировка OK (пробела) при активном глоссарии
+    var _Window_Selectable_processOk = Window_Selectable.prototype.processOk;
+    Window_Selectable.prototype.processOk = function() {
+        var battle = SceneManager._scene;
+        if (battle instanceof Scene_Battle && battle._glossaryOverlay && battle._glossaryOverlay._active) {
+            // Разрешаем OK только для окон самого глоссария
+            if (!this._glossaryOverlayWindow) {
+                return; // Блокируем подтверждение в боевых окнах
+            }
+        }
+        _Window_Selectable_processOk.call(this);
+    };
 })();
