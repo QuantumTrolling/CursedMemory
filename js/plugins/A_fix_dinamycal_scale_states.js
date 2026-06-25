@@ -27,6 +27,12 @@
  *    <LUK Bonus from Actor Full HP: 3, 50%>  // +50% от удачи актёра 3 к удаче, только если HP = MHP
  *    <ATK Bonus from Actor Full HP: 2, 30%>  // +30% от атаки актёра 2 к атаке, только если HP = MHP
  *
+ * 6. Бонус от параметра всех союзников, имеющих определённое состояние:
+ *    <ATK Bonus from Actors ATK with state 5: 50%>
+ *    // +50% от суммарной атаки живых союзников, на которых есть состояние с ID 5, к атаке владельца
+ *    <DEF Bonus from Actors MDF with state 8: 30%>
+ *    // +30% от суммарной маг. защиты живых союзников с состоянием 8 к защите владельца
+ *
  * ============================================================================
  * Источники:
  * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
@@ -64,13 +70,35 @@
         for (let i = 0; i < states.length; i++) {
             const note = states[i].note || "";
 
+            // Новый тег: <STAT Bonus from Actors PARAM with state ID: X%>
+            const regexActorsWithState =
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+            let matchActorsWithState;
+            while ((matchActorsWithState = regexActorsWithState.exec(note)) !== null) {
+                const target = matchActorsWithState[1].toUpperCase();
+                const sourceParam = matchActorsWithState[2].toUpperCase();
+                const stateId = Number(matchActorsWithState[3]);
+                const percent = Number(matchActorsWithState[4]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (PARAM_MAP[sourceParam] === undefined) continue;
+                if (!this.friendsUnit) continue;
+
+                const unit = this.friendsUnit();
+                let sum = 0;
+                for (const member of unit.members()) {
+                    if (member.hp > 0 && member.isStateAffected(stateId)) {
+                        sum += _Game_BattlerBase_param.call(member, PARAM_MAP[sourceParam]);
+                    }
+                }
+                bonusFlat += Math.floor(sum * percent);
+            }
+
             // <PARAM Bonus from SOURCE: X%>  (поддерживает % у источника)
             const regexFlat =
                 /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+?)(\s*%)?\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
-
             let matchFlat;
             while ((matchFlat = regexFlat.exec(note)) !== null) {
-
                 const target = matchFlat[1].toUpperCase();
                 let source = matchFlat[2].toUpperCase().trim();
                 const isPercent = !!matchFlat[3];
@@ -92,10 +120,8 @@
             // <PARAM Bonus per SOURCE: X%>  (поддерживает % у источника)
             const regexPer =
                 /<(\w+)[ _]?BONUS[ _]?PER[ _]?([\w ]+?)(\s*%)?\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
-
             let matchPer;
             while ((matchPer = regexPer.exec(note)) !== null) {
-
                 const target = matchPer[1].toUpperCase();
                 let source = matchPer[2].toUpperCase().trim();
                 const isPercent = !!matchPer[3];
@@ -115,10 +141,8 @@
             // <PARAM Bonus from Actor: ID, %, SOURCE>
             const regexActor =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTOR\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)%\s*,\s*(\w+)\s*>/gi;
-
             let matchActor;
             while ((matchActor = regexActor.exec(note)) !== null) {
-
                 const target = matchActor[1].toUpperCase();
                 const actorId = Number(matchActor[2]);
                 const percent = Number(matchActor[3]) / 100;
@@ -129,7 +153,6 @@
                 }
 
                 const actor = $gameActors.actor(actorId);
-
                 if (!actor) {
                     continue;
                 }
@@ -138,33 +161,24 @@
                     continue;
                 }
 
-                // Используем оригинальный param, чтобы избежать рекурсии
                 const sourceValue =
-                    _Game_BattlerBase_param.call(
-                        actor,
-                        PARAM_MAP[sourceParam]
-                    );
-
+                    _Game_BattlerBase_param.call(actor, PARAM_MAP[sourceParam]);
                 bonusFlat += Math.floor(sourceValue * percent);
             }
 
             // <STAT Bonus from Actor Full HP: actorId, X%>
             const regexActorFullHP =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTOR\s+FULL\s+HP\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)%\s*>/gi;
-
             let matchFullHP;
             while ((matchFullHP = regexActorFullHP.exec(note)) !== null) {
-
                 const target = matchFullHP[1].toUpperCase();
                 const actorId = Number(matchFullHP[2]);
                 const percent = Number(matchFullHP[3]) / 100;
 
-                // 1. Проверяем, что запрашивается именно этот параметр
                 if (PARAM_MAP[target] !== paramId) {
                     continue;
                 }
 
-                // 2. Проверяем полное здоровье (hp < mhp → не активно)
                 if (this.hp < this.mhp) {
                     continue;
                 }
@@ -172,10 +186,8 @@
                 const actor = $gameActors.actor(actorId);
                 if (!actor) continue;
 
-                // Базовое значение того же параметра актёра-источника
                 const sourceValue =
                     _Game_BattlerBase_param.call(actor, PARAM_MAP[target]);
-
                 bonusFlat += Math.floor(sourceValue * percent);
             }
         }
@@ -188,7 +200,6 @@
     };
 
     Game_BattlerBase.prototype.getSourceValue = function(source, isPercent) {
-
         // Параметры
         if (PARAM_MAP[source] !== undefined) {
             return _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
@@ -214,11 +225,9 @@
 
         // Shield / Current Shield
         if (source === "CURRENT SHIELD" || source === "SHIELD") {
-
             // Olivia Octo Battle:
             // во время Break считаем щиты равными 0
             if (typeof this.isStateAffected === "function") {
-
                 const breakStateId =
                     Olivia &&
                     Olivia.OctoBattle &&
