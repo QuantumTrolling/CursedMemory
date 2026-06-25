@@ -11,6 +11,8 @@
  * - Вертикальный скролл, если товаров больше, чем видимых ячеек
  * - listMaxRows ограничивает количество видимых строк (0 = авто)
  * - Режим заполнения: "row" (рекомендуется) или "column" (без скролла)
+ * - Окно описания поддерживает прокрутку (стрелки настраиваются)
+ * - Системные стрелки списка товаров двигаются через listScrollArrowX/Y
  *
  * ============================
  * ОСНОВНЫЕ НАСТРОЙКИ
@@ -78,6 +80,16 @@
  * @type number
  * @default 18
  *
+ * @param listScrollArrowX
+ * @text Сист. стрелка списка X
+ * @type number
+ * @default 0
+ *
+ * @param listScrollArrowY
+ * @text Сист. стрелка списка Y
+ * @type number
+ * @default 0
+ *
  * ============================
  * ОПИСАНИЕ
  * ============================
@@ -109,6 +121,16 @@
  *
  * @param descLines
  * @text Макс строк описания
+ * @type number
+ * @default 0
+ *
+ * @param descScrollArrowX
+ * @text Стрелка описания X
+ * @type number
+ * @default 0
+ *
+ * @param descScrollArrowY
+ * @text Стрелка описания Y
  * @type number
  * @default 0
  *
@@ -145,9 +167,19 @@
  * @type number
  * @default 800
  *
+ * @param nameFontSize
+ * @text Размер шрифта названия
+ * @type number
+ * @default 32
+ *
  * ============================
  * ПРОЧЕЕ
  * ============================
+ *
+ * @param goldX
+ * @text Золото X
+ * @type number
+ * @default 0
  *
  * @param goldY
  * @text Золото Y
@@ -199,17 +231,22 @@ if (!Imported.YEP_ShopMenuCore) {
         listColumns:     Number(parameters['listColumns'] || 4),
         listMaxRows:     Number(parameters['listMaxRows'] || 0),
         listFontSize:    Number(parameters['listFontSize'] || 18),
+        listScrollArrowX: Number(parameters['listScrollArrowX'] || 0),
+        listScrollArrowY: Number(parameters['listScrollArrowY'] || 0),
         descX:           Number(parameters['descX'] || 0),
         descY:           Number(parameters['descY'] || 440),
         descHeight:      Number(parameters['descHeight'] || 300),
         descFontSize:    Number(parameters['descFontSize'] || 14),
         descLines:       Number(parameters['descLines'] || 0),
         descWidth:       Number(parameters['descWidth'] || 800),
+        descScrollArrowX: Number(parameters['descScrollArrowX'] || 0),
+        descScrollArrowY: Number(parameters['descScrollArrowY'] || 0),
         buyBtnX:         Number(parameters['buyBtnX'] || 516),
         buyBtnY:         Number(parameters['buyBtnY'] || 390),
         nameX:           Number(parameters['nameX'] || 0),
         nameY:           Number(parameters['nameY'] || 410),
         nameWidth:       Number(parameters['nameWidth'] || 800),
+        nameFontSize:    Number(parameters['nameFontSize'] || 32),
         goldX:           Number(parameters['goldX'] || 0),
         goldY:           Number(parameters['goldY'] || 0),
         fillMode:        String(parameters['fillMode'] || 'row').toLowerCase(),
@@ -239,8 +276,6 @@ if (!Imported.YEP_ShopMenuCore) {
             var traderName = args[0] && args[0].trim() ? args[0] : params.traderDefault;
             $gameSystem._shopTrader = traderName;
         } else if (command === 'FixShopTraderPos') {
-            // Если переданы два аргумента и оба являются числами, записываем их.
-            // Иначе сбрасываем на стандартные координаты.
             if (args.length >= 2 && !isNaN(Number(args[0])) && !isNaN(Number(args[1]))) {
                 $gameSystem._shopTraderX = Number(args[0]);
                 $gameSystem._shopTraderY = Number(args[1]);
@@ -278,7 +313,7 @@ if (!Imported.YEP_ShopMenuCore) {
         this.contents.clear();
         if (this._item) {
             this.resetFontSettings();
-            this.contents.fontSize = 32;
+            this.contents.fontSize = params.nameFontSize;
             this.changeTextColor(this.normalColor());
             this.drawText(this._item.name, this.textPadding(), 0,
                          this.contents.width - this.textPadding() * 2, 'left');
@@ -286,7 +321,7 @@ if (!Imported.YEP_ShopMenuCore) {
     };
 
     //=============================================================================
-    // Window_ShopDesc
+    // Window_ShopDesc (с поддержкой скролла)
     //=============================================================================
     function Window_ShopDesc() {
         this.initialize.apply(this, arguments);
@@ -297,6 +332,8 @@ if (!Imported.YEP_ShopMenuCore) {
     Window_ShopDesc.prototype.initialize = function(x, y, width, height) {
         Window_Base.prototype.initialize.call(this, x, y, width, height);
         this._item = null;
+        this._scrollY = 0;
+        this._maxScrollY = 0;
         this.refresh();
     };
 
@@ -307,23 +344,53 @@ if (!Imported.YEP_ShopMenuCore) {
     Window_ShopDesc.prototype.setItem = function(item) {
         if (this._item === item) return;
         this._item = item;
+        this._scrollY = 0;
         this.refresh();
+    };
+
+    Window_ShopDesc.prototype.maxVisibleLines = function() {
+        return Math.floor(this.contentsHeight() / this.lineHeight());
     };
 
     Window_ShopDesc.prototype.refresh = function() {
         this.contents.clear();
         if (this._item) {
             var desc = this._item.description.replace(/\\n/g, '\n');
-            var lines = desc.split('\n');
+            var allLines = desc.split('\n');
             if (params.descLines > 0) {
-                lines = lines.slice(0, params.descLines);
-            } else {
-                var maxLines = Math.floor(this.contentsHeight() / this.lineHeight());
-                lines = lines.slice(0, Math.max(1, maxLines));
+                allLines = allLines.slice(0, params.descLines);
             }
+            var visibleLines = this.maxVisibleLines();
+            this._maxScrollY = Math.max(0, allLines.length - visibleLines);
+            this._scrollY = Math.min(this._scrollY, this._maxScrollY);
+
+            var startLine = this._scrollY;
+            var endLine = Math.min(startLine + visibleLines, allLines.length);
+            var shownLines = allLines.slice(startLine, endLine);
             this.resetFontSettings();
-            this.drawTextEx(lines.join('\n'), this.textPadding(), 0);
+            this.drawTextEx(shownLines.join('\n'), this.textPadding(), 0);
+        } else {
+            this._maxScrollY = 0;
+            this._scrollY = 0;
         }
+    };
+
+    Window_ShopDesc.prototype.scrollDown = function() {
+        if (this._scrollY < this._maxScrollY) {
+            this._scrollY++;
+            this.refresh();
+        }
+    };
+
+    Window_ShopDesc.prototype.scrollUp = function() {
+        if (this._scrollY > 0) {
+            this._scrollY--;
+            this.refresh();
+        }
+    };
+
+    Window_ShopDesc.prototype.isScrollable = function() {
+        return this._maxScrollY > 0;
     };
 
     //=============================================================================
@@ -735,11 +802,15 @@ if (!Imported.YEP_ShopMenuCore) {
         if (Graphics._canvas) {
             Graphics._canvas.addEventListener('contextmenu', this._onContextMenu);
         }
+
+        // Создаём только стрелки прокрутки описания
+        this.createDescScrollArrows();
     };
 
     var _Scene_Shop_update = Scene_Shop.prototype.update;
     Scene_Shop.prototype.update = function() {
         _Scene_Shop_update.call(this);
+        // Обновление попапов
         if (this._popups) {
             for (var i = this._popups.length - 1; i >= 0; i--) {
                 var p = this._popups[i];
@@ -752,6 +823,28 @@ if (!Imported.YEP_ShopMenuCore) {
                 }
             }
         }
+        // Обновление стрелок прокрутки описания
+        if (this._descWindow && this._arrowUpDesc && this._arrowDownDesc) {
+            var scrollable = this._descWindow.isScrollable() && this._descWindow.visible;
+            this._arrowUpDesc.visible = scrollable && this._descWindow._scrollY > 0;
+            this._arrowDownDesc.visible = scrollable && this._descWindow._scrollY < this._descWindow._maxScrollY;
+            if (scrollable) {
+                if (TouchInput.isTriggered()) {
+                    if (this._arrowUpDesc.visible && this.isSpriteTouched(this._arrowUpDesc)) {
+                        this._descWindow.scrollUp();
+                    } else if (this._arrowDownDesc.visible && this.isSpriteTouched(this._arrowDownDesc)) {
+                        this._descWindow.scrollDown();
+                    }
+                }
+            }
+        }
+    };
+
+    Scene_Shop.prototype.isSpriteTouched = function(sprite) {
+        var x = TouchInput.x;
+        var y = TouchInput.y;
+        var local = sprite.worldTransform.applyInverse({x: x, y: y});
+        return local.x >= 0 && local.y >= 0 && local.x < sprite.width && local.y < sprite.height;
     };
 
     var _Scene_Shop_activateBuyWindow = Scene_Shop.prototype.activateBuyWindow;
@@ -775,7 +868,6 @@ if (!Imported.YEP_ShopMenuCore) {
         if (!traderName) return;
         var vm = new VWSprite(traderName);
         vm.setLoop(); vm.create();
-        // Используем сохранённые координаты, если доступны, иначе из параметров
         var tx = ($gameSystem._shopTraderX !== undefined) ? $gameSystem._shopTraderX : params.traderX;
         var ty = ($gameSystem._shopTraderY !== undefined) ? $gameSystem._shopTraderY : params.traderY;
         vm.x = tx;
@@ -787,7 +879,11 @@ if (!Imported.YEP_ShopMenuCore) {
     Scene_Shop.prototype.repositionStandardWindows = function() {
         if (this._goldWindow) {
             this._goldWindow.width = 140;
-            this._goldWindow.x = Graphics.boxWidth - this._goldWindow.width - 10;
+            if (params.goldX > 0) {
+                this._goldWindow.x = params.goldX;
+            } else {
+                this._goldWindow.x = Graphics.boxWidth - this._goldWindow.width - 10;
+            }
             this._goldWindow.y = params.goldY;
             this._goldWindow.createContents();
             this._goldWindow.refresh();
@@ -806,6 +902,16 @@ if (!Imported.YEP_ShopMenuCore) {
             }
             this._buyWindow.createContents();
             this._buyWindow.refresh();
+
+            // Передвигаем системные стрелки прокрутки, если они есть (YEP_ShopMenuCore)
+            if (this._buyWindow._scrollArrowUpSprite) {
+                this._buyWindow._scrollArrowUpSprite.x = params.listScrollArrowX;
+                this._buyWindow._scrollArrowUpSprite.y = params.listScrollArrowY;
+            }
+            if (this._buyWindow._scrollArrowDownSprite) {
+                this._buyWindow._scrollArrowDownSprite.x = params.listScrollArrowX;
+                this._buyWindow._scrollArrowDownSprite.y = params.listScrollArrowY + 36; // отступ между стрелками
+            }
         }
 
         if (this._commandWindow) this._commandWindow.hide();
@@ -855,6 +961,41 @@ if (!Imported.YEP_ShopMenuCore) {
         this._buyActionWindow = new Window_ShopBuyAction(params.buyBtnX, params.buyBtnY, 180);
         this.addWindow(this._buyActionWindow);
         this._buyActionWindow.hide();
+    };
+
+    Scene_Shop.prototype.createDescScrollArrows = function() {
+        var arrowSize = 32;
+        this._arrowUpDesc = new Sprite();
+        this._arrowDownDesc = new Sprite();
+        var drawArrow = function(up) {
+            var bmp = new Bitmap(arrowSize, arrowSize);
+            bmp.fillAll('rgba(0,0,0,0)');
+            var ctx = bmp._context;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            if (up) {
+                ctx.moveTo(arrowSize/2, 4);
+                ctx.lineTo(arrowSize-4, arrowSize-4);
+                ctx.lineTo(4, arrowSize-4);
+            } else {
+                ctx.moveTo(arrowSize/2, arrowSize-4);
+                ctx.lineTo(4, 4);
+                ctx.lineTo(arrowSize-4, 4);
+            }
+            ctx.closePath();
+            ctx.fill();
+            return bmp;
+        };
+        this._arrowUpDesc.bitmap = drawArrow(true);
+        this._arrowDownDesc.bitmap = drawArrow(false);
+        this._arrowUpDesc.x = params.descScrollArrowX;
+        this._arrowUpDesc.y = params.descScrollArrowY;
+        this._arrowDownDesc.x = params.descScrollArrowX;
+        this._arrowDownDesc.y = params.descScrollArrowY + arrowSize + 4;
+        this._arrowUpDesc.visible = false;
+        this._arrowDownDesc.visible = false;
+        this.addChild(this._arrowUpDesc);
+        this.addChild(this._arrowDownDesc);
     };
 
     Scene_Shop.prototype.updateActionEnabled = function() {
@@ -912,6 +1053,12 @@ if (!Imported.YEP_ShopMenuCore) {
         popup._life = 60;
         this.addChild(popup);
         this._popups.push(popup);
+    };
+
+    // Отключаем реакцию на левый клик (ЛКМ) по фону,
+    // чтобы выход происходил только по ПКМ или Escape.
+    Scene_Shop.prototype.onTouch = function() {
+        // ничего не делаем
     };
 
     Scene_Shop.prototype.commandBuyAction = function() {
