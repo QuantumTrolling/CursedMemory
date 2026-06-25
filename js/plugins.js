@@ -140,5 +140,6 @@ var $plugins =
 {"name":"A_states_heal","status":true,"description":"","parameters":{}},
 {"name":"A_profiler","status":false,"description":"MV Performance Profiler (FPS + update time tracker)","parameters":{}},
 {"name":"A_menu_skill_fix","status":true,"description":"","parameters":{}},
-{"name":"A_reatreat_fix","status":true,"description":"","parameters":{}}
+{"name":"A_reatreat_fix","status":true,"description":"","parameters":{}},
+{"name":"CustomAfterActionEffect","status":true,"description":"","parameters":{}}
 ];
