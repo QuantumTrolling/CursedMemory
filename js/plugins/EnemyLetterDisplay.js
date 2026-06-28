@@ -1,6 +1,7 @@
 //=============================================================================
 // EnemyLetterDisplay.js
 // Добавляет A, B, C к именам одинаковых врагов во всех боевых окнах.
+// (буква присваивается один раз при старте боя и не меняется после смерти противников)
 //=============================================================================
 
 var Imported = Imported || {};
@@ -17,9 +18,11 @@ Game_Enemy.prototype.name = function() {
     return letter ? original + ' ' + letter : original;
 };
 
-// Вычисляем букву (A, B, C…) среди живых врагов с тем же enemyId
+// Вычисляем букву (A, B, C…) среди **всех** врагов с тем же enemyId (включая мёртвых)
+// Это гарантирует, что при смерти одного противника буквы у оставшихся не сдвигаются.
 Game_Enemy.prototype.letterForDuplicate = function() {
-    var enemies = $gameTroop.aliveMembers().filter(function(e) {
+    // Используем $gameTroop.members() вместо aliveMembers(), чтобы список был неизменным
+    var enemies = $gameTroop.members().filter(function(e) {
         return e.enemyId() === this.enemyId();
     }, this);
     if (enemies.length <= 1) return '';
