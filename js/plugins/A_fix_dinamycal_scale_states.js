@@ -33,6 +33,12 @@
  *    <DEF Bonus from Actors MDF with state 8: 30%>
  *    // +30% от суммарной маг. защиты живых союзников с состоянием 8 к защите владельца
  *
+ * 7. Бонус от параметра всех союзников с полным HP:
+ *    <ATK Bonus from Actors ATK Full HP: 50%>
+ *    // +50% от суммарной атаки всех живых союзников, у которых HP = MHP, к атаке владельца
+ *    <MAT Bonus from Actors DEF Full HP: 30%>
+ *    // +30% от суммарной защиты живых союзников с полным HP к магии владельца
+ *
  * ============================================================================
  * Источники:
  * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
@@ -88,6 +94,30 @@
                 let sum = 0;
                 for (const member of unit.members()) {
                     if (member.hp > 0 && member.isStateAffected(stateId)) {
+                        sum += _Game_BattlerBase_param.call(member, PARAM_MAP[sourceParam]);
+                    }
+                }
+                bonusFlat += Math.floor(sum * percent);
+            }
+
+            // Новый тег: <STAT Bonus from Actors PARAM Full HP: X%>
+            const regexActorsFullHP =
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+FULL\s+HP\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+            let matchActorsFullHP;
+            while ((matchActorsFullHP = regexActorsFullHP.exec(note)) !== null) {
+                const target = matchActorsFullHP[1].toUpperCase();
+                const sourceParam = matchActorsFullHP[2].toUpperCase();
+                const percent = Number(matchActorsFullHP[3]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (PARAM_MAP[sourceParam] === undefined) continue;
+                if (!this.friendsUnit) continue;
+
+                const unit = this.friendsUnit();
+                let sum = 0;
+                for (const member of unit.members()) {
+                    // Живой союзник с полным HP (hp >= mhp)
+                    if (member.hp > 0 && member.hp >= member.mhp) {
                         sum += _Game_BattlerBase_param.call(member, PARAM_MAP[sourceParam]);
                     }
                 }
