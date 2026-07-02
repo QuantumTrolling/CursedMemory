@@ -410,6 +410,35 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
         return this._throwableObjects;
     };
 
+    BattleManager.createThrow = function(subject, target, params) {
+    if (!subject || !target || !params) return;
+    var object = {
+        image: {},
+        start: { x: params.startX || 0, y: params.startY || 0 },
+        end: { x: params.endX || 0, y: params.endY || 0 },
+        speed: params.speed || 100,
+        duration: params.duration || 0,
+        delay: params.delay || 0,
+        spin: params.spin || 0,
+        arc: params.arc || 0,
+        anim: params.anim || 0,
+        returning: !!params.returning,
+        angled: !!params.angled
+    };
+    var imgType = params.image || 'icon';
+    object.image.type = imgType;
+    if (imgType === 'picture') {
+        object.image.name = params.name || '';
+        object.image.id = 0;
+    } else {
+        object.image.id = params.id || 0;
+        object.image.name = '';
+    }
+    if (target.battleSprite()) {
+        target.battleSprite().startThrow(subject, target, object);
+    }
+};
+
     //=============================================================================
     // Game_Action
     //=============================================================================
@@ -492,10 +521,11 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
     // Spriteset_Battle
     //=============================================================================
 
+    // !!! УБИРАЕМ ВЫЗОВ sortBattleSprites, т.к. он вызывает мерцание всех спрайтов
     VictorEngine.ThrowableObjects.updateSpritesetBattle = Spriteset_Battle.prototype.update;
     Spriteset_Battle.prototype.update = function() {
         VictorEngine.ThrowableObjects.updateSpritesetBattle.call(this);
-        this.sortBattleSprites();
+        // this.sortBattleSprites();  <-- удалено
     };
 
     //=============================================================================
@@ -615,9 +645,15 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
 
 })();
 
+//=============================================================================
+// Sprite_Throw
+//=============================================================================
+
 function Sprite_Throw() {
     this.initialize.apply(this, arguments);
 }
+
+Sprite_Throw._lastId = 0;
 
 Sprite_Throw.prototype = Object.create(Sprite_Base.prototype);
 Sprite_Throw.prototype.constructor = Sprite_Throw;
@@ -641,9 +677,11 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
 
     Sprite_Throw.prototype.initialize = function(subject, target, object) {
         Sprite_Base.prototype.initialize.call(this);
+        console.log('Sprite_Throw created for', this._subject, this._target, this._object);
         this._subject = subject;
         this._target = target;
         this._object = object;
+        this._throwId = Sprite_Throw._lastId++;
         this.initMembers();
     };
 
@@ -668,7 +706,7 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
     };
 
     Sprite_Throw.prototype.throwZ = function() {
-        return this._z;
+        return 10000 + this.y + this._throwId * 0.001;
     };
 
     Sprite_Throw.prototype.throwH = function() {
@@ -723,11 +761,18 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
         this._homeY = srcSprite.y + object.start.y - srcSprite.center().y;
         this._homeZ = srcSprite.center().y + 4;
         this._targetX = trgSprite.x + trgOffset * (trgRight ? -1 : 1) - this._homeX;
-        this._targetY = trgSprite.y + object.end.y - trgSprite.center().y - this._homeY;
+        // ======== ИЗМЕНЕНИЕ: ограничение отклонения конечной Y от 420 вдвое ========
+        // Исходная точка приземления (без ограничения)
+        var rawTargetY = trgSprite.y + object.end.y - trgSprite.center().y;
+        var baseY = 420; // опорное значение Y
+        var diff = rawTargetY - baseY;
+        var adjustedTargetY = baseY + diff / 2; // отклонение от baseY уменьшаем вдвое
+        console.log('raw:', rawTargetY, 'adjusted:', adjustedTargetY);
+        // =========================================================================
+        this._targetY = adjustedTargetY - this._homeY;
         this._targetZ = trgSprite.center().y + 4;
         this._offsetX = 0;
         this._offsetY = 0;
-        this._z = trgSprite.z;
     };
 
     Sprite_Throw.prototype.setupDuration = function() {
@@ -756,20 +801,20 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
         var image = this.setupObjectImage();
         if (image) {
             switch (image.type) {
-			case 'icon':
-				this._imageType = image.type;
-				this._iconIndex = image.id;
-				break;
-			case 'picture':
-				this._imageType = image.type;
-				this._imageFile = image.name;
-				break;
-			case 'animation':
-				if (Imported['VE - Loop Animation']) {
-					this._imageType = image.type;
-					this._animationId = image.id;
-				}
-				break;
+            case 'icon':
+                this._imageType = image.type;
+                this._iconIndex = image.id;
+                break;
+            case 'picture':
+                this._imageType = image.type;
+                this._imageFile = image.name;
+                break;
+            case 'animation':
+                if (Imported['VE - Loop Animation']) {
+                    this._imageType = image.type;
+                    this._animationId = image.id;
+                }
+                break;
             }
         }
     };
@@ -861,12 +906,12 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
 
     Sprite_Throw.prototype.updateGraphics = function() {
         switch (this._imageType) {
-		case 'icon':
-			this.updateIcon();
-			break;
-		case 'picture':
-			this.updatePicture();
-			break;
+        case 'icon':
+            this.updateIcon();
+            break;
+        case 'picture':
+            this.updatePicture();
+            break;
         }
     };
 
@@ -909,4 +954,28 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
             (this._subject === target && this._target === subject));
     };
 
+})();
+
+//=============================================================================
+// Глобальное исправление мерцания всех боевых спрайтов
+// (актёров и врагов) — стабильная глубина без постоянной пересортировки
+//=============================================================================
+
+(function() {
+    // Переопределяем обновление Sprite_Battler, чтобы Z вычислялся на основе Y + уникальный индекс
+    var _Sprite_Battler_update = Sprite_Battler.prototype.update;
+    Sprite_Battler.prototype.update = function() {
+        _Sprite_Battler_update.call(this);
+        if (this._battler) {
+            // Берём индекс бойца в группе/отряде как стабильный идентификатор
+            var index = 0;
+            if (this._battler.isActor()) {
+                index = $gameParty.members().indexOf(this._battler);
+            } else {
+                index = $gameTroop.members().indexOf(this._battler);
+            }
+            // Z = Y + индекс * 0.001 — исключает наложения при одинаковом Y
+            this.z = this.y + index * 0.001;
+        }
+    };
 })();

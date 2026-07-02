@@ -109,9 +109,9 @@ var $plugins =
 {"name":"A_biggerIcons","status":true,"description":"Увеличивает иконки навыков в 2 раза и корректирует высоту строк в окнах боя (v1.1)","parameters":{}},
 {"name":"A_turn_arrow_actors","status":true,"description":"Показывает Turn.png над актёром во время выбора навыка v2.5","parameters":{"OffsetX":"0","OffsetY":"0","Actor1X":"20","Actor1Y":"-190","Actor2X":"20","Actor2Y":"-190","Actor3X":"5","Actor3Y":"-170","Actor4X":"20","Actor4Y":"-190","Actor5X":"20","Actor5Y":"-190","Actor6X":"20","Actor6Y":"-190","Actor7X":"20","Actor7Y":"-190","Actor8X":"20","Actor8Y":"-190","Actor9X":"20","Actor9Y":"-190","Actor10X":"20","Actor10Y":"-190","Actor11X":"20","Actor11Y":"-190","Actor12X":"20","Actor12Y":"-190","Actor13X":"20","Actor13Y":"-190","Actor14X":"20","Actor14Y":"-190","Actor15X":"20","Actor15Y":"-190","Actor16X":"20","Actor16Y":"-190"}},
 {"name":"MOG_OugiAnimation","status":false,"description":"(v1.3) Ativa uma animação antes de executar a ação. Suporte a GIF.","parameters":{"For Enemies":"false","File Extension":"gif"}},
-{"name":"A_fix_throw","status":true,"description":"Fixes z-order for UI elements when using VE Throwable Objects and BattleZoom","parameters":{}},
-{"name":"A_fix_throw2","status":true,"description":"","parameters":{}},
-{"name":"A_fix_throw3","status":true,"description":"","parameters":{}},
+{"name":"A_fix_throw","status":false,"description":"Fixes z-order for UI elements when using VE Throwable Objects and BattleZoom","parameters":{}},
+{"name":"A_fix_throw2","status":false,"description":"","parameters":{}},
+{"name":"A_fix_throw3","status":false,"description":"","parameters":{}},
 {"name":"A_fix_sv_actors","status":true,"description":"","parameters":{}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
 {"name":"MOG_SceneMenu","status":true,"description":"(v1.3) Modifica a cena de menu principal.","parameters":{"Actor Hud X-Axis":"-55","Actor Hud Y-Axis":"40","Char X-Axis":"0","Char Y-Axis":"-30","HP Meter X-Axis":"17","HP Meter Y-Axis":"80","MP Meter X-Axis":"17","MP Meter Y-Axis":"144","HP Number X-Axis":"155","HP Number Y-Axis":"65","HPMax Number X-Axis":"140","HPMax Number Y-Axis":"100","MP Number X-Axis":"90","MP Number Y-Axis":"124","MPMax Number X-Axis":"140","MPMax Number Y-Axis":"151","LV Number X-Axis":"37","LV Number Y-Axis":"15","States X-Axis":"111","States Y-Axis":"30","Name X-Axis":"90","Name Y-Axis":"12","Name FontSize":"25","Commands X-Axis":"430","Commands Y-Axis":"100","Command Active X-Axis":"255","Command Active Y-Axis":"148","Com Name Visible":"true","Com Name X-Axis":"592","Com Name Y-Axis":"17","Com Name FontSize":"26","Max Visible Faces":"4","Face Sel X-Axis":"510","Face Sel Y-Axis":"128","Gold X-Axis":"1245","Gold Y-Axis":"21","Time X-Axis":"865","Time Y-Axis":"60","Time FontSize":"26","Location X-Axis":"450","Location Y-Axis":"575","Location FontSize":"26","Magic Circle Visible":"false","Magic Circle X-Axis":"700","Magic Circle Y-Axis":"140","Magic Circle Rotation":"0.001","Equip Icons X-Axis":"15","Equip Icons Y-Axis":"65","Equip Icons Spacing":"38","Playtime Visible":"false","Menu Label":"Menu","Menu Label X-Axis":"80","Menu Label Y-Axis":"10","Menu Label FontSize":"40"}},
@@ -141,5 +141,6 @@ var $plugins =
 {"name":"A_profiler","status":false,"description":"MV Performance Profiler (FPS + update time tracker)","parameters":{}},
 {"name":"A_menu_skill_fix","status":true,"description":"","parameters":{}},
 {"name":"A_reatreat_fix","status":true,"description":"","parameters":{}},
-{"name":"CustomAfterActionEffect","status":true,"description":"","parameters":{}}
+{"name":"CustomAfterActionEffect","status":true,"description":"","parameters":{}},
+{"name":"A_fix_throw4","status":true,"description":"","parameters":{}}
 ];
