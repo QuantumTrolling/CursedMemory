@@ -7,219 +7,165 @@
  * @author Moghunter
  *
  * @param Actor Hud X-Axis
- * @desc Сдвиг панели статуса по X
  * @default 0
  *
  * @param Actor Hud Y-Axis
- * @desc Сдвиг панели статуса по Y
  * @default 0
  *
  * @param Char X-Axis
- * @desc Сдвиг портрета персонажа по X
  * @default 20
  *
  * @param Char Y-Axis
- * @desc Сдвиг портрета персонажа по Y (от нижнего края)
  * @default 0
  *
  * @param HP Meter X-Axis
- * @desc Сдвиг полосы HP по X
  * @default 17
  *
  * @param HP Meter Y-Axis
- * @desc Сдвиг полосы HP по Y
  * @default 93
  *
  * @param MP Meter X-Axis
- * @desc Сдвиг полосы MP по X
  * @default 17
  *
  * @param MP Meter Y-Axis
- * @desc Сдвиг полосы MP по Y
  * @default 144
  *
  * @param HP Number X-Axis
- * @desc Сдвиг числа HP по X
  * @default 100
  *
  * @param HP Number Y-Axis
- * @desc Сдвиг числа HP по Y
  * @default 73
  *
  * @param HPMax Number X-Axis
- * @desc Сдвиг максимума HP по X
  * @default 140
  *
  * @param HPMax Number Y-Axis
- * @desc Сдвиг максимума HP по Y
  * @default 100
  *
  * @param MP Number X-Axis
- * @desc Сдвиг числа MP по X
  * @default 100
  *
  * @param MP Number Y-Axis
- * @desc Сдвиг числа MP по Y
  * @default 124
  *
  * @param MPMax Number X-Axis
- * @desc Сдвиг максимума MP по X
  * @default 140
  *
  * @param MPMax Number Y-Axis
- * @desc Сдвиг максимума MP по Y
  * @default 151
  *
  * @param LV Number X-Axis
- * @desc Сдвиг номера уровня по X
  * @default 95
  *
  * @param LV Number Y-Axis
- * @desc Сдвиг номера уровня по Y
  * @default 33
  *
  * @param States X-Axis
- * @desc Сдвиг иконок состояний по X
  * @default 111
  *
  * @param States Y-Axis
- * @desc Сдвиг иконок состояний по Y
  * @default 30
  *
  * @param Name X-Axis
- * @desc Сдвиг имени персонажа по X
  * @default 20
  *
  * @param Name Y-Axis
- * @desc Сдвиг имени персонажа по Y
  * @default 0
  *
  * @param Name FontSize
- * @desc Размер шрифта имени
  * @default 20
  *
  * @param Commands X-Axis
- * @desc Центр группы команд по X
  * @default 180
  *
  * @param Commands Y-Axis
- * @desc Позиция команд по Y
  * @default 50
  *
  * @param Command Active X-Axis
- * @desc Сдвиг активной команды по X (при открытом статусе)
  * @default 40
  *
  * @param Command Active Y-Axis
- * @desc Сдвиг активной команды по Y (при открытом статусе)
  * @default 148
  *
  * @param Com Name Visible
- * @desc Показывать название команды (true/false)
  * @default true
  *
  * @param Com Name X-Axis
- * @desc Сдвиг названия команды по X
  * @default 40
  *
  * @param Com Name Y-Axis
- * @desc Сдвиг названия команды по Y
  * @default 96
  *
  * @param Com Name FontSize
- * @desc Размер шрифта названия команды
  * @default 22
  *
  * @param Max Visible Faces
- * @desc Максимальное количество видимых лиц
  * @default 5
  *
  * @param Face Sel X-Axis
- * @desc Сдвиг панели выбора лиц по X
- * @default 240
+ * @default 400
  *
  * @param Face Sel Y-Axis
- * @desc Сдвиг панели выбора лиц по Y
  * @default 128
  *
  * @param Gold X-Axis
- * @desc Сдвиг золота по X
  * @default 260
  *
  * @param Gold Y-Axis
- * @desc Сдвиг золота по Y
  * @default 580
  *
  * @param Time X-Axis
- * @desc Сдвиг времени игры по X
  * @default 565
  *
  * @param Time Y-Axis
- * @desc Сдвиг времени игры по Y
  * @default 60
  *
  * @param Time FontSize
- * @desc Размер шрифта времени
  * @default 24
  *
  * @param Location X-Axis
- * @desc Сдвиг названия локации по X
  * @default 450
  *
  * @param Location Y-Axis
- * @desc Сдвиг названия локации по Y
  * @default 575
  *
  * @param Location FontSize
- * @desc Размер шрифта локации
  * @default 26
  *
  * @param Magic Circle Visible
- * @desc Показывать магический круг (true/false)
  * @default true
  *
  * @param Magic Circle X-Axis
- * @desc Сдвиг магического круга по X
  * @default 700
  *
  * @param Magic Circle Y-Axis
- * @desc Сдвиг магического круга по Y
  * @default 140
  *
  * @param Magic Circle Rotation
- * @desc Скорость вращения магического круга
  * @default 0.001
  *
  * @param Equip Icons X-Axis
- * @desc Сдвиг иконок экипировки по X
  * @default 20
  *
  * @param Equip Icons Y-Axis
- * @desc Сдвиг иконок экипировки по Y
  * @default 120
  *
  * @param Equip Icons Spacing
- * @desc Расстояние между иконками экипировки
  * @default 36
  *
  * @param Playtime Visible
- * @desc Показывать время игры (true/false)
  * @default false
  *
  * @param Menu Label
- * @desc Текст заголовка меню
  * @default Menu
  *
  * @param Menu Label X-Axis
- * @desc Сдвиг заголовка меню по X
  * @default 20
  *
  * @param Menu Label Y-Axis
- * @desc Сдвиг заголовка меню по Y
  * @default 20
  *
  * @param Menu Label FontSize
- * @desc Размер шрифта заголовка меню
  * @default 28
  *
  * @help
@@ -228,11 +174,17 @@
  * By Moghunter
  * https://mogplugins.com
  * =============================================================================
- * Модификации (2026):
- * - Удалена команда "Инвентарь" (Item)
- * - Иконки команд центрированы по экрану
+ * Модификации:
+ * - Удалены команды "Инвентарь" и "Навык"
+ * - Иконки команд центрированы
+ * - Иконки команд затемнены (opacity 160) когда не выбраны, яркие (255) при выборе
  * - Полностью скрыты HP/MP и состояния
- * - Исправлена синхронизация списка команд с окном
+ * - Панель выбора лиц центрируется (Face Sel X/Y — центр группы)
+ * - Исправлены клики/тапы по лицам
+ * - Выбранное лицо подсвечивается (opacity 255), остальные приглушены (160)
+ * - Вместо увеличения — системная стрелка над выбранным лицом (сдвинута на 20px вниз для точного позиционирования)
+ * - Стрелки прокрутки лиц и команд — системные (pause sign)
+ * - Отключено сглаживание для чёткости
  */
 
 var Imported = Imported || {};
@@ -272,7 +224,7 @@ Moghunter.scMenu_ComNameX = Number(Moghunter.parameters['Com Name X-Axis'] || 40
 Moghunter.scMenu_ComNameY = Number(Moghunter.parameters['Com Name Y-Axis'] || 96);
 Moghunter.scMenu_ComNameFontSize = Number(Moghunter.parameters['Com Name FontSize'] || 22);
 Moghunter.scMenu_maxVisibleFaces = Number(Moghunter.parameters['Max Visible Faces'] || 5);
-Moghunter.scMenu_FaceSelX = Number(Moghunter.parameters['Face Sel X-Axis'] || 240);
+Moghunter.scMenu_FaceSelX = Number(Moghunter.parameters['Face Sel X-Axis'] || 400);
 Moghunter.scMenu_FaceSelY = Number(Moghunter.parameters['Face Sel Y-Axis'] || 128);
 Moghunter.scMenu_GoldNumberX = Number(Moghunter.parameters['Gold X-Axis'] || 260);
 Moghunter.scMenu_GoldNumberY = Number(Moghunter.parameters['Gold Y-Axis'] || 580);
@@ -336,7 +288,6 @@ Scene_Menu.prototype.create = function() {
 };
 
 Scene_Menu.prototype.loadBitmapsMain = function() {
-    // Удаляем команды "Инвентарь" и "Навык"
     this._commandWindow._list = this._commandWindow._list.filter(function(cmd) {
         return cmd.symbol !== "item" && cmd.symbol !== "skill";
     });
@@ -350,8 +301,14 @@ Scene_Menu.prototype.loadBitmapsMain = function() {
     for (var i = 0; i < this._comList.length; i++) {
         this._comBitmaps[i] = ImageManager.loadMenusMainCommands(this._comList[i].name);
     };
-    this._arrowImg = ImageManager.loadMenusMain("FaceArrow");
     this._goldImg = ImageManager.loadMenusMain("GoldNumber");
+
+    for (var j = 0; j < this._facesBitmaps.length; j++) {
+        if (this._facesBitmaps[j]) this._facesBitmaps[j].smooth = false;
+    }
+    for (var k = 0; k < this._comBitmaps.length; k++) {
+        if (this._comBitmaps[k]) this._comBitmaps[k].smooth = false;
+    }
 };
 
 Scene_Menu.prototype.createField = function() {
@@ -373,7 +330,7 @@ Scene_Menu.prototype.createMonogatari = function() {
 
 Scene_Menu.prototype.createAfter = function() {
     this.createSelection();
-    this.createFaceArrow();
+    this.createFaceArrows();
     this.createGold();
 };
 
@@ -499,7 +456,7 @@ Scene_Menu.prototype.createLayout = function() {
     this._field.addChild(this._layout);
 };
 
-// Команды выровнены по центру
+// *** КОМАНДЫ: затемнённые по умолчанию, яркие при выборе ***
 Scene_Menu.prototype.createCommands = function() {
     this._commands = [];
     this._compos = [];
@@ -508,7 +465,6 @@ Scene_Menu.prototype.createCommands = function() {
     this._field.addChild(this._comField);
 
     var spacing = 80;
-    // Центр группы = Commands X-Axis из параметров
     var centerX = Moghunter.scMenu_ComX;
     var startX = centerX + 210 - ((this._comList.length - 1) * spacing) / 2;
 
@@ -516,21 +472,31 @@ Scene_Menu.prototype.createCommands = function() {
         this._commands[i] = new Sprite(this._comBitmaps[i]);
         this._commands[i].anchor.x = 0.5;
         this._commands[i].anchor.y = 0.5;
-
         this._commands[i].x = startX + spacing * i;
-        this._commands[i].y = Moghunter.scMenu_ComY; // высота из параметров
-
-        this._commands[i].opacity = 255;
-
-        this._compos[i] = [
-            startX + spacing * i,
-            Moghunter.scMenu_ComY
-        ];
-
+        this._commands[i].y = Moghunter.scMenu_ComY;
+        this._commands[i].opacity = 160; // начальное затемнение
+        this._compos[i] = [startX + spacing * i, Moghunter.scMenu_ComY];
         this._comzoom[i] = 0;
         this._comField.addChild(this._commands[i]);
-    };
+    }
+
+    // Стрелка для команд
+    this._cmdArrowWindow = new Window_Base(0, 0, 0, 0);
+    this._cmdArrowWindow.opacity = 0;
+    this._cmdArrowWindow.backOpacity = 0;
+    this._cmdArrowWindow.contentsOpacity = 0;
+    this._cmdArrow = this._cmdArrowWindow._windowPauseSignSprite;
+    this._cmdArrow.visible = false;
+    this._comField.addChild(this._cmdArrow);
 };
+
+Scene_Menu.prototype.updatePauseArrow = function(sprite) {
+    if (!sprite) return;
+    var w = Graphics.frameCount;
+    sprite.y += Math.sin(w / 8) * 0.5;
+    sprite.opacity = 200 + Math.sin(w / 8) * 55;
+};
+
 Scene_Menu.prototype.updateCommands = function() {
     if (!this._statusWindow.active && this._commandWindow.active) {
         var hoverIndex = -1;
@@ -545,48 +511,44 @@ Scene_Menu.prototype.updateCommands = function() {
         }
     }
 
+    var selIndex = this._commandWindow._index;
     for (var i = 0; i < this._commands.length; i++) {
-        var isSelected = (i === this._commandWindow._index);
-
+        var isSelected = (i === selIndex);
+        var nx, ny;
         if (isSelected) {
-            var nx = this._statusWindow.active ? Moghunter.scMenu_ComWX : this._compos[i][0];
-            var ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];
-            if (this._commandWindow.isCurrentItemEnabled()) {this._commands[i].opacity += 20};
-
-            if (this._comzoom[i] === 0 && !this._statusWindow.active) {
-                this._commands[i].scale.x += 0.01;
-                if (this._commands[i].scale.x >= 1.30) {
-                    this._commands[i].scale.x = 1.30;
-                    this._comzoom[i] = 1;
-                };
-            } else {
-                this._commands[i].scale.x -= 0.01;
-                if (this._commands[i].scale.x <= 1.00) {
-                    this._commands[i].scale.x = 1.00;
-                    this._comzoom[i] = 0;
-                };
-            };
-            this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
-            this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
-            this._commands[i].scale.y = this._commands[i].scale.x;
-
-        } else {
-            var nx = this._compos[i][0];
-            var ny = this._compos[i][1];
-            this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
-            this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
+            nx = this._statusWindow.active ? Moghunter.scMenu_ComWX : this._compos[i][0];
+            ny = this._statusWindow.active ? Moghunter.scMenu_ComWY : this._compos[i][1];
+            // Выбранная иконка — яркая
             if (this._commands[i].opacity < 255) {
-                this._commands[i].opacity += 10;
+                this._commands[i].opacity += 20;
                 if (this._commands[i].opacity > 255) this._commands[i].opacity = 255;
             }
-            if (this._commands[i].scale.x > 1.00) {
-                this._commands[i].scale.x -= 0.01;
-                if (this._commands[i].scale.x < 1.00) this._commands[i].scale.x = 1.00;
+        } else {
+            nx = this._compos[i][0];
+            ny = this._compos[i][1];
+            // Невыбранные — затемнённые (160)
+            if (this._commands[i].opacity > 160) {
+                this._commands[i].opacity -= 10;
+                if (this._commands[i].opacity < 160) this._commands[i].opacity = 160;
+            } else if (this._commands[i].opacity < 160) {
+                this._commands[i].opacity += 10;
+                if (this._commands[i].opacity > 160) this._commands[i].opacity = 160;
             }
-            this._commands[i].scale.y = this._commands[i].scale.x;
-            this._comzoom[i] = 0;
-        };
-    };
+        }
+        this._commands[i].x = this.commandMoveTo(this._commands[i].x, nx);
+        this._commands[i].y = this.commandMoveTo(this._commands[i].y, ny);
+    }
+
+    // Стрелка над активной командой
+    if (!this._statusWindow.active && selIndex >= 0 && this._commands[selIndex]) {
+        var cmd = this._commands[selIndex];
+        this._cmdArrow.visible = true;
+        this._cmdArrow.x = cmd.x;
+        this._cmdArrow.y = cmd.y - 18;
+        this.updatePauseArrow(this._cmdArrow);
+    } else {
+        this._cmdArrow.visible = false;
+    }
 };
 
 Scene_Menu.prototype.updateComField = function() {
@@ -643,7 +605,6 @@ Scene_Menu.prototype.updateCommandName = function() {
 
 Scene_Menu.prototype.refreshCommandName = function() {
     var index = this._commandWindow._index;
-    // Выходим, если индекс некорректен (окно неактивно)
     if (index < 0 || index >= this._comList.length) return;
     this._commandNameIndex = index;
     this._commandNameIndex2 = -2;
@@ -666,6 +627,7 @@ Scene_Menu.prototype.refreshActorName = function() {
     this._commandName.opacity = 0;
 };
 
+// *** ПАНЕЛЬ ВЫБОРА ЛИЦ (faces2): подсветка + стрелка СВЕРХУ (сдвинута на 20px вниз) ***
 Scene_Menu.prototype.createSelection = function() {
     this._selection = [];
     this._selectionPos = [];
@@ -674,25 +636,53 @@ Scene_Menu.prototype.createSelection = function() {
     this._selField = new Sprite();
     this._field.addChild(this._selField);
     this._selField.opacity = 0;
-    this._selField.x = 50;
-    for (var i = 0; i < $gameParty.members().length; i++) {
+    this._selField.x = Moghunter.scMenu_FaceSelX + 50;
+    this._selField.y = Moghunter.scMenu_FaceSelY;
+
+    var count = $gameParty.members().length;
+    var faceWidth = this._facesBitmaps[0].width;
+    var spacing = 4 + faceWidth;
+    for (var i = 0; i < count; i++) {
         this._selection[i] = new Sprite(this._facesBitmaps[i]);
-        this._selectionPos[i] = [Moghunter.scMenu_FaceSelX + ((4 + this._facesBitmaps[i].width) * i),Moghunter.scMenu_FaceSelY];
+        var localX = (i - (count - 1) / 2) * spacing;
+        this._selectionPos[i] = [localX, 0];
         this._selection[i].anchor.x = 0.5;
         this._selection[i].anchor.y = 0.5;
-        this._selection[i].opacity = 160;
+        this._selection[i].opacity = 160;  // все приглушены по умолчанию
         this._selection[i].vsb = false;
         this._selection[i].x = this._selectionPos[i][0];
         this._selection[i].y = this._selectionPos[i][1];
-        this._selField .addChild(this._selection[i]);
-    };
+        this._selField.addChild(this._selection[i]);
+    }
+
+    // Стрелка для подсвеченного лица
+    this._selArrowWindow = new Window_Base(0, 0, 0, 0);
+    this._selArrowWindow.opacity = 0;
+    this._selArrowWindow.backOpacity = 0;
+    this._selArrowWindow.contentsOpacity = 0;
+    this._selArrow = this._selArrowWindow._windowPauseSignSprite;
+    this._selArrow.visible = false;
+    this._selField.addChild(this._selArrow);
+};
+
+Scene_Menu.prototype.isOnFaceSprite = function(sprite) {
+    if (!sprite.visible || sprite.opacity === 0) return false;
+    var cw = sprite.bitmap.width / 2;
+    var ch = sprite.bitmap.height / 2;
+    var globalX = sprite.x + this._selField.x;
+    var globalY = sprite.y + this._selField.y;
+    if (TouchInput.x < globalX - cw) return false;
+    if (TouchInput.x > globalX + cw) return false;
+    if (TouchInput.y < globalY - ch) return false;
+    if (TouchInput.y > globalY + ch) return false;
+    return true;
 };
 
 Scene_Menu.prototype.updateSelection = function() {
     if (this._statusWindow.active && this._selection) {
         var hoverFaceIndex = -1;
         for (var i = 0; i < this._selection.length; i++) {
-            if (this.isOnSprite(this._selection[i])) {
+            if (this.isOnFaceSprite(this._selection[i])) {
                 hoverFaceIndex = i;
                 break;
             }
@@ -704,16 +694,22 @@ Scene_Menu.prototype.updateSelection = function() {
 
     if (this._statusWindow.active) {
         this._selField.opacity += 15;
-        if (this._selField.x > 0) {this._selField.x -= 4
-            if (this._selField.x < 0) {this._selField.x = 0};
-        };
+        if (this._selField.x > Moghunter.scMenu_FaceSelX) {
+            this._selField.x -= 4;
+            if (this._selField.x < Moghunter.scMenu_FaceSelX) this._selField.x = Moghunter.scMenu_FaceSelX;
+        }
     } else {
-        if (this._selField.x < 50) {this._selField.x += 4
-            if (this._selField.x > 50) {this._selField.x = 50};
-        };
+        if (this._selField.x < Moghunter.scMenu_FaceSelX + 50) {
+            this._selField.x += 4;
+            if (this._selField.x > Moghunter.scMenu_FaceSelX + 50) this._selField.x = Moghunter.scMenu_FaceSelX + 50;
+        }
         this._selField.opacity -= 15;
     }
+
+    var selIndex = this._statusWindow._index;
+
     for (var i = 0; i < this._selection.length; i++) {
+        // Управление видимостью лиц
         if (this._statusWindow._index < this._selMax) {
             var nindex = 0
             if (i > this._selMax) {
@@ -726,85 +722,95 @@ Scene_Menu.prototype.updateSelection = function() {
             var nindex = ((4 + this._facesBitmaps[i].width) * (ni));
             if (i < ni || i > ni + this._selMax) {
                 this._selection[i].vsb = false;
-            } else {this._selection[i].vsb = true;
+            } else {
+                this._selection[i].vsb = true;
             }
         };
-        if (i === this._statusWindow._index) {
-            this._selection[i].opacity += 15;
-            if (this._selzoom[i] === 0) {
-                this._selection[i].scale.x += 0.015;
-                if (this._selection[i].scale.x > 1.30) {
-                    this._selection[i].scale.x = 1.30;
-                    this._selzoom[i] = 1;
-                };
-            } else {
-                this._selection[i].scale.x -= 0.015;
-                if (this._selection[i].scale.x < 1.00) {
-                    this._selection[i].scale.x = 1.00;
-                    this._selzoom[i] = 0;
-                };
-            };
-        } else {
-            if (!this._selection[i].vsb) {
-                this._selection[i].opacity -= 15;
-            } else if (this._selection[i].vsb) {
-                if (this._selection[i].opacity < 160) {this._selection[i].opacity += 15;
-                    if (this._selection[i].opacity > 160) {this._selection[i].opacity = 160};
-                };
-                if (this._selection[i].opacity > 160) {this._selection[i].opacity -= 15;
-                    if (this._selection[i].opacity < 160) {this._selection[i].opacity = 160};
-                };
-            } else {
-                if (this._selection[i].opacity > 160) {this._selection[i].opacity -= 10
-                    if (this._selection[i].opacity < 160) {this._selection[i].opacity = 160};
-                };
-            };
-            this._selzoom[i] = 0;
-            this._selection[i].scale.x -= 0.01;
-            if (this._selection[i].scale.x < 1.00) {this._selection[i].scale.x = 1.00}
+
+        // Подсветка выбранного лица (opacity 255), остальные затемнены (160) или скрыты (0)
+        var targetOpacity = 0;
+        if (i === selIndex) {
+            targetOpacity = 255;
+        } else if (this._selection[i].vsb) {
+            targetOpacity = 160;
         }
+
+        // Плавное изменение прозрачности
+        if (this._selection[i].opacity < targetOpacity) {
+            this._selection[i].opacity += 15;
+            if (this._selection[i].opacity > targetOpacity) this._selection[i].opacity = targetOpacity;
+        } else if (this._selection[i].opacity > targetOpacity) {
+            this._selection[i].opacity -= 15;
+            if (this._selection[i].opacity < targetOpacity) this._selection[i].opacity = targetOpacity;
+        }
+
+        // Масштаб всегда 1.0
+        this._selection[i].scale.x = 1.0;
+        this._selection[i].scale.y = 1.0;
+
         var nx = this._selectionPos[i][0] - nindex;
         var ny = this._selectionPos[i][1];
         this._selection[i].x = this.commandMoveTo(this._selection[i].x,nx);
         this._selection[i].y = this.commandMoveTo(this._selection[i].y,ny);
-        this._selection[i].scale.y = this._selection[i].scale.x;
-    };
+    }
+
+    // Стрелка над выбранным лицом, сдвинута на 20px вниз (было 10, стало 20)
+    if (this._statusWindow.active && selIndex >= 0 && this._selection[selIndex]) {
+        var face = this._selection[selIndex];
+        this._selArrow.visible = true;
+        this._selArrow.x = face.x;
+        this._selArrow.y = face.y - face.bitmap.height / 2 - 14 + 20; // +20 вместо +10
+        this.updatePauseArrow(this._selArrow);
+    } else {
+        this._selArrow.visible = false;
+    }
+
     this.updateArrow();
 };
 
-Scene_Menu.prototype.createFaceArrow = function() {
-    this._arrow = [];
+// *** СИСТЕМНЫЕ СТРЕЛКИ ДЛЯ ПРОКРУТКИ ЛИЦ ***
+Scene_Menu.prototype.createFaceArrows = function() {
+    this._arrowSprites = [];
+    this._arrowWindows = [];
     this._arrowPos = [];
     this._arrowAni = [0,0];
+
     for (var i = 0; i < 2; i++) {
-        this._arrow[i] = new Sprite(this._arrowImg);
-        if (i === 1) {this._arrow[i].scale.x = -1.00
-            this._arrowPos[i] = [this._selection[0].x + (4 + (this._arrowImg.width * 2)) + ((4 + this._facesBitmaps[0].width) * this._selMax),Moghunter.scMenu_FaceSelY]
-        } else {
-            this._arrowPos[i] = [this._selection[0].x - (4 + (this._arrowImg.width * 2)),Moghunter.scMenu_FaceSelY]
-        };
-        this._arrow[i].anchor.x = 0.5;
-        this._arrow[i].anchor.y = 0.5;
-        this._arrow[i].x = this._arrowPos[i][0];
-        this._arrow[i].y = this._arrowPos[i][1];
-        this._selField.addChild(this._arrow[i]);
-    };
+        var win = new Window_Base(0, 0, 0, 0);
+        win.opacity = 0;
+        win.backOpacity = 0;
+        win.contentsOpacity = 0;
+        this._arrowWindows[i] = win;
+        this._arrowSprites[i] = win._windowPauseSignSprite;
+        this._arrowSprites[i].visible = false;
+        this._selField.addChild(this._arrowSprites[i]);
+    }
+
+    var baseX = this._selection[0].x + this._selField.x;
+    var baseY = Moghunter.scMenu_FaceSelY;
+    var spacing = (4 + this._facesBitmaps[0].width) * this._selMax;
+    this._arrowPos[0] = [baseX - 20, baseY];
+    this._arrowPos[1] = [baseX + 4 + spacing, baseY];
+    this._arrowSprites[1].scale.x = -1;
+};
+
+Scene_Menu.prototype.updateFaceArrowAnimation = function(sprite) {
+    this.updatePauseArrow(sprite);
 };
 
 Scene_Menu.prototype.updateArrow = function() {
-    this.updateArrowAni()
-    for (var i = 0; i < this._arrow.length; i++) {
-        if (i === 0) {
-            var nx = this._arrowPos[i][0] - this._arrowAni[1];
-            this._arrow[i].visible = this.isArrow1Visible();
-        } else {
-            var nx = this._arrowPos[i][0] + this._arrowAni[1];
-            this._arrow[i].visible = this.isArrow2Visible();
-        };
-        var ny = this._arrowPos[i][1];
-        this._arrow[i].x = this.commandMoveTo(this._arrow[i].x,nx);
-        this._arrow[i].y = this.commandMoveTo(this._arrow[i].y,ny);
-    };
+    this.updateArrowAni();
+    for (var i = 0; i < 2; i++) {
+        var sprite = this._arrowSprites[i];
+        var basePos = this._arrowPos[i];
+        var offsetX = (i === 0 ? -this._arrowAni[1] : this._arrowAni[1]);
+        sprite.x = this.commandMoveTo(sprite.x, basePos[0] + offsetX);
+        sprite.y = this.commandMoveTo(sprite.y, basePos[1]);
+        sprite.visible = (i === 0 ? this.isArrow1Visible() : this.isArrow2Visible());
+        if (sprite.visible) {
+            this.updateFaceArrowAnimation(sprite);
+        }
+    }
 };
 
 Scene_Menu.prototype.isArrow1Visible = function() {
@@ -830,6 +836,7 @@ Scene_Menu.prototype.updateArrowAni = function() {
     };
 };
 
+// *** ТАЧИ ***
 Scene_Menu.prototype.checkTouchOnSprites = function() {
     if (this._statusWindow.active) {
         this.checkTouchSelection();
@@ -840,10 +847,10 @@ Scene_Menu.prototype.checkTouchOnSprites = function() {
 
 Scene_Menu.prototype.checkTouchSelection = function() {
     for (var i = 0; i < this._selection.length; i++) {
-        if (this.isOnSprite(this._selection[i])) {this.setTouchSelection(i)};
+        if (this.isOnFaceSprite(this._selection[i])) {this.setTouchSelection(i)};
     };
-    for (var i = 0; i < this._arrow.length; i++) {
-        if (this.isOnSprite(this._arrow[i])) {this.setTouchArrow(i)};
+    for (var i = 0; i < this._arrowSprites.length; i++) {
+        if (this.isOnFaceSprite(this._arrowSprites[i])) {this.setTouchArrow(i)};
     };
 };
 
@@ -989,7 +996,6 @@ MCharStatus.prototype.posX = function() {
     return 16 + (space / 2) + (space * this._index);
 };
 
-// Только фон, имя, уровень и иконки экипировки
 MCharStatus.prototype.createSprites = function() {
     this.createLayoutStatus();
     this.createLVNumber();
@@ -1007,7 +1013,6 @@ MCharStatus.prototype.createName = function() {
 };
 
 MCharStatus.prototype.createStates = function() {
-    // Состояния полностью отключены
 };
 
 MCharStatus.prototype.refresh_states = function() {
