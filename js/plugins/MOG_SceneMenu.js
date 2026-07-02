@@ -6,7 +6,222 @@
  * @plugindesc (v1.3) Modifica a cena de menu principal.
  * @author Moghunter
  *
- * (параметры оставлены без изменений, полный список опущен для краткости)
+ * @param Actor Hud X-Axis
+ * @desc Сдвиг панели статуса по X
+ * @default 0
+ *
+ * @param Actor Hud Y-Axis
+ * @desc Сдвиг панели статуса по Y
+ * @default 0
+ *
+ * @param Char X-Axis
+ * @desc Сдвиг портрета персонажа по X
+ * @default 20
+ *
+ * @param Char Y-Axis
+ * @desc Сдвиг портрета персонажа по Y (от нижнего края)
+ * @default 0
+ *
+ * @param HP Meter X-Axis
+ * @desc Сдвиг полосы HP по X
+ * @default 17
+ *
+ * @param HP Meter Y-Axis
+ * @desc Сдвиг полосы HP по Y
+ * @default 93
+ *
+ * @param MP Meter X-Axis
+ * @desc Сдвиг полосы MP по X
+ * @default 17
+ *
+ * @param MP Meter Y-Axis
+ * @desc Сдвиг полосы MP по Y
+ * @default 144
+ *
+ * @param HP Number X-Axis
+ * @desc Сдвиг числа HP по X
+ * @default 100
+ *
+ * @param HP Number Y-Axis
+ * @desc Сдвиг числа HP по Y
+ * @default 73
+ *
+ * @param HPMax Number X-Axis
+ * @desc Сдвиг максимума HP по X
+ * @default 140
+ *
+ * @param HPMax Number Y-Axis
+ * @desc Сдвиг максимума HP по Y
+ * @default 100
+ *
+ * @param MP Number X-Axis
+ * @desc Сдвиг числа MP по X
+ * @default 100
+ *
+ * @param MP Number Y-Axis
+ * @desc Сдвиг числа MP по Y
+ * @default 124
+ *
+ * @param MPMax Number X-Axis
+ * @desc Сдвиг максимума MP по X
+ * @default 140
+ *
+ * @param MPMax Number Y-Axis
+ * @desc Сдвиг максимума MP по Y
+ * @default 151
+ *
+ * @param LV Number X-Axis
+ * @desc Сдвиг номера уровня по X
+ * @default 95
+ *
+ * @param LV Number Y-Axis
+ * @desc Сдвиг номера уровня по Y
+ * @default 33
+ *
+ * @param States X-Axis
+ * @desc Сдвиг иконок состояний по X
+ * @default 111
+ *
+ * @param States Y-Axis
+ * @desc Сдвиг иконок состояний по Y
+ * @default 30
+ *
+ * @param Name X-Axis
+ * @desc Сдвиг имени персонажа по X
+ * @default 20
+ *
+ * @param Name Y-Axis
+ * @desc Сдвиг имени персонажа по Y
+ * @default 0
+ *
+ * @param Name FontSize
+ * @desc Размер шрифта имени
+ * @default 20
+ *
+ * @param Commands X-Axis
+ * @desc Центр группы команд по X
+ * @default 180
+ *
+ * @param Commands Y-Axis
+ * @desc Позиция команд по Y
+ * @default 50
+ *
+ * @param Command Active X-Axis
+ * @desc Сдвиг активной команды по X (при открытом статусе)
+ * @default 40
+ *
+ * @param Command Active Y-Axis
+ * @desc Сдвиг активной команды по Y (при открытом статусе)
+ * @default 148
+ *
+ * @param Com Name Visible
+ * @desc Показывать название команды (true/false)
+ * @default true
+ *
+ * @param Com Name X-Axis
+ * @desc Сдвиг названия команды по X
+ * @default 40
+ *
+ * @param Com Name Y-Axis
+ * @desc Сдвиг названия команды по Y
+ * @default 96
+ *
+ * @param Com Name FontSize
+ * @desc Размер шрифта названия команды
+ * @default 22
+ *
+ * @param Max Visible Faces
+ * @desc Максимальное количество видимых лиц
+ * @default 5
+ *
+ * @param Face Sel X-Axis
+ * @desc Сдвиг панели выбора лиц по X
+ * @default 240
+ *
+ * @param Face Sel Y-Axis
+ * @desc Сдвиг панели выбора лиц по Y
+ * @default 128
+ *
+ * @param Gold X-Axis
+ * @desc Сдвиг золота по X
+ * @default 260
+ *
+ * @param Gold Y-Axis
+ * @desc Сдвиг золота по Y
+ * @default 580
+ *
+ * @param Time X-Axis
+ * @desc Сдвиг времени игры по X
+ * @default 565
+ *
+ * @param Time Y-Axis
+ * @desc Сдвиг времени игры по Y
+ * @default 60
+ *
+ * @param Time FontSize
+ * @desc Размер шрифта времени
+ * @default 24
+ *
+ * @param Location X-Axis
+ * @desc Сдвиг названия локации по X
+ * @default 450
+ *
+ * @param Location Y-Axis
+ * @desc Сдвиг названия локации по Y
+ * @default 575
+ *
+ * @param Location FontSize
+ * @desc Размер шрифта локации
+ * @default 26
+ *
+ * @param Magic Circle Visible
+ * @desc Показывать магический круг (true/false)
+ * @default true
+ *
+ * @param Magic Circle X-Axis
+ * @desc Сдвиг магического круга по X
+ * @default 700
+ *
+ * @param Magic Circle Y-Axis
+ * @desc Сдвиг магического круга по Y
+ * @default 140
+ *
+ * @param Magic Circle Rotation
+ * @desc Скорость вращения магического круга
+ * @default 0.001
+ *
+ * @param Equip Icons X-Axis
+ * @desc Сдвиг иконок экипировки по X
+ * @default 20
+ *
+ * @param Equip Icons Y-Axis
+ * @desc Сдвиг иконок экипировки по Y
+ * @default 120
+ *
+ * @param Equip Icons Spacing
+ * @desc Расстояние между иконками экипировки
+ * @default 36
+ *
+ * @param Playtime Visible
+ * @desc Показывать время игры (true/false)
+ * @default false
+ *
+ * @param Menu Label
+ * @desc Текст заголовка меню
+ * @default Menu
+ *
+ * @param Menu Label X-Axis
+ * @desc Сдвиг заголовка меню по X
+ * @default 20
+ *
+ * @param Menu Label Y-Axis
+ * @desc Сдвиг заголовка меню по Y
+ * @default 20
+ *
+ * @param Menu Label FontSize
+ * @desc Размер шрифта заголовка меню
+ * @default 28
+ *
  * @help
  * =============================================================================
  * +++ MOG - Scene Menu (v1.3) +++
