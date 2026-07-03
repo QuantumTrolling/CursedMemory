@@ -43,7 +43,6 @@
  * Источники:
  * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
  * (процентные версии: Current HP%, Missing HP%)
- * Для Actor-тега: параметры из PARAM_MAP (ATK, DEF, MAT, MDF, AGI, LUK)
  * ============================================================================
  */
 
@@ -142,6 +141,11 @@
                     continue;
                 }
 
+                // EDIT: Бонусы, основанные на щите, не применяются, если цель поражена состоянием 157
+                if ((source === "SHIELD" || source === "CURRENT SHIELD") && this.isStateAffected(157)) {
+                    continue;
+                }
+
                 bonusFlat += Math.floor(
                     this.getSourceValue(source, isPercent) * mult
                 );
@@ -162,6 +166,11 @@
                 }
 
                 if (PARAM_MAP[target] !== paramId) {
+                    continue;
+                }
+
+                // EDIT: Бонусы, основанные на щите, не применяются, если цель поражена состоянием 157
+                if ((source === "SHIELD" || source === "CURRENT SHIELD") && this.isStateAffected(157)) {
                     continue;
                 }
 
