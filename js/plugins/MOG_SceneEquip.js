@@ -221,6 +221,7 @@
  * - Настраиваемый заголовок "Equipment" (текст, размер, позиция).
  * - Настройки позиции лица и имени персонажа в окне статуса.
  * - Надпись "Снять" по центру, только если слот не пуст (оружие снять нельзя).
+ * - Количество предметов в списке экипировки (если >1).
  */
 
 var Imported = Imported || {};
@@ -246,7 +247,7 @@ Moghunter.scEquip_SlotIcons = [
     Number(Moghunter.parameters['Slot2_Icon'] || 0),
     Number(Moghunter.parameters['Slot3_Icon'] || 0),
     Number(Moghunter.parameters['Slot4_Icon'] || 0),
-	Number(Moghunter.parameters['Slot5_Icon'] || 0)
+    Number(Moghunter.parameters['Slot5_Icon'] || 0)
 ];
 
 Moghunter.scEquip_WeaponTypeIcons = [];
@@ -470,6 +471,7 @@ Window_EquipSlot.prototype.slotIconId = function(index) {
     }
 };
 
+// Без количества
 Window_EquipSlot.prototype.drawItemName = function(item, x, y, width) {
     if (item) {
         var iconIndex = item.iconIndex;
@@ -531,7 +533,6 @@ Window_EquipStatus.prototype.refresh = function() {
         this._parData[1] = this._parImg.height;
         if (!this._faceSprite) this.createFaceSprite();
         this.refreshFaceSprite();
-        // Имя теперь рисуется с настраиваемым смещением
         var nameX = this.textPadding() + Moghunter.scEquip_ActorNameX;
         var nameY = Moghunter.scEquip_ActorNameY;
         this.drawActorName(this._actor, nameX, nameY);
@@ -607,6 +608,7 @@ Window_EquipItem.prototype.itemHeight = function() {
     return this.lineHeight();
 };
 
+// Количество предметов в списке (если >1)
 Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
     this.contents.fontSize = Moghunter.scEquip_FontSize * 2;
     if (item) {
@@ -623,13 +625,21 @@ Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
         this.contents.blt(bitmap, sx, sy, Window_Base._iconWidth, Window_Base._iconHeight, x, y, pw, ph);
         ctx.imageSmoothingEnabled = smooth;
 
-        this.drawText(item.name, x + pw + 8, y, width - pw - 8);
+        var num = $gameParty.numItems(item);
+        if (num > 1) {
+            var numText = 'x' + num;
+            var numWidth = this.textWidth(numText);
+            this.drawText(item.name, x + pw + 8, y, width - pw - 8 - numWidth - 4);
+            this.drawText(numText, x + width - numWidth, y, numWidth);
+        } else {
+            this.drawText(item.name, x + pw + 8, y, width - pw - 8);
+        }
     } else {
         this.drawText("", x, y, width);
     }
 };
 
-// Отображение надписи "Снять" по центру для пустого элемента (если он присутствует)
+// Отображение надписи "Снять" по центру
 Window_EquipItem.prototype.drawItem = function(index) {
     if (this._actor) {
         var rect = this.itemRectForText(index);
@@ -650,11 +660,9 @@ Window_EquipItem.prototype.drawItem = function(index) {
 var _mog_WindowEquipItem_makeItemList = Window_EquipItem.prototype.makeItemList;
 Window_EquipItem.prototype.makeItemList = function() {
     _mog_WindowEquipItem_makeItemList.call(this);
-    // Для оружия (slot 0) опцию "Снять" не показываем никогда
     if (this._slotId === 0) {
         this._data = this._data.filter(function(item) { return item !== null; });
     } else {
-        // Для остальных слотов: если слот пуст, убираем null (нечего снимать)
         if (!this._actor.equips()[this._slotId]) {
             this._data = this._data.filter(function(item) { return item !== null; });
         }
