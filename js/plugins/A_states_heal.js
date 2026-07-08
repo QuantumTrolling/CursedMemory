@@ -3,6 +3,7 @@
 // For RPG Maker MV
 // Requires YEP_BuffsStatesCore
 // =============================================================================
+// Fix: added $gameParty.inBattle() check to prevent out-of-battle triggers
 
 var Imported = Imported || {};
 Imported.HealStateTriggers = true;
@@ -101,6 +102,8 @@ Imported.HealStateTriggers = true;
     _Game_BattlerBase_setHp.call(this, hp);
     var healAmount = this.hp - oldHp;
     if (healAmount <= 0) return;
+    // ТОЛЬКО В БОЮ
+    if (!$gameParty.inBattle()) return;
     if (this.processHealStateEffects) {
       var healer = BattleManager._healStateSubject || this;
       this.processHealStateEffects(healAmount, healer);
@@ -114,13 +117,15 @@ Imported.HealStateTriggers = true;
   Game_Battler.prototype.gainHp = function(value) {
     _Game_Battler_gainHp.call(this, value);
     if (value > 0 && this.processHealStateEffects) {
+      // ТОЛЬКО В БОЮ
+      if (!$gameParty.inBattle()) return;
       var healer = BattleManager._healStateSubject || this;
       this.processHealStateEffects(value, healer);
     }
   };
 
   //=============================================================================
-  // Heal Processing (оставляем без изменений)
+  // Heal Processing
   //=============================================================================
   Game_Battler.prototype.processHealStateEffects = function(value, healer) {
     var target = this;
