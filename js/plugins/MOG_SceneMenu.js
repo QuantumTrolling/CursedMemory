@@ -1,5 +1,5 @@
 //=============================================================================
-// MOG_SceneMenu.js (модифицированная версия)
+// MOG_SceneMenu.js (модифицированная версия для совместимости с YEP_PartySystem)
 //=============================================================================
 
 /*:
@@ -185,6 +185,7 @@
  * - Вместо увеличения — системная стрелка над выбранным лицом (сдвинута на 20px вниз для точного позиционирования)
  * - Стрелки прокрутки лиц и команд — системные (pause sign)
  * - Отключено сглаживание для чёткости
+ * - **Адаптация под YEP_PartySystem: показывает только боевой отряд (battleMembers)**
  */
 
 var Imported = Imported || {};
@@ -294,8 +295,9 @@ Scene_Menu.prototype.loadBitmapsMain = function() {
     this._comList = this._commandWindow._list;
 
     this._facesBitmaps = []
-    for (var i = 0; i < $gameParty.members().length; i++) {
-        this._facesBitmaps[i] = ImageManager.loadMenusFaces2("Actor_" + $gameParty.members()[i]._actorId);
+    // *** ИСПРАВЛЕНИЕ: используем боевой отряд ***
+    for (var i = 0; i < $gameParty.battleMembers().length; i++) {
+        this._facesBitmaps[i] = ImageManager.loadMenusFaces2("Actor_" + $gameParty.battleMembers()[i]._actorId);
     };
     this._comBitmaps = []
     for (var i = 0; i < this._comList.length; i++) {
@@ -426,13 +428,15 @@ Scene_Menu.prototype.refresh_number = function(sprites,value,img_data,x) {
 };
 
 Scene_Menu.prototype.maxMembers = function() {
-    return Math.min(Math.max($gameParty.members().length,0),$gameParty.maxBattleMembers());
+    // *** ИСПРАВЛЕНИЕ: возвращаем размер боевого отряда ***
+    return $gameParty.battleMembers().length;
 };
 
 Scene_Menu.prototype.createCharacters = function() {
     this._characters = [];
     for (var i = 0; i < this.maxMembers(); i++) {
-        this._characters[i] = new MBustMenu(i,$gameParty.members()[i],this.maxMembers());
+        // *** ИСПРАВЛЕНИЕ: используем battleMembers ***
+        this._characters[i] = new MBustMenu(i, $gameParty.battleMembers()[i], this.maxMembers());
         this._field.addChild(this._characters[i]);
     };
 };
@@ -440,7 +444,8 @@ Scene_Menu.prototype.createCharacters = function() {
 Scene_Menu.prototype.createCharStatus = function() {
     this._charStatus = [];
     for (var i = 0; i < this.maxMembers(); i++) {
-        this._charStatus[i] = new MCharStatus(i,$gameParty.members()[i],this.maxMembers());
+        // *** ИСПРАВЛЕНИЕ: используем battleMembers ***
+        this._charStatus[i] = new MCharStatus(i, $gameParty.battleMembers()[i], this.maxMembers());
         this._field.addChild(this._charStatus[i]);
     };
 };
@@ -619,7 +624,8 @@ Scene_Menu.prototype.refreshActorName = function() {
     this._commandNameIndex = -2;
     this._commandNameIndex2 = this._statusWindow._index;
     this._commandName.bitmap.clear();
-    var actor = $gameParty.members()[this._statusWindow._index]
+    // *** ИСПРАВЛЕНИЕ: получаем актёра из боевого отряда ***
+    var actor = $gameParty.battleMembers()[this._statusWindow._index];
     if (!actor) {return}
     this._commandName.bitmap.drawText(actor.name(),0,0,100,32,"center")
     this._commandName.x = Moghunter.scMenu_ComNameX - 100;
@@ -639,7 +645,8 @@ Scene_Menu.prototype.createSelection = function() {
     this._selField.x = Moghunter.scMenu_FaceSelX + 50;
     this._selField.y = Moghunter.scMenu_FaceSelY;
 
-    var count = $gameParty.members().length;
+    // *** ИСПРАВЛЕНИЕ: используем боевой отряд ***
+    var count = $gameParty.battleMembers().length;
     var faceWidth = this._facesBitmaps[0].width;
     var spacing = 4 + faceWidth;
     for (var i = 0; i < count; i++) {
@@ -820,7 +827,7 @@ Scene_Menu.prototype.isArrow1Visible = function() {
 
 Scene_Menu.prototype.isArrow2Visible = function() {
     if (this._statusWindow._index >= this._selection.length - 1) {return false};
-    if ($gameParty.members().length < this._selMax + 2 ) {return false};
+    if ($gameParty.battleMembers().length < this._selMax + 2 ) {return false};
     return true;
 };
 
@@ -1235,7 +1242,7 @@ Scene_Party.prototype.createStatusWindow = function() {
 
 Scene_Party.prototype.onFormationOk = function() {
     var index = this._statusWindow.index();
-    var actor = $gameParty.members()[index];
+    var actor = $gameParty.battleMembers()[index];   // *** ИСПРАВЛЕНИЕ ***
     var pendingIndex = this._statusWindow.pendingIndex();
     if (pendingIndex >= 0) {
         $gameParty.swapOrder(index, pendingIndex);
@@ -1291,7 +1298,8 @@ Window_MenuStatusM.prototype.windowHeight = function() {
 };
 
 Window_MenuStatusM.prototype.maxItems = function() {
-    return $gameParty.size();
+    // *** ИСПРАВЛЕНИЕ: размер боевого отряда ***
+    return $gameParty.battleMembers().length;
 };
 
 Window_MenuStatusM.prototype.itemHeight = function() {
@@ -1304,7 +1312,8 @@ Window_MenuStatusM.prototype.numVisibleRows = function() {
 };
 
 Window_MenuStatusM.prototype.loadImages = function() {
-    $gameParty.members().forEach(function(actor) {
+    // *** ИСПРАВЛЕНИЕ: загружаем лица только для боевого отряда ***
+    $gameParty.battleMembers().forEach(function(actor) {
         ImageManager.loadFace(actor.faceName());
     }, this);
 };
@@ -1327,7 +1336,8 @@ Window_MenuStatusM.prototype.drawItemBackground = function(index) {
 };
 
 Window_MenuStatusM.prototype.drawItemImage = function(index) {
-    var actor = $gameParty.members()[index];
+    // *** ИСПРАВЛЕНИЕ: берём актёра из боевого отряда ***
+    var actor = $gameParty.battleMembers()[index];
     var rect = this.itemRect(index);
     this.changePaintOpacity(actor.isBattleMember());
     this.drawActorFace(actor, rect.x + 1, rect.y + 1, 144, rect.height - 2);
@@ -1335,7 +1345,8 @@ Window_MenuStatusM.prototype.drawItemImage = function(index) {
 };
 
 Window_MenuStatusM.prototype.drawItemStatus = function(index) {
-    var actor = $gameParty.members()[index];
+    // *** ИСПРАВЛЕНИЕ: берём актёра из боевого отряда ***
+    var actor = $gameParty.battleMembers()[index];
     var rect = this.itemRect(index);
     var x = rect.x + 162;
     var y = rect.y + rect.height / 2 - this.lineHeight() * 1.5;
@@ -1360,17 +1371,18 @@ Window_MenuStatusM.prototype.drawItemStatus = function(index) {
     this.drawText(actor.mat,x + 130,y + 32 * 3,80,"right")
     this.drawText(actor.mdf ,x + 260,y + 32 * 1,80,"right")
     this.drawText(actor.agi,x+ 260,y + 32 * 2,80,"right")
-    this.drawText(actor.luk,x + 260,y + 32 * 3,80,"right")
+    this.drawText(actor.luk,x + 260,y + 32 * 3,80)
 };
 
 Window_MenuStatusM.prototype.processOk = function() {
     Window_Selectable.prototype.processOk.call(this);
-    $gameParty.setMenuActor($gameParty.members()[this.index()]);
+    // *** ИСПРАВЛЕНИЕ: сохраняем menuActor из боевого отряда ***
+    $gameParty.setMenuActor($gameParty.battleMembers()[this.index()]);
 };
 
 Window_MenuStatusM.prototype.isCurrentItemEnabled = function() {
     if (this._formationMode) {
-        var actor = $gameParty.members()[this.index()];
+        var actor = $gameParty.battleMembers()[this.index()];
         return actor && actor.isFormationChangeOk();
     } else {
         return true;

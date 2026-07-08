@@ -1,42 +1,50 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v44 (fixes: arrow position, remove btn left, MOG menu refresh)
+ * @plugindesc Custom Party Scene v47.5 (fix reserve faces not showing initially, name centered, Y offset)
  * @author ChatGPT (improved)
  *
  * @help
- * Меняет состав боевого отряда:
- * - Верхняя панель: лица резервных героев загружаются из img/menus/faces/faces2/
- *   с именами Actor_1, Actor_2 и т.д. (как в MOG_SceneMenu).
- *   При наведении мыши/касании лицо подсвечивается, над ним появляется стрелка.
- * - Отдельная кнопка «Убрать» слева экрана.
- * - Клик по герою из отряда → выбор (медленное мигание).
- *   Повторный клик по выбранному → убрать в резерв (если в отряде > 1).
- * - Правая кнопка мыши / Cancel снимает выделение; если выделения нет — выход.
- * - Клик по герою из резерва:
- *     если нет выбранного и в отряде есть пустые слоты → сразу добавить;
- *     если есть выбранный → обменять местами.
- * - Клик по кнопке «Убрать» при выбранном члене отряда → убирает его в резерв.
- * - Стрелки навигации по страницам резерва.
- * - После выхода из этого окна главное меню (MOG_SceneMenu) автоматически обновляется.
+ * Настройка боевого отряда.
+ * - Верхняя панель: лица резервных героев (теперь появляются сразу).
+ * - Кнопка «Убрать» (появляется только при выборе члена отряда).
+ * - Персонаж добавляется на крайнее правое пустое место.
+ * - Имя персонажа центрируется.
  *
- * Команда плагина:
- *   OpenPartyMenu   - открывает текущее окно настройки отряда.
+ * Команда плагина: OpenPartyMenu
  *
  * @param facesPerPage
- * @desc Количество резервных лиц на странице (по умолчанию 6). Одно место занято кнопкой "Убрать".
  * @default 6
- *
  * @param maxFaceSize
- * @desc Максимальный размер лица в пикселях (ширина = высота). По умолчанию 144.
  * @default 144
- *
  * @param faceSpacing
- * @desc Минимальный промежуток между лицами в пикселях
- * @default 10
+ * @default 12
+ * @param reserveFacesOffsetX
+ * @default 60
+ * @param reserveFacesOffsetY
+ * @default 0
  *
  * @param removeButtonText
- * @desc Текст на кнопке удаления из отряда. По умолчанию "Убрать".
  * @default Убрать
+ * @param removeButtonX
+ * @default 10
+ * @param removeButtonY
+ * @default 30
+ * @param removeButtonWidth
+ * @default 200
+ * @param removeButtonHeight
+ * @default 80
+ * @param removeButtonTextX
+ * @default 40
+ * @param removeButtonTextWidth
+ * @default 120
+ *
+ * @param partyYOffset
+ * @default 50
+ *
+ * @param arrowOffsetX
+ * @default 12
+ * @param arrowOffsetY
+ * @default 16
  *
  * @param statusBaseX
  * @default 0
@@ -71,7 +79,7 @@
  * @param statusLevelY
  * @default 0
  * @param statusNameX
- * @default 230
+ * @default 0
  * @param statusNameY
  * @default 24
  * @param statusNameSize
@@ -107,10 +115,24 @@
 (function() {
 
 var parameters = PluginManager.parameters('CustomPartyScene');
-var facesPerPage = Number(parameters['facesPerPage'] || 6);
-var maxFaceSize = Number(parameters['maxFaceSize'] || 144);
-var faceSpacing = Number(parameters['faceSpacing'] || 10);
-var removeButtonText = String(parameters['removeButtonText'] || 'Убрать');
+var facesPerPage         = Number(parameters['facesPerPage'] || 6);
+var maxFaceSize          = Number(parameters['maxFaceSize'] || 144);
+var faceSpacing          = Number(parameters['faceSpacing'] || 12);
+var reserveFacesOffsetX  = Number(parameters['reserveFacesOffsetX'] || 60);
+var reserveFacesOffsetY  = Number(parameters['reserveFacesOffsetY'] || 0);
+
+var removeButtonText     = String(parameters['removeButtonText'] || 'Убрать');
+var removeButtonX        = Number(parameters['removeButtonX'] || 10);
+var removeButtonY        = Number(parameters['removeButtonY'] || 30);
+var removeButtonWidth    = Number(parameters['removeButtonWidth'] || 200);
+var removeButtonHeight   = Number(parameters['removeButtonHeight'] || 80);
+var removeButtonTextX    = Number(parameters['removeButtonTextX'] || 40);
+var removeButtonTextWidth= Number(parameters['removeButtonTextWidth'] || 120);
+
+var partyYOffset         = Number(parameters['partyYOffset'] || 50);
+
+var arrowOffsetX         = Number(parameters['arrowOffsetX'] || 12);
+var arrowOffsetY         = Number(parameters['arrowOffsetY'] || 16);
 
 var statusBaseX   = Number(parameters['statusBaseX'] || 0);
 var statusBaseY   = Number(parameters['statusBaseY'] || -150);
@@ -149,7 +171,7 @@ var seArrowPan    = Number(parameters['seArrowPan'] || 0);
 var ARROW_WIDTH  = 22;
 var ARROW_HEIGHT = 20;
 
-// --- утилита ---
+// --- утилиты ---
 function loadMenuBitmap(filename, hue) {
     if (typeof ImageManager.loadMenusMain === 'function') {
         return ImageManager.loadMenusMain(filename);
@@ -170,13 +192,12 @@ function loadStatusBitmaps() {
     this._iconSet = ImageManager.loadSystem('IconSet');
 }
 
-// ----------- Класс окна статуса (не изменялся) -----------
+// ----------- Окно статуса персонажа (имя центрировано) -----------
 function MCharStatusParty(actor, scene) {
     this.initialize(actor, scene);
 }
 MCharStatusParty.prototype = Object.create(Sprite.prototype);
 MCharStatusParty.prototype.constructor = MCharStatusParty;
-
 MCharStatusParty.prototype.initialize = function(actor, scene) {
     Sprite.prototype.initialize.call(this);
     this._actor = actor;
@@ -187,7 +208,6 @@ MCharStatusParty.prototype.initialize = function(actor, scene) {
     this.createSprites();
     this.refresh();
 };
-
 MCharStatusParty.prototype.createSprites = function() {
     this._layout = new Sprite(this._scene._layoutStatusBmp);
     this.addChild(this._layout);
@@ -195,7 +215,6 @@ MCharStatusParty.prototype.createSprites = function() {
     this.addChild(this._hpMeter);
     this._mpMeter = new Sprite(this._scene._mpMeterBmp);
     this.addChild(this._mpMeter);
-
     this._hpNumbers = [];
     for (var i = 0; i < 5; i++) {
         var spr = new Sprite(this._scene._hpNumberBmp);
@@ -231,11 +250,9 @@ MCharStatusParty.prototype.createSprites = function() {
         this.addChild(spr5);
         this._lvNumbers.push(spr5);
     }
-
     this._nameBitmap = new Bitmap(120, 32);
     this._nameSprite = new Sprite(this._nameBitmap);
     this.addChild(this._nameSprite);
-
     this._equipIcons = [];
     for (var e = 0; e < 5; e++) {
         var icon = new Sprite(this._scene._iconSet);
@@ -243,7 +260,6 @@ MCharStatusParty.prototype.createSprites = function() {
         this.addChild(icon);
         this._equipIcons.push(icon);
     }
-
     this._stateIcon = null;
     if (showStates) {
         this._stateIcon = new Sprite(this._scene._iconSet);
@@ -251,23 +267,19 @@ MCharStatusParty.prototype.createSprites = function() {
         this.addChild(this._stateIcon);
     }
 };
-
 MCharStatusParty.prototype.refresh = function() {
     if (!this._actor || !this._scene._hpMeterBmp.isReady()) return;
-
     var hpW = Math.floor(this._scene._hpMeterBmp.width * this._actor.hp / this._actor.mhp);
     var mpW = Math.floor(this._scene._mpMeterBmp.width * this._actor.mp / this._actor.mmp);
     this._hpMeter.setFrame(0, 0, hpW, this._scene._hpMeterBmp.height);
     this._mpMeter.setFrame(0, 0, mpW, this._scene._mpMeterBmp.height);
-
     this.refreshNumber(this._mpNumbers, this._actor.mp, this._scene._mpNumberBmp);
     this.refreshNumber(this._mpMaxNumbers, this._actor.mmp, this._scene._mpNumberBmp);
     this.refreshNumber(this._lvNumbers, this._actor.level, this._scene._lvNumberBmp);
-
     this._nameBitmap.clear();
     this._nameBitmap.fontSize = nameSize;
-    this._nameBitmap.drawText(this._actor.name(), 0, 0, 120, 32, 'left');
-
+    // Центрируем имя внутри битмапа
+    this._nameBitmap.drawText(this._actor.name(), 0, 0, 120, 32, 'center');
     var equips = this._actor.equips();
     for (var i = 0; i < this._equipIcons.length; i++) {
         var item = i < equips.length ? equips[i] : null;
@@ -283,7 +295,6 @@ MCharStatusParty.prototype.refresh = function() {
             icon.visible = false;
         }
     }
-
     if (this._stateIcon) {
         var icons = this._actor.allIcons();
         if (icons.length > 0) {
@@ -299,7 +310,6 @@ MCharStatusParty.prototype.refresh = function() {
         }
     }
 };
-
 MCharStatusParty.prototype.refreshNumber = function(sprites, value, bitmap) {
     var maxDigits = sprites.length;
     var str = Math.min(value, Math.pow(10, maxDigits) - 1).toString();
@@ -314,16 +324,13 @@ MCharStatusParty.prototype.refreshNumber = function(sprites, value, bitmap) {
         }
     }
 };
-
 MCharStatusParty.prototype.layout = function(posX, posY) {
     this._layout.x = -127;
     this._layout.y = -80;
-
     this._hpMeter.x = hpMeterX;
     this._hpMeter.y = hpMeterY;
     this._mpMeter.x = mpMeterX;
     this._mpMeter.y = mpMeterY;
-
     var digitW = this._scene._hpNumberBmp.width / 10;
     var lenHP = this._actor.hp.toString().length;
     var startX = hpNumX - lenHP * digitW;
@@ -331,7 +338,6 @@ MCharStatusParty.prototype.layout = function(posX, posY) {
         this._hpNumbers[i].x = startX + i * digitW;
         this._hpNumbers[i].y = hpNumY;
     }
-
     var digitWmp = this._scene._mpNumberBmp.width / 10;
     var lenMP = this._actor.mp.toString().length;
     var startXMp = mpNumX - lenMP * digitWmp;
@@ -339,14 +345,12 @@ MCharStatusParty.prototype.layout = function(posX, posY) {
         this._mpNumbers[k].x = startXMp + k * digitWmp;
         this._mpNumbers[k].y = mpNumY;
     }
-
     var lenMaxMP = this._actor.mmp.toString().length;
     var startXMaxMp = mpMaxX - lenMaxMP * digitWmp;
     for (var m = 0; m < this._mpMaxNumbers.length; m++) {
         this._mpMaxNumbers[m].x = startXMaxMp + m * digitWmp;
         this._mpMaxNumbers[m].y = mpMaxY;
     }
-
     var lvDigitW = this._scene._lvNumberBmp.width / 10;
     var lenLV = this._actor.level.toString().length;
     var startLv = lvX - lenLV * lvDigitW;
@@ -354,23 +358,19 @@ MCharStatusParty.prototype.layout = function(posX, posY) {
         this._lvNumbers[n].x = startLv + n * lvDigitW;
         this._lvNumbers[n].y = lvY;
     }
-
     this._nameSprite.x = nameX;
     this._nameSprite.y = nameY;
-
     for (var e = 0; e < this._equipIcons.length; e++) {
         if (this._equipIcons[e].visible) {
             this._equipIcons[e].x = equipX + e * equipSpace;
             this._equipIcons[e].y = equipY;
         }
     }
-
     if (this._stateIcon && this._stateIcon.visible) {
         this._stateIcon.x = nameX + 130;
         this._stateIcon.y = nameY;
     }
 };
-
 MCharStatusParty.prototype.update = function() {
     Sprite.prototype.update.call(this);
     if (this._slideWait > 0) {
@@ -395,7 +395,6 @@ MCharStatusParty.prototype.update = function() {
 function Scene_PartyCustom() {
     this.initialize.apply(this, arguments);
 }
-
 Scene_PartyCustom.prototype = Object.create(Scene_MenuBase.prototype);
 Scene_PartyCustom.prototype.constructor = Scene_PartyCustom;
 
@@ -408,12 +407,14 @@ Scene_PartyCustom.prototype.create = function() {
     this._reservePage = 0;
     this._animationsDone = false;
     this._reserveFaceBitmaps = {};
+    this._facesReady = false; // флаг готовности битмапов резерва
     this.createTitle();
     this.createParty();
     this.createFaceBar();
     this._animationsDone = true;
     this.updateClickableList();
     this.preloadReserveFaces();
+    if (this._removeButtonWindow) this._removeButtonWindow.visible = false;
 };
 
 Scene_PartyCustom.prototype.preloadReserveFaces = function() {
@@ -435,8 +436,25 @@ Scene_PartyCustom.prototype.getReserveBitmap = function(actorId) {
     return this._reserveFaceBitmaps[actorId] || null;
 };
 
+// Проверка готовности всех битмапов резерва
+Scene_PartyCustom.prototype.areAllReserveFacesReady = function() {
+    var ids = this.allReserveIds();
+    for (var i = 0; i < ids.length; i++) {
+        var bmp = this.getReserveBitmap(ids[i]);
+        if (bmp && !bmp.isReady()) return false;
+    }
+    return true;
+};
+
 Scene_PartyCustom.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
+
+    // Если резервные лица ещё не готовы, но битмапы уже загрузились — обновляем
+    if (!this._facesReady && this.areAllReserveFacesReady()) {
+        this._facesReady = true;
+        this.refreshFaces();
+    }
+
     if (Input.isTriggered('cancel') || TouchInput.isCancelled()) {
         if (this._selectedActor) {
             SoundManager.playCancel();
@@ -459,7 +477,6 @@ Scene_PartyCustom.prototype.update = function() {
 };
 
 Scene_PartyCustom.prototype.terminate = function() {
-    // Устанавливаем флаг для обновления меню MOG
     $gameSystem._customPartyChanged = true;
     Scene_MenuBase.prototype.terminate.call(this);
 };
@@ -472,16 +489,19 @@ Scene_PartyCustom.prototype.createTitle = function() {
 
 Scene_PartyCustom.prototype.createFaceBar = function() {
     this._faceContainer = new Sprite();
-    this._faceContainer.y = 90;
+    this._faceContainer.y = 90 + reserveFacesOffsetY; // вертикальное смещение панели резерва
     this.addChild(this._faceContainer);
 
-    // Кнопка "Убрать" – отдельное окно слева
-    this._removeButtonWindow = new Window_Base(10, 10, 120, 36);
-    this._removeButtonWindow.contents.fontSize = 18;
-    this._removeButtonWindow.drawText(removeButtonText, 0, 0, 120, 36, 'center');
+    // Кнопка «Убрать» с настройками
+    this._removeButtonWindow = new Window_Base(removeButtonX, removeButtonY, removeButtonWidth, removeButtonHeight);
+    this._removeButtonWindow.padding = 0;
+    this._removeButtonWindow.contents = new Bitmap(removeButtonWidth, removeButtonHeight);
+    this._removeButtonWindow.contents.fontSize = 26;
+    var lineHeight = 36;
+    var yText = (removeButtonHeight - lineHeight) / 2;
+    this._removeButtonWindow.drawText(removeButtonText, removeButtonTextX, yText, removeButtonTextWidth, lineHeight, 'center');
     this.addWindow(this._removeButtonWindow);
 
-    // Стрелка подсветки
     this._faceArrowWindow = new Window_Base(0, 0, 0, 0);
     this._faceArrowWindow.opacity = 0;
     this._faceArrowWindow.backOpacity = 0;
@@ -529,31 +549,28 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
 
     var actors = this.reserveActorsForPage(this._reservePage);
     var count = actors.length;
+    if (count === 0) {
+        this.updateClickableList();
+        return;
+    }
 
-    var totalSlots = count; // только лица, кнопка отдельно
-    var availWidth = Graphics.boxWidth - 30; // небольшой отступ
-    var maxFaceDisplayWidth = Math.floor((availWidth - faceSpacing * (totalSlots + 1)) / totalSlots);
-    var faceSize = Math.min(maxFaceSize, maxFaceDisplayWidth);
+    var minMargin = 15;
+    var availWidth = Graphics.boxWidth - minMargin * 2;
+    var faceSize = Math.min(maxFaceSize, Math.floor((availWidth - faceSpacing * (count - 1)) / count));
     var faceScale = faceSize / 144;
-    var totalFacesWidth = totalSlots * faceSize;
-    var actualSpacing = (availWidth - totalFacesWidth) / (totalSlots + 1);
+    var totalWidth = count * faceSize + (count - 1) * faceSpacing;
+    var startX = (Graphics.boxWidth - totalWidth) / 2 + reserveFacesOffsetX;
 
     for (var i = 0; i < actors.length; i++) {
         var actor = actors[i];
         var bmp = this.getReserveBitmap(actor.actorId());
-        var sprite;
-        if (bmp && bmp.isReady()) {
-            sprite = new Sprite(bmp);
-        } else {
-            sprite = new Sprite();
-            sprite.bitmap = new Bitmap(faceSize, faceSize);
-        }
+        // Если битмап не готов, всё равно создаём спрайт (он будет пустым, но обновится при готовности)
+        var sprite = new Sprite(bmp || new Bitmap(faceSize, faceSize));
         sprite._actor = actor;
         sprite._isReserveFace = true;
         sprite.scale.x = faceScale;
         sprite.scale.y = faceScale;
-        var targetX = actualSpacing + i * (faceSize + actualSpacing);
-        sprite.x = targetX;
+        sprite.x = startX + i * (faceSize + faceSpacing);
         sprite.opacity = 160;
         this.setupInteraction(sprite);
         this._faceContainer.addChild(sprite);
@@ -591,7 +608,7 @@ Scene_PartyCustom.prototype.createArrow = function(direction, x, y, visible) {
 Scene_PartyCustom.prototype.createParty = function() {
     this._partyContainer = new Sprite();
     var charY = (typeof Moghunter !== 'undefined' && Moghunter.scMenu_CharY != null) ? Moghunter.scMenu_CharY : 0;
-    this._partyContainer.y = Graphics.boxHeight + charY + 50;
+    this._partyContainer.y = Graphics.boxHeight + charY + partyYOffset;
     this.addChild(this._partyContainer);
     this.refreshParty();
 };
@@ -606,6 +623,7 @@ Scene_PartyCustom.prototype.refreshParty = function() {
     this._statusSprites = [];
 
     var battleMembers = $gameParty.battleMembers();
+
     battleMembers.forEach(function(actor, i) {
         var sprite;
         if (typeof ImageManager.loadMenusFaces3 === 'function') {
@@ -755,9 +773,9 @@ Scene_PartyCustom.prototype.updateFaceHover = function() {
             spr._hovered = true;
             foundHover = true;
             this._faceArrow.visible = true;
-            // Центрируем стрелку по горизонтали над спрайтом
-            this._faceArrow.x = spr.x;
-            this._faceArrow.y = spr.y - spr.height * spr.scale.y / 2 - 14;
+            var faceDisplayWidth = spr.width * spr.scale.x;
+            this._faceArrow.x = spr.x + faceDisplayWidth / 2 - ARROW_WIDTH / 2 + arrowOffsetX;
+            this._faceArrow.y = spr.y - ARROW_HEIGHT - 4 + arrowOffsetY;
             this.updatePauseArrow(this._faceArrow);
         } else {
             spr._hovered = false;
@@ -775,7 +793,7 @@ Scene_PartyCustom.prototype.updatePauseArrow = function(sprite) {
 };
 
 Scene_PartyCustom.prototype.handleClick = function() {
-    if (this._removeButtonWindow && this.isRemButtonHovered()) {
+    if (this._removeButtonWindow && this._removeButtonWindow.visible && this.isRemButtonHovered()) {
         this.onRemoveButtonClick();
         return;
     }
@@ -847,6 +865,7 @@ Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
             this._selectedActor = actor;
             this._selectedSprite = sprite;
             sprite.startBlink();
+            if (this._removeButtonWindow) this._removeButtonWindow.visible = true;
         } else {
             if (this.hasEmptyBattleSlot()) {
                 this.addToParty(actor);
@@ -910,7 +929,11 @@ Scene_PartyCustom.prototype.removeFromParty = function(actor) {
     var battle = $gameParty._battleMembers;
     var idx = battle.indexOf(id);
     if (idx >= 0) {
-        battle[idx] = 0;
+        battle.splice(idx, 1);
+        var maxSlots = $gameParty.maxBattleMembers();
+        while (battle.length < maxSlots) {
+            battle.push(0);
+        }
         if (!$gameParty._actors.contains(id)) $gameParty._actors.push(id);
     }
     if (typeof $gameParty.rearrangeActors === 'function') $gameParty.rearrangeActors();
@@ -922,6 +945,7 @@ Scene_PartyCustom.prototype.clearSelection = function() {
     if (this._selectedSprite) this._selectedSprite.stopBlink();
     this._selectedActor = null;
     this._selectedSprite = null;
+    if (this._removeButtonWindow) this._removeButtonWindow.visible = false;
 };
 
 Scene_PartyCustom.prototype.swapActors = function(a, b) {
@@ -971,7 +995,6 @@ Scene_Menu.prototype.update = function() {
     _Scene_Menu_update.call(this);
     if ($gameSystem._customPartyChanged) {
         $gameSystem._customPartyChanged = false;
-        // Перезагружаем битмапы и пересоздаём спрайты
         if (this._facesBitmaps) this.loadBitmapsMain();
         if (this._field) {
             this._field.removeChildren();
