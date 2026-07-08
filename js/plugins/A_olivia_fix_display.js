@@ -6,8 +6,9 @@
  * @author YourName
  *
  * @help
- * Makes the weakness window appear 1 layer above its own enemy sprite,
- * but below all other character and enemy sprites.
+ * - Прикрепляет окно слабостей к спрайту врага (решает перекрытие посторонними спрайтами).
+ * - Задаёт Z врага пропорционально его Y: чем ниже враг на экране, тем выше его Z,
+ *   и его HUD не перекрывается верхними врагами.
  *
  * Place this plugin directly below Olivia_OctoBattle.js.
  */
@@ -21,16 +22,12 @@ if (Imported.Olivia_OctoBattle && Olivia.OctoBattle.WeaknessDisplay && Olivia.Oc
     Sprite_Enemy.prototype.createWeaknessDisplayWindow = function() {
         _Sprite_Enemy_createWeaknessDisplayWindow.call(this);
         if (this._weaknessWindow) {
-            // Удаляем окно из любого другого родителя (например, _baseSprite), если оно там уже было
             if (this._weaknessWindow.parent) {
                 this._weaknessWindow.parent.removeChild(this._weaknessWindow);
             }
-            // Добавляем окно как дочерний элемент спрайта врага
             this.addChild(this._weaknessWindow);
-            // Устанавливаем относительные координаты (смещение от спрайта)
             this._weaknessWindow.x = this._weaknessWindow._factorX;
             this._weaknessWindow.y = this._weaknessWindow._factorY;
-            // Помечаем, что окно уже добавлено, чтобы избежать повторной вставки в _baseSprite
             this._weaknessWindow._added = true;
         }
     };
@@ -39,7 +36,6 @@ if (Imported.Olivia_OctoBattle && Olivia.OctoBattle.WeaknessDisplay && Olivia.Oc
     var _Window_WeaknessDisplay_updatePosition = Window_WeaknessDisplay.prototype.updatePosition;
     Window_WeaknessDisplay.prototype.updatePosition = function() {
         if (this.parent && this.parent instanceof Sprite_Enemy) {
-            // Если родитель – спрайт врага, используем относительное смещение
             this.x = this._factorX;
             this.y = this._factorY;
         } else {
@@ -55,11 +51,21 @@ if (Imported.Olivia_OctoBattle && Olivia.OctoBattle.WeaknessDisplay && Olivia.Oc
                 var sprite = this._enemySprites[i];
                 if (!!sprite && !!sprite._weaknessWindow) {
                     sprite._weaknessWindow.refresh();
-                    // Окно уже является потомком спрайта, поэтому ничего не добавляем
                 }
             }
             $gameTemp._needRefreshAllEnemyWeaknessWindows = false;
         }
+    };
+
+    // ----- ДОБАВЛЯЕМ СОРТИРОВКУ ПО ГЛУБИНЕ -----
+    // Каждый кадр для каждого врага задаём Z = Y (или Y * множитель)
+    var _Sprite_Enemy_update = Sprite_Enemy.prototype.update;
+    Sprite_Enemy.prototype.update = function() {
+        _Sprite_Enemy_update.call(this);
+        // Чем ниже враг (больше Y), тем выше Z → рисуется поверх остальных
+        this.z = this.y;
+        // Для гарантии можно использовать множитель, если Y различаются слабо:
+        // this.z = this.y * 10;
     };
 
 }
