@@ -1,16 +1,18 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v47.5 (fix reserve faces not showing initially, name centered, Y offset)
+ * @plugindesc Custom Party Scene v47.6 (fix level position on plugin command, reserve faces load fix, name centered)
  * @author ChatGPT (improved)
  *
  * @help
  * Настройка боевого отряда.
- * - Верхняя панель: лица резервных героев (теперь появляются сразу).
- * - Кнопка «Убрать» (появляется только при выборе члена отряда).
+ * - Верхняя панель: лица резервных героев (появляются сразу).
+ * - Кнопка «Убрать» (видна только при выборе члена отряда).
  * - Персонаж добавляется на крайнее правое пустое место.
  * - Имя персонажа центрируется.
+ * - Исправлено смещение уровня при открытии через команду плагина OpenPartyMenu.
  *
- * Команда плагина: OpenPartyMenu
+ * Команда плагина:
+ *   OpenPartyMenu
  *
  * @param facesPerPage
  * @default 6
@@ -192,7 +194,7 @@ function loadStatusBitmaps() {
     this._iconSet = ImageManager.loadSystem('IconSet');
 }
 
-// ----------- Окно статуса персонажа (имя центрировано) -----------
+// ----------- Окно статуса персонажа (имя центрировано, защита от нулевых битмапов) -----------
 function MCharStatusParty(actor, scene) {
     this.initialize(actor, scene);
 }
@@ -278,7 +280,6 @@ MCharStatusParty.prototype.refresh = function() {
     this.refreshNumber(this._lvNumbers, this._actor.level, this._scene._lvNumberBmp);
     this._nameBitmap.clear();
     this._nameBitmap.fontSize = nameSize;
-    // Центрируем имя внутри битмапа
     this._nameBitmap.drawText(this._actor.name(), 0, 0, 120, 32, 'center');
     var equips = this._actor.equips();
     for (var i = 0; i < this._equipIcons.length; i++) {
@@ -331,33 +332,42 @@ MCharStatusParty.prototype.layout = function(posX, posY) {
     this._hpMeter.y = hpMeterY;
     this._mpMeter.x = mpMeterX;
     this._mpMeter.y = mpMeterY;
-    var digitW = this._scene._hpNumberBmp.width / 10;
-    var lenHP = this._actor.hp.toString().length;
-    var startX = hpNumX - lenHP * digitW;
-    for (var i = 0; i < this._hpNumbers.length; i++) {
-        this._hpNumbers[i].x = startX + i * digitW;
-        this._hpNumbers[i].y = hpNumY;
+
+    // Защита: позиционируем цифры только если битмапы загружены
+    if (this._scene._hpNumberBmp.width > 0) {
+        var digitW = this._scene._hpNumberBmp.width / 10;
+        var lenHP = this._actor.hp.toString().length;
+        var startX = hpNumX - lenHP * digitW;
+        for (var i = 0; i < this._hpNumbers.length; i++) {
+            this._hpNumbers[i].x = startX + i * digitW;
+            this._hpNumbers[i].y = hpNumY;
+        }
     }
-    var digitWmp = this._scene._mpNumberBmp.width / 10;
-    var lenMP = this._actor.mp.toString().length;
-    var startXMp = mpNumX - lenMP * digitWmp;
-    for (var k = 0; k < this._mpNumbers.length; k++) {
-        this._mpNumbers[k].x = startXMp + k * digitWmp;
-        this._mpNumbers[k].y = mpNumY;
+    if (this._scene._mpNumberBmp.width > 0) {
+        var digitWmp = this._scene._mpNumberBmp.width / 10;
+        var lenMP = this._actor.mp.toString().length;
+        var startXMp = mpNumX - lenMP * digitWmp;
+        for (var k = 0; k < this._mpNumbers.length; k++) {
+            this._mpNumbers[k].x = startXMp + k * digitWmp;
+            this._mpNumbers[k].y = mpNumY;
+        }
+        var lenMaxMP = this._actor.mmp.toString().length;
+        var startXMaxMp = mpMaxX - lenMaxMP * digitWmp;
+        for (var m = 0; m < this._mpMaxNumbers.length; m++) {
+            this._mpMaxNumbers[m].x = startXMaxMp + m * digitWmp;
+            this._mpMaxNumbers[m].y = mpMaxY;
+        }
     }
-    var lenMaxMP = this._actor.mmp.toString().length;
-    var startXMaxMp = mpMaxX - lenMaxMP * digitWmp;
-    for (var m = 0; m < this._mpMaxNumbers.length; m++) {
-        this._mpMaxNumbers[m].x = startXMaxMp + m * digitWmp;
-        this._mpMaxNumbers[m].y = mpMaxY;
+    if (this._scene._lvNumberBmp.width > 0) {
+        var lvDigitW = this._scene._lvNumberBmp.width / 10;
+        var lenLV = this._actor.level.toString().length;
+        var startLv = lvX - lenLV * lvDigitW;
+        for (var n = 0; n < this._lvNumbers.length; n++) {
+            this._lvNumbers[n].x = startLv + n * lvDigitW;
+            this._lvNumbers[n].y = lvY;
+        }
     }
-    var lvDigitW = this._scene._lvNumberBmp.width / 10;
-    var lenLV = this._actor.level.toString().length;
-    var startLv = lvX - lenLV * lvDigitW;
-    for (var n = 0; n < this._lvNumbers.length; n++) {
-        this._lvNumbers[n].x = startLv + n * lvDigitW;
-        this._lvNumbers[n].y = lvY;
-    }
+
     this._nameSprite.x = nameX;
     this._nameSprite.y = nameY;
     for (var e = 0; e < this._equipIcons.length; e++) {
@@ -407,7 +417,8 @@ Scene_PartyCustom.prototype.create = function() {
     this._reservePage = 0;
     this._animationsDone = false;
     this._reserveFaceBitmaps = {};
-    this._facesReady = false; // флаг готовности битмапов резерва
+    this._facesReady = false;
+    this._statusBitmapsReady = false;   // новый флаг
     this.createTitle();
     this.createParty();
     this.createFaceBar();
@@ -436,7 +447,6 @@ Scene_PartyCustom.prototype.getReserveBitmap = function(actorId) {
     return this._reserveFaceBitmaps[actorId] || null;
 };
 
-// Проверка готовности всех битмапов резерва
 Scene_PartyCustom.prototype.areAllReserveFacesReady = function() {
     var ids = this.allReserveIds();
     for (var i = 0; i < ids.length; i++) {
@@ -446,13 +456,27 @@ Scene_PartyCustom.prototype.areAllReserveFacesReady = function() {
     return true;
 };
 
+Scene_PartyCustom.prototype.areStatusBitmapsReady = function() {
+    return this._layoutStatusBmp && this._layoutStatusBmp.isReady() &&
+           this._hpMeterBmp && this._hpMeterBmp.isReady() &&
+           this._mpMeterBmp && this._mpMeterBmp.isReady() &&
+           this._hpNumberBmp && this._hpNumberBmp.isReady() &&
+           this._mpNumberBmp && this._mpNumberBmp.isReady() &&
+           this._lvNumberBmp && this._lvNumberBmp.isReady() &&
+           this._iconSet && this._iconSet.isReady();
+};
+
 Scene_PartyCustom.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
 
-    // Если резервные лица ещё не готовы, но битмапы уже загрузились — обновляем
+    // Автоподгрузка битмапов
     if (!this._facesReady && this.areAllReserveFacesReady()) {
         this._facesReady = true;
         this.refreshFaces();
+    }
+    if (!this._statusBitmapsReady && this.areStatusBitmapsReady()) {
+        this._statusBitmapsReady = true;
+        this.refreshParty();
     }
 
     if (Input.isTriggered('cancel') || TouchInput.isCancelled()) {
@@ -489,10 +513,10 @@ Scene_PartyCustom.prototype.createTitle = function() {
 
 Scene_PartyCustom.prototype.createFaceBar = function() {
     this._faceContainer = new Sprite();
-    this._faceContainer.y = 90 + reserveFacesOffsetY; // вертикальное смещение панели резерва
+    this._faceContainer.y = 90 + reserveFacesOffsetY;
     this.addChild(this._faceContainer);
 
-    // Кнопка «Убрать» с настройками
+    // Кнопка «Убрать»
     this._removeButtonWindow = new Window_Base(removeButtonX, removeButtonY, removeButtonWidth, removeButtonHeight);
     this._removeButtonWindow.padding = 0;
     this._removeButtonWindow.contents = new Bitmap(removeButtonWidth, removeButtonHeight);
@@ -564,7 +588,6 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
     for (var i = 0; i < actors.length; i++) {
         var actor = actors[i];
         var bmp = this.getReserveBitmap(actor.actorId());
-        // Если битмап не готов, всё равно создаём спрайт (он будет пустым, но обновится при готовности)
         var sprite = new Sprite(bmp || new Bitmap(faceSize, faceSize));
         sprite._actor = actor;
         sprite._isReserveFace = true;
