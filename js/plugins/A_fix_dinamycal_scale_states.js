@@ -39,6 +39,10 @@
  *    <MAT Bonus from Actors DEF Full HP: 30%>
  *    // +30% от суммарной защиты живых союзников с полным HP к магии владельца
  *
+ * 8. Бонус от суммы недостающего HP всех живых союзников:
+ *    <MAT Bonus from Allies Missing HP: 5%>
+ *    // +5% от общей недостающей HP живых членов отряда к маг. атаке владельца
+ *
  * ============================================================================
  * Источники:
  * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
@@ -121,6 +125,27 @@
                     }
                 }
                 bonusFlat += Math.floor(sum * percent);
+            }
+
+            // НОВЫЙ ТЕГ: <STAT Bonus from Allies Missing HP: X%>
+            const regexAlliesMissingHP =
+                /<(\w+)\s+BONUS\s+FROM\s+ALLIES\s+MISSING\s+HP\s*:\s*(-?\d+\.?\d*)\s*%>/gi;
+            let matchAlliesMissingHP;
+            while ((matchAlliesMissingHP = regexAlliesMissingHP.exec(note)) !== null) {
+                const target = matchAlliesMissingHP[1].toUpperCase();
+                const percent = parseFloat(matchAlliesMissingHP[2]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (!this.friendsUnit) continue;
+
+                const unit = this.friendsUnit();
+                let totalMissing = 0;
+                for (const member of unit.members()) {
+                    if (member.hp > 0) {
+                        totalMissing += (member.mhp - member.hp);
+                    }
+                }
+                bonusFlat += Math.floor(totalMissing * percent);
             }
 
             // <PARAM Bonus from SOURCE: X%>  (поддерживает % у источника)
