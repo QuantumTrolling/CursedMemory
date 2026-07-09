@@ -10,6 +10,7 @@
  * - Задаёт Z врага пропорционально его Y: чем ниже враг на экране, тем выше его Z,
  *   и его HUD не перекрывается верхними врагами.
  * - Предотвращает мерцание за счёт однократного добавления окна.
+ * - Скрывает HUD всех врагов, пока какой-либо враг выполняет действие.
  *
  * Place this plugin directly below Olivia_OctoBattle.js.
  */
@@ -62,7 +63,7 @@ if (Imported.Olivia_OctoBattle && Olivia.OctoBattle.WeaknessDisplay && Olivia.Oc
         }
     };
 
-    // ----- СОРТИРОВКА ПО ГЛУБИНЕ + ОБНОВЛЕНИЕ ПОЗИЦИИ ОКНА -----
+    // ----- СОРТИРОВКА ПО ГЛУБИНЕ + ОБНОВЛЕНИЕ ПОЗИЦИИ ОКНА + СКРЫТИЕ ВО ВРЕМЯ ДЕЙСТВИЯ -----
     var _Sprite_Enemy_update = Sprite_Enemy.prototype.update;
     Sprite_Enemy.prototype.update = function() {
         _Sprite_Enemy_update.call(this);
@@ -71,6 +72,14 @@ if (Imported.Olivia_OctoBattle && Olivia.OctoBattle.WeaknessDisplay && Olivia.Oc
         // Следим, чтобы окно слабостей обновляло позицию каждый кадр
         if (this._weaknessWindow && this._weaknessDisplayAdded) {
             this._weaknessWindow.updatePosition();
+        }
+        // ---- НОВОЕ: скрываем HUD всех врагов, пока какой-либо враг выполняет действие ----
+        if (this._weaknessWindow) {
+            // Проверяем, выполняется ли сейчас действие врага (фаза 'action' и субъект — враг)
+            var enemyActing = BattleManager._subject &&
+                              BattleManager._subject.isEnemy() &&
+                              BattleManager._phase === 'action';
+            this._weaknessWindow.visible = !enemyActing;
         }
     };
 
