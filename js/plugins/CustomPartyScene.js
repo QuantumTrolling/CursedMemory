@@ -1,15 +1,16 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v47.6 (fix level position on plugin command, reserve faces load fix, name centered)
+ * @plugindesc Custom Party Scene v56 (fixed window layer, more visible remove button)
  * @author ChatGPT (improved)
  *
  * @help
  * Настройка боевого отряда.
- * - Верхняя панель: лица резервных героев (появляются сразу).
- * - Кнопка «Убрать» (видна только при выборе члена отряда).
+ * - Кнопка «Убрать» всегда находится поверх всех портретов и панелей.
+ * - Текст внутри кнопки можно смещать по X.
+ * - При наведении на персонажа появляется системное окно с именем (настраивается по X/Y).
+ * - Клик по HUD персонажа открывает экипировку.
+ * - Портреты членов отряда подсвечиваются при наведении.
  * - Персонаж добавляется на крайнее правое пустое место.
- * - Имя персонажа центрируется.
- * - Исправлено смещение уровня при открытии через команду плагина OpenPartyMenu.
  *
  * Команда плагина:
  *   OpenPartyMenu
@@ -27,18 +28,22 @@
  *
  * @param removeButtonText
  * @default Убрать
- * @param removeButtonX
- * @default 10
+ * @param removeButtonOffsetX
+ * @desc Смещение кнопки по X от центра портрета персонажа
+ * @default 0
  * @param removeButtonY
+ * @desc Фиксированная Y-координата кнопки
  * @default 30
  * @param removeButtonWidth
  * @default 200
  * @param removeButtonHeight
  * @default 80
  * @param removeButtonTextX
- * @default 40
+ * @desc Отступ текста кнопки по X от левого края
+ * @default 0
  * @param removeButtonTextWidth
- * @default 120
+ * @desc Ширина области текста внутри кнопки
+ * @default 200
  *
  * @param partyYOffset
  * @default 50
@@ -112,6 +117,13 @@
  * @default 100
  * @param seArrowPan
  * @default 0
+ *
+ * @param hoverNameOffsetX
+ * @desc Смещение окна с именем по X от центра экрана
+ * @default 0
+ * @param hoverNameOffsetY
+ * @desc Y-координата, на которой останавливается окно с именем
+ * @default 10
  */
 
 (function() {
@@ -124,12 +136,12 @@ var reserveFacesOffsetX  = Number(parameters['reserveFacesOffsetX'] || 60);
 var reserveFacesOffsetY  = Number(parameters['reserveFacesOffsetY'] || 0);
 
 var removeButtonText     = String(parameters['removeButtonText'] || 'Убрать');
-var removeButtonX        = Number(parameters['removeButtonX'] || 10);
+var removeButtonOffsetX  = Number(parameters['removeButtonOffsetX'] || 0);
 var removeButtonY        = Number(parameters['removeButtonY'] || 30);
 var removeButtonWidth    = Number(parameters['removeButtonWidth'] || 200);
 var removeButtonHeight   = Number(parameters['removeButtonHeight'] || 80);
-var removeButtonTextX    = Number(parameters['removeButtonTextX'] || 40);
-var removeButtonTextWidth= Number(parameters['removeButtonTextWidth'] || 120);
+var removeButtonTextX    = Number(parameters['removeButtonTextX'] || 0);
+var removeButtonTextWidth= Number(parameters['removeButtonTextWidth'] || 200);
 
 var partyYOffset         = Number(parameters['partyYOffset'] || 50);
 
@@ -170,6 +182,9 @@ var seArrowVolume = Number(parameters['seArrowVolume'] || 80);
 var seArrowPitch  = Number(parameters['seArrowPitch'] || 100);
 var seArrowPan    = Number(parameters['seArrowPan'] || 0);
 
+var hoverNameOffsetX = Number(parameters['hoverNameOffsetX'] || 0);
+var hoverNameOffsetY = Number(parameters['hoverNameOffsetY'] || 10);
+
 var ARROW_WIDTH  = 22;
 var ARROW_HEIGHT = 20;
 
@@ -194,7 +209,7 @@ function loadStatusBitmaps() {
     this._iconSet = ImageManager.loadSystem('IconSet');
 }
 
-// ----------- Окно статуса персонажа (имя центрировано, защита от нулевых битмапов) -----------
+// ----------- Окно статуса персонажа -----------
 function MCharStatusParty(actor, scene) {
     this.initialize(actor, scene);
 }
@@ -333,7 +348,6 @@ MCharStatusParty.prototype.layout = function(posX, posY) {
     this._mpMeter.x = mpMeterX;
     this._mpMeter.y = mpMeterY;
 
-    // Защита: позиционируем цифры только если битмапы загружены
     if (this._scene._hpNumberBmp.width > 0) {
         var digitW = this._scene._hpNumberBmp.width / 10;
         var lenHP = this._actor.hp.toString().length;
@@ -418,7 +432,21 @@ Scene_PartyCustom.prototype.create = function() {
     this._animationsDone = false;
     this._reserveFaceBitmaps = {};
     this._facesReady = false;
-    this._statusBitmapsReady = false;   // новый флаг
+    this._statusBitmapsReady = false;
+
+    // Системное окно для имени при наведении
+    this._hoverNameWindow = new Window_Base(0, 0, 280, 72);
+    this._hoverNameWindow.x = (Graphics.boxWidth - 280) / 2 + hoverNameOffsetX;
+    this._hoverNameWindow.y = -100;
+    this._hoverNameWindow.opacity = 0;
+    this._hoverNameWindow.backOpacity = 0;
+    this._hoverNameWindow.contentsOpacity = 0;
+    this._hoverNameWindow.contents = new Bitmap(280 - this._hoverNameWindow.padding * 2, 72 - this._hoverNameWindow.padding * 2);
+    this._hoverNameWindow.contents.fontSize = 24;
+    this.addWindow(this._hoverNameWindow);
+    this._lastHoveredActor = null;
+    this._hoverNameTargetY = -100;
+
     this.createTitle();
     this.createParty();
     this.createFaceBar();
@@ -426,6 +454,11 @@ Scene_PartyCustom.prototype.create = function() {
     this.updateClickableList();
     this.preloadReserveFaces();
     if (this._removeButtonWindow) this._removeButtonWindow.visible = false;
+
+    // ГАРАНТИЯ: слой окон (кнопка «Убрать») всегда поверх всех спрайтов
+    if (this._windowLayer) {
+        this.setChildIndex(this._windowLayer, this.children.length - 1);
+    }
 };
 
 Scene_PartyCustom.prototype.preloadReserveFaces = function() {
@@ -469,7 +502,6 @@ Scene_PartyCustom.prototype.areStatusBitmapsReady = function() {
 Scene_PartyCustom.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
 
-    // Автоподгрузка битмапов
     if (!this._facesReady && this.areAllReserveFacesReady()) {
         this._facesReady = true;
         this.refreshFaces();
@@ -498,6 +530,90 @@ Scene_PartyCustom.prototype.update = function() {
         }
     }
     this.updateFaceHover();
+    this.updatePartyHover();
+    this.updateHoverActorName();
+    this.updateRemoveButtonHighlight();
+    this.updateRemoveButtonPosition();
+};
+
+Scene_PartyCustom.prototype.updatePartyHover = function() {
+    if (!this._partyContainer) return;
+    var children = this._partyContainer.children;
+    for (var i = 0; i < children.length; i++) {
+        var spr = children[i];
+        spr._hovered = spr.isHovered();
+    }
+};
+
+Scene_PartyCustom.prototype.updateHoverActorName = function() {
+    var hoveredActor = null;
+    var sprites = this._clickableSprites;
+    for (var i = 0; i < sprites.length; i++) {
+        var spr = sprites[i];
+        if (spr._actor && spr.isHovered && spr.isHovered()) {
+            hoveredActor = spr._actor;
+            break;
+        }
+    }
+
+    if (hoveredActor !== this._lastHoveredActor) {
+        this._lastHoveredActor = hoveredActor;
+        var win = this._hoverNameWindow;
+        win.contents.clear();
+        if (hoveredActor) {
+            win.contents.drawText(hoveredActor.name(), 0, 0, win.contents.width, win.contents.height, 'center');
+            this._hoverNameTargetY = hoverNameOffsetY;
+        } else {
+            this._hoverNameTargetY = -100;
+        }
+    }
+
+    var win = this._hoverNameWindow;
+    win.y += (this._hoverNameTargetY - win.y) * 0.15;
+    if (Math.abs(win.y - this._hoverNameTargetY) < 0.5) win.y = this._hoverNameTargetY;
+
+    if (this._lastHoveredActor) {
+        win.opacity = Math.min(win.opacity + 15, 255);
+        win.backOpacity = Math.min(win.backOpacity + 15, 255);
+        win.contentsOpacity = Math.min(win.contentsOpacity + 15, 255);
+    } else {
+        win.opacity = Math.max(win.opacity - 15, 0);
+        win.backOpacity = Math.max(win.backOpacity - 15, 0);
+        win.contentsOpacity = Math.max(win.contentsOpacity - 15, 0);
+    }
+};
+
+Scene_PartyCustom.prototype.updateRemoveButtonHighlight = function() {
+    if (!this._removeButtonWindow || !this._removeButtonWindow.visible) return;
+    var hover = this.isRemButtonHovered();
+    var btn = this._removeButtonWindow;
+    var targetOpacity = hover ? 255 : 240;
+    var targetBackOpacity = hover ? 255 : 200;
+    var targetContentsOpacity = hover ? 255 : 240;
+
+    btn.opacity += (targetOpacity > btn.opacity ? 5 : -5);
+    if (Math.abs(btn.opacity - targetOpacity) < 5) btn.opacity = targetOpacity;
+
+    btn.backOpacity += (targetBackOpacity > btn.backOpacity ? 5 : -5);
+    if (Math.abs(btn.backOpacity - targetBackOpacity) < 5) btn.backOpacity = targetBackOpacity;
+
+    btn.contentsOpacity += (targetContentsOpacity > btn.contentsOpacity ? 5 : -5);
+    if (Math.abs(btn.contentsOpacity - targetContentsOpacity) < 5) btn.contentsOpacity = targetContentsOpacity;
+};
+
+Scene_PartyCustom.prototype.updateRemoveButtonPosition = function() {
+    if (!this._removeButtonWindow || !this._removeButtonWindow.visible) return;
+    if (!this._selectedSprite) return;
+
+    var sprite = this._selectedSprite;
+    var parentX = sprite.parent ? sprite.parent.x : 0;
+    var anchorX = sprite.anchor ? sprite.anchor.x : 0;
+    var width = sprite.width * (sprite.scale.x || 1);
+    var centerX = sprite.x + parentX + width * (0.5 - anchorX);
+
+    var btn = this._removeButtonWindow;
+    btn.x = centerX - removeButtonWidth / 2 + removeButtonOffsetX;
+    btn.y = removeButtonY;
 };
 
 Scene_PartyCustom.prototype.terminate = function() {
@@ -516,14 +632,16 @@ Scene_PartyCustom.prototype.createFaceBar = function() {
     this._faceContainer.y = 90 + reserveFacesOffsetY;
     this.addChild(this._faceContainer);
 
-    // Кнопка «Убрать»
-    this._removeButtonWindow = new Window_Base(removeButtonX, removeButtonY, removeButtonWidth, removeButtonHeight);
+    this._removeButtonWindow = new Window_Base(0, removeButtonY, removeButtonWidth, removeButtonHeight);
     this._removeButtonWindow.padding = 0;
     this._removeButtonWindow.contents = new Bitmap(removeButtonWidth, removeButtonHeight);
     this._removeButtonWindow.contents.fontSize = 26;
     var lineHeight = 36;
     var yText = (removeButtonHeight - lineHeight) / 2;
     this._removeButtonWindow.drawText(removeButtonText, removeButtonTextX, yText, removeButtonTextWidth, lineHeight, 'center');
+    this._removeButtonWindow.opacity = 240;          // более заметная
+    this._removeButtonWindow.backOpacity = 200;      // тёмный фон
+    this._removeButtonWindow.contentsOpacity = 240;
     this.addWindow(this._removeButtonWindow);
 
     this._faceArrowWindow = new Window_Base(0, 0, 0, 0);
@@ -747,6 +865,8 @@ Scene_PartyCustom.prototype.updateClickableList = function() {
 Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
     sprite._blink = false;
     sprite._hovered = false;
+    sprite._baseScaleX = sprite.scale.x || 1;
+    sprite._baseScaleY = sprite.scale.y || 1;
     sprite.update = function() {
         Sprite.prototype.update.call(this);
         if (this._slideWait != null && this._slideWait > 0) {
@@ -762,14 +882,23 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
                 this._targetX = null;
             }
         }
-        if (this._blink) {
-            this.opacity = 150 + Math.sin(Graphics.frameCount * 0.12) * 100;
-        } else if (this._hovered && this._isReserveFace) {
+
+        if (this._hovered && this._actor) {
             this.opacity = 255;
-        } else if (this._isReserveFace && !this._blink) {
-            this.opacity = 160;
-        } else if (this._targetX == null && !this._blink) {
-            this.opacity = 255;
+            var targetScaleX = this._baseScaleX * 1.05;
+            var targetScaleY = this._baseScaleY * 1.05;
+            this.scale.x += (targetScaleX - this.scale.x) * 0.2;
+            this.scale.y += (targetScaleY - this.scale.y) * 0.2;
+        } else {
+            if (this._blink) {
+                this.opacity = 150 + Math.sin(Graphics.frameCount * 0.12) * 100;
+            } else if (this._isReserveFace && !this._blink) {
+                this.opacity = 160;
+            } else if (!this._blink) {
+                this.opacity = 255;
+            }
+            this.scale.x += (this._baseScaleX - this.scale.x) * 0.2;
+            this.scale.y += (this._baseScaleY - this.scale.y) * 0.2;
         }
     };
     sprite.isHovered = function() {
@@ -800,7 +929,7 @@ Scene_PartyCustom.prototype.updateFaceHover = function() {
             this._faceArrow.x = spr.x + faceDisplayWidth / 2 - ARROW_WIDTH / 2 + arrowOffsetX;
             this._faceArrow.y = spr.y - ARROW_HEIGHT - 4 + arrowOffsetY;
             this.updatePauseArrow(this._faceArrow);
-        } else {
+        } else if (spr._isReserveFace) {
             spr._hovered = false;
         }
     }
@@ -815,7 +944,29 @@ Scene_PartyCustom.prototype.updatePauseArrow = function(sprite) {
     sprite.opacity = 200 + Math.sin(w / 8) * 55;
 };
 
+Scene_PartyCustom.prototype.isPointInStatus = function(statusSpr) {
+    var bounds = statusSpr.getBounds();
+    if (bounds.width === 0) return false;
+    return TouchInput.x >= bounds.x && TouchInput.x <= bounds.x + bounds.width &&
+           TouchInput.y >= bounds.y && TouchInput.y <= bounds.y + bounds.height;
+};
+
 Scene_PartyCustom.prototype.handleClick = function() {
+    if (this._statusSprites) {
+        for (var i = 0; i < this._statusSprites.length; i++) {
+            var statusSpr = this._statusSprites[i];
+            if (statusSpr.visible && this.isPointInStatus(statusSpr)) {
+                var actor = statusSpr._actor;
+                if (actor) {
+                    SoundManager.playOk();
+                    $gameParty.setMenuActor(actor);
+                    SceneManager.push(Scene_Equip);
+                }
+                return;
+            }
+        }
+    }
+
     if (this._removeButtonWindow && this._removeButtonWindow.visible && this.isRemButtonHovered()) {
         this.onRemoveButtonClick();
         return;
@@ -888,7 +1039,13 @@ Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
             this._selectedActor = actor;
             this._selectedSprite = sprite;
             sprite.startBlink();
-            if (this._removeButtonWindow) this._removeButtonWindow.visible = true;
+            if (this._removeButtonWindow) {
+                this._removeButtonWindow.visible = true;
+                this._removeButtonWindow.opacity = 240;
+                this._removeButtonWindow.backOpacity = 200;
+                this._removeButtonWindow.contentsOpacity = 240;
+                this.updateRemoveButtonPosition();
+            }
         } else {
             if (this.hasEmptyBattleSlot()) {
                 this.addToParty(actor);
@@ -1012,7 +1169,6 @@ Scene_PartyCustom.prototype.swapActors = function(a, b) {
     };
 })();
 
-// ================= Автообновление меню MOG после выхода =================
 var _Scene_Menu_update = Scene_Menu.prototype.update;
 Scene_Menu.prototype.update = function() {
     _Scene_Menu_update.call(this);
@@ -1027,7 +1183,6 @@ Scene_Menu.prototype.update = function() {
     }
 };
 
-// ================= PLUGIN COMMAND =================
 var _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
 Game_Interpreter.prototype.pluginCommand = function(command, args) {
     _Game_Interpreter_pluginCommand.call(this, command, args);

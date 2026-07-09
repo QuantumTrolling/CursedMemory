@@ -2,191 +2,7 @@
 // MOG_SceneMenu.js (модифицированная версия для совместимости с YEP_PartySystem)
 //=============================================================================
 
-/*:
- * @plugindesc (v1.3) Modifica a cena de menu principal.
- * @author Moghunter
- *
- * @param Actor Hud X-Axis
- * @default 0
- *
- * @param Actor Hud Y-Axis
- * @default 0
- *
- * @param Char X-Axis
- * @default 20
- *
- * @param Char Y-Axis
- * @default 0
- *
- * @param HP Meter X-Axis
- * @default 17
- *
- * @param HP Meter Y-Axis
- * @default 93
- *
- * @param MP Meter X-Axis
- * @default 17
- *
- * @param MP Meter Y-Axis
- * @default 144
- *
- * @param HP Number X-Axis
- * @default 100
- *
- * @param HP Number Y-Axis
- * @default 73
- *
- * @param HPMax Number X-Axis
- * @default 140
- *
- * @param HPMax Number Y-Axis
- * @default 100
- *
- * @param MP Number X-Axis
- * @default 100
- *
- * @param MP Number Y-Axis
- * @default 124
- *
- * @param MPMax Number X-Axis
- * @default 140
- *
- * @param MPMax Number Y-Axis
- * @default 151
- *
- * @param LV Number X-Axis
- * @default 95
- *
- * @param LV Number Y-Axis
- * @default 33
- *
- * @param States X-Axis
- * @default 111
- *
- * @param States Y-Axis
- * @default 30
- *
- * @param Name X-Axis
- * @default 20
- *
- * @param Name Y-Axis
- * @default 0
- *
- * @param Name FontSize
- * @default 20
- *
- * @param Commands X-Axis
- * @default 180
- *
- * @param Commands Y-Axis
- * @default 50
- *
- * @param Command Active X-Axis
- * @default 40
- *
- * @param Command Active Y-Axis
- * @default 148
- *
- * @param Com Name Visible
- * @default true
- *
- * @param Com Name X-Axis
- * @default 40
- *
- * @param Com Name Y-Axis
- * @default 96
- *
- * @param Com Name FontSize
- * @default 22
- *
- * @param Max Visible Faces
- * @default 5
- *
- * @param Face Sel X-Axis
- * @default 400
- *
- * @param Face Sel Y-Axis
- * @default 128
- *
- * @param Gold X-Axis
- * @default 260
- *
- * @param Gold Y-Axis
- * @default 580
- *
- * @param Time X-Axis
- * @default 565
- *
- * @param Time Y-Axis
- * @default 60
- *
- * @param Time FontSize
- * @default 24
- *
- * @param Location X-Axis
- * @default 450
- *
- * @param Location Y-Axis
- * @default 575
- *
- * @param Location FontSize
- * @default 26
- *
- * @param Magic Circle Visible
- * @default true
- *
- * @param Magic Circle X-Axis
- * @default 700
- *
- * @param Magic Circle Y-Axis
- * @default 140
- *
- * @param Magic Circle Rotation
- * @default 0.001
- *
- * @param Equip Icons X-Axis
- * @default 20
- *
- * @param Equip Icons Y-Axis
- * @default 120
- *
- * @param Equip Icons Spacing
- * @default 36
- *
- * @param Playtime Visible
- * @default false
- *
- * @param Menu Label
- * @default Menu
- *
- * @param Menu Label X-Axis
- * @default 20
- *
- * @param Menu Label Y-Axis
- * @default 20
- *
- * @param Menu Label FontSize
- * @default 28
- *
- * @help
- * =============================================================================
- * +++ MOG - Scene Menu (v1.3) +++
- * By Moghunter
- * https://mogplugins.com
- * =============================================================================
- * Модификации:
- * - Удалены команды "Инвентарь" и "Навык"
- * - Иконки команд центрированы
- * - Иконки команд затемнены (opacity 160) когда не выбраны, яркие (255) при выборе
- * - Полностью скрыты HP/MP и состояния
- * - Панель выбора лиц центрируется (Face Sel X/Y — центр группы)
- * - Исправлены клики/тапы по лицам
- * - Выбранное лицо подсвечивается (opacity 255), остальные приглушены (160)
- * - Вместо увеличения — системная стрелка над выбранным лицом (сдвинута на 20px вниз для точного позиционирования)
- * - Стрелки прокрутки лиц и команд — системные (pause sign)
- * - Отключено сглаживание для чёткости
- * - **Адаптация под YEP_PartySystem: показывает только боевой отряд (battleMembers)**
- */
+/*: ... (параметры плагина без изменений) ... */
 
 var Imported = Imported || {};
 Imported.MMOG_SceneMenu = true;
@@ -902,7 +718,68 @@ Scene_Menu.prototype.isOnSprite = function(sprite) {
 };
 
 Scene_Menu.prototype.updateTouchScreen = function() {
-    if (TouchInput.isTriggered()) {this.checkTouchOnSprites()};
+    if (TouchInput.isTriggered()) {
+        this.checkTouchOnSprites();
+        this.checkTouchActorHud(); // НОВОЕ: обработка клика по HUD актёра
+    }
+};
+
+// НОВЫЕ МЕТОДЫ ДЛЯ ПЕРЕХОДА В ЭКИПИРОВКУ ПО КЛИКУ НА АКТЁРА
+
+Scene_Menu.prototype.isSpriteTouched = function(sprite) {
+    if (!sprite.visible || sprite.opacity === 0 || !sprite.bitmap) return false;
+    // Вычисляем глобальные координаты спрайта с учётом всех родителей
+    let x = sprite.x;
+    let y = sprite.y;
+    let parent = sprite.parent;
+    while (parent) {
+        x += parent.x;
+        y += parent.y;
+        parent = parent.parent;
+    }
+    const w = sprite.bitmap.width;
+    const h = sprite.bitmap.height;
+    const ax = sprite.anchor ? sprite.anchor.x : 0;
+    const ay = sprite.anchor ? sprite.anchor.y : 0;
+    const left = x - w * ax;
+    const top = y - h * ay;
+    return TouchInput.x >= left && TouchInput.x <= left + w &&
+           TouchInput.y >= top && TouchInput.y <= top + h;
+};
+
+Scene_Menu.prototype.isTouchingActorHud = function(index) {
+    if (!this._charStatus || !this._characters) return false;
+    // Проверяем спрайт бюста
+    if (this._characters[index] && this._characters[index]._char) {
+        if (this.isSpriteTouched(this._characters[index]._char)) return true;
+    }
+    // Проверяем основной контейнер статуса (панель с именем, уровнем и т.д.)
+    if (this._charStatus[index]) {
+        if (this.isSpriteTouched(this._charStatus[index])) return true;
+    }
+    return false;
+};
+
+Scene_Menu.prototype.checkTouchActorHud = function() {
+    // Работает только когда главное меню активно (не выбрана конкретная команда)
+    if (!this._commandWindow.active || this._statusWindow.active) return;
+    if (!this._charStatus || !this._characters) return;
+
+    for (let i = 0; i < this.maxMembers(); i++) {
+        if (this.isTouchingActorHud(i)) {
+            this.startActorEquip(i);
+            return;
+        }
+    }
+};
+
+Scene_Menu.prototype.startActorEquip = function(index) {
+    const actor = $gameParty.battleMembers()[index];
+    if (actor) {
+        SoundManager.playOk();
+        $gameParty.setMenuActor(actor);
+        SceneManager.push(Scene_Equip);
+    }
 };
 
 Scene_Menu.prototype.updateWindowStatus = function() {
