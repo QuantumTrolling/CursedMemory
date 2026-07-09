@@ -141,5 +141,6 @@ var $plugins =
 {"name":"A_menu_skill_fix","status":true,"description":"","parameters":{}},
 {"name":"A_reatreat_fix","status":true,"description":"","parameters":{}},
 {"name":"CustomAfterActionEffect","status":true,"description":"","parameters":{}},
-{"name":"A_fix_throw4","status":true,"description":"","parameters":{}}
+{"name":"A_fix_throw4","status":true,"description":"","parameters":{}},
+{"name":"A_fix_enemy_hud","status":true,"description":"","parameters":{}}
 ];
