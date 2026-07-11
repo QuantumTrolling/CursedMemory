@@ -286,6 +286,15 @@
             }
             return (this.mhp || 0) - (this.hp || 0);
         }
+		
+		// Добавить в getSourceValue, после блока MISSING HP
+		if (source === "CURRENT MP") {
+			if (isPercent) {
+				const mmp = this.mmp || 1;
+				return (this.mp || 0) / mmp * 100;   // 0..100
+			}
+			return this.mp || 0;
+		}
 
         // Shield / Current Shield
         if (source === "CURRENT SHIELD" || source === "SHIELD") {
