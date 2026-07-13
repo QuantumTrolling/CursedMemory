@@ -2,8 +2,8 @@
 // Element Damage Icons
 // EDamageIcons.js
 //=============================================================================
-// v1.10 – Упрощённая версия: иконки состояний для Custom Turn/Regen/Action End
-//         и ручное управление в Custom React/Deselect через код состояния.
+// v1.11 – Исправлено смещение иконки при наличии других состояний в попапе
+//         (иконка теперь привязана к размеру текста, а не к битмапу спрайта).
 // Требуется: YEP_ElementCore и LGP_BetterDamagePopup.
 // Разместите этот плагин НИЖЕ LGP_BetterDamagePopup.
 //=============================================================================
@@ -11,7 +11,7 @@
 var Imported = Imported || {};
 Imported.EDamageIcons = true;
 var EDamageIcons = EDamageIcons || {};
-EDamageIcons.version = '1.10';
+EDamageIcons.version = '1.11';
 
 /*:
  * @plugindesc v1.5 Иконки элементов и состояний в попапах урона.
@@ -112,8 +112,6 @@ EDamageIcons.version = '1.10';
     };
 
     if (Imported.YEP_BuffsStatesCore) {
-
-        // Для Custom Turn / Regen / Action End и других периодических эффектов
         var _EDI_customEffectEval = Game_Battler.prototype.customEffectEval;
         Game_Battler.prototype.customEffectEval = function(stateId, type) {
             var state = $dataStates[stateId];
@@ -128,7 +126,7 @@ EDamageIcons.version = '1.10';
         };
     }
 
-    // startDamagePopup – стандартный перехват (без изменений)
+    // startDamagePopup – без изменений
     Game_Battler.prototype.startDamagePopup = function() {
         var result = this.result();
         if (result.missed || result.evaded) {
@@ -206,7 +204,17 @@ EDamageIcons.version = '1.10';
         }
     };
 
-    // Отрисовка иконок (без изменений)
+    // Сохраняем реальные размеры текста урона сразу после отрисовки числа
+    var _Sprite_Damage_drawNumber = Sprite_Damage.prototype.drawNumber;
+    Sprite_Damage.prototype.drawNumber = function() {
+        _Sprite_Damage_drawNumber.call(this);
+        if (this._number && this._number.bitmap) {
+            this._number._textWidth = this._number.bitmap.width;
+            this._number._textHeight = this._number.bitmap.height;
+        }
+    };
+
+    // Отрисовка иконок
     var _Sprite_Damage_drawDefaultNumber = Sprite_Damage.prototype.drawDefaultNumber;
     Sprite_Damage.prototype.drawDefaultNumber = function() {
         _Sprite_Damage_drawDefaultNumber.call(this);
@@ -220,40 +228,49 @@ EDamageIcons.version = '1.10';
     Sprite_Damage.prototype._addStateIcon = function() {
         var numberSprite = this.getChild('number');
         if (!numberSprite) return;
+
+        // Удаляем старый контейнер, если есть
         if (numberSprite._elementIconContainer) {
             numberSprite.removeChild(numberSprite._elementIconContainer);
         }
+
         var container = new Sprite();
         numberSprite._elementIconContainer = container;
         numberSprite.addChild(container);
+
         var iconBitmap = ImageManager.loadSystem('IconSet');
         var pw = Window_Base._iconWidth;
         var ph = Window_Base._iconHeight;
         var iconIndex = this._result._stateDamageIcon;
-        var bw = numberSprite.bitmap.width;
-        var bh = numberSprite.bitmap.height;
-        var startX, startY;
+
+        // Используем сохранённые размеры текста; если нет – fallback на bitmap
+        var tw = numberSprite._textWidth  || (numberSprite.bitmap ? numberSprite.bitmap.width  : 0);
+        var th = numberSprite._textHeight || (numberSprite.bitmap ? numberSprite.bitmap.height : 0);
         var totalWidth = pw * iconScale;
+        var startX, startY;
+
         switch (iconPosition) {
             case 'right':
-                startX = bw / 2 + iconOffsetX;
-                startY = -bh / 2 + iconOffsetY - (ph * iconScale) / 2;
+                startX = tw / 2 + iconOffsetX;
+                startY = -th / 2 + iconOffsetY - (ph * iconScale) / 2;
                 break;
             case 'left':
-                startX = -bw / 2 - totalWidth - iconOffsetX;
-                startY = -bh / 2 + iconOffsetY - (ph * iconScale) / 2;
+                startX = -tw / 2 - totalWidth - iconOffsetX;
+                startY = -th / 2 + iconOffsetY - (ph * iconScale) / 2;
                 break;
             case 'top':
                 startX = -totalWidth / 2 + iconOffsetX;
-                startY = -bh - iconOffsetY - ph * iconScale;
+                startY = -th - iconOffsetY - ph * iconScale;
                 break;
             case 'bottom':
                 startX = -totalWidth / 2 + iconOffsetX;
                 startY = iconOffsetY;
                 break;
         }
+
         container.x = startX;
         container.y = startY;
+
         var iconSprite = new Sprite();
         iconSprite.bitmap = new Bitmap(pw, ph);
         var sx = iconIndex % 16 * pw;
@@ -262,6 +279,7 @@ EDamageIcons.version = '1.10';
         iconSprite.scale.x = iconScale;
         iconSprite.scale.y = iconScale;
         container.addChild(iconSprite);
+
         delete this._result._stateDamageIcon;
     };
 
@@ -274,41 +292,49 @@ EDamageIcons.version = '1.10';
         if (maxIcons > 0 && elements.length > maxIcons) {
             elements = elements.slice(0, maxIcons);
         }
+
         var numberSprite = this.getChild('number');
         if (!numberSprite) return;
+
         if (numberSprite._elementIconContainer) {
             numberSprite.removeChild(numberSprite._elementIconContainer);
         }
+
         var container = new Sprite();
         numberSprite._elementIconContainer = container;
         numberSprite.addChild(container);
+
         var iconBitmap = ImageManager.loadSystem('IconSet');
         var pw = Window_Base._iconWidth;
         var ph = Window_Base._iconHeight;
-        var bw = numberSprite.bitmap.width;
-        var bh = numberSprite.bitmap.height;
+
+        var tw = numberSprite._textWidth  || (numberSprite.bitmap ? numberSprite.bitmap.width  : 0);
+        var th = numberSprite._textHeight || (numberSprite.bitmap ? numberSprite.bitmap.height : 0);
         var totalIconsWidth = elements.length * pw * iconScale;
         var startX, startY;
+
         switch (iconPosition) {
             case 'right':
-                startX = bw / 2 + iconOffsetX;
-                startY = -bh / 2 + iconOffsetY - (ph * iconScale) / 2;
+                startX = tw / 2 + iconOffsetX;
+                startY = -th / 2 + iconOffsetY - (ph * iconScale) / 2;
                 break;
             case 'left':
-                startX = -bw / 2 - totalIconsWidth - iconOffsetX;
-                startY = -bh / 2 + iconOffsetY - (ph * iconScale) / 2;
+                startX = -tw / 2 - totalIconsWidth - iconOffsetX;
+                startY = -th / 2 + iconOffsetY - (ph * iconScale) / 2;
                 break;
             case 'top':
                 startX = -totalIconsWidth / 2 + iconOffsetX;
-                startY = -bh - iconOffsetY - ph * iconScale;
+                startY = -th - iconOffsetY - ph * iconScale;
                 break;
             case 'bottom':
                 startX = -totalIconsWidth / 2 + iconOffsetX;
                 startY = iconOffsetY;
                 break;
         }
+
         container.x = startX;
         container.y = startY;
+
         for (var i = 0; i < elements.length; i++) {
             var iconIndex = iconMapping[elements[i]];
             var iconSprite = new Sprite();
