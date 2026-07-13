@@ -2,19 +2,19 @@
 // Element Damage Icons
 // EDamageIcons.js
 //=============================================================================
-// v1.4 – Полный перехват startDamagePopup из LGP для точной привязки иконок
+// v1.10 – Упрощённая версия: иконки состояний для Custom Turn/Regen/Action End
+//         и ручное управление в Custom React/Deselect через код состояния.
 // Требуется: YEP_ElementCore и LGP_BetterDamagePopup.
 // Разместите этот плагин НИЖЕ LGP_BetterDamagePopup.
 //=============================================================================
 
 var Imported = Imported || {};
 Imported.EDamageIcons = true;
-
 var EDamageIcons = EDamageIcons || {};
-EDamageIcons.version = '1.4';
+EDamageIcons.version = '1.10';
 
 /*:
- * @plugindesc v1.4 Иконки элементов и состояний в попапах урона.
+ * @plugindesc v1.5 Иконки элементов и состояний в попапах урона.
  * @author YourName
  *
  * @param Icon Mapping
@@ -65,8 +65,8 @@ EDamageIcons.version = '1.4';
  * вызвавшего урон/лечение через YEP_BuffsStatesCore.
  *
  * Для состояний: добавьте в заметки <State Damage Icon>.
- * Тогда при срабатывании Custom Turn/Regen/Action End Effect
- * в попапе появится иконка именно этого состояния.
+ * Тогда при срабатывании Custom Turn/Regen/Action End Effect и
+ * Custom React Effect в попапе появится иконка именно этого состояния.
  */
 //=============================================================================
 
@@ -75,22 +75,14 @@ EDamageIcons.version = '1.4';
 
     if (!Imported.LGP_BetterDamagePopup || !Imported.YEP_ElementCore) return;
 
-    //=============================================================================
-    // Параметры плагина
-    //=============================================================================
-
     var parameters = PluginManager.parameters('EDamageIcons');
-
-    // Нормализуем ключи iconMapping — переводим строковые ключи в числа
     var iconMapping = {};
     try {
         var rawMapping = JSON.parse(parameters['Icon Mapping'] || '{}');
         for (var key in rawMapping) {
             if (rawMapping.hasOwnProperty(key)) {
                 var numKey = Number(key);
-                if (!isNaN(numKey)) {
-                    iconMapping[numKey] = rawMapping[key];
-                }
+                if (!isNaN(numKey)) iconMapping[numKey] = rawMapping[key];
             }
         }
     } catch (e) {
@@ -103,10 +95,7 @@ EDamageIcons.version = '1.4';
     var iconScale = Number(parameters['Icon Scale']) || 1.0;
     var maxIcons = Number(parameters['Max Icons']) || 3;
 
-    //=============================================================================
-    // Предварительный парсинг нотетега состояний при загрузке базы
-    //=============================================================================
-
+    // Парсинг тега <State Damage Icon>
     var _DataManager_isDatabaseLoaded = DataManager.isDatabaseLoaded;
     DataManager.isDatabaseLoaded = function() {
         if (!_DataManager_isDatabaseLoaded.call(this)) return false;
@@ -122,50 +111,24 @@ EDamageIcons.version = '1.4';
         return true;
     };
 
-    //=============================================================================
-    // Интеграция с YEP_BuffsStatesCore
-    //=============================================================================
-
     if (Imported.YEP_BuffsStatesCore) {
 
+        // Для Custom Turn / Regen / Action End и других периодических эффектов
         var _EDI_customEffectEval = Game_Battler.prototype.customEffectEval;
         Game_Battler.prototype.customEffectEval = function(stateId, type) {
             var state = $dataStates[stateId];
-            if (
-                state &&
-                state._stateDamageIcon &&
-                state.customEffectEval &&
-                state.customEffectEval[type] !== ''
-            ) {
+            if (state && state._stateDamageIcon &&
+                state.customEffectEval && state.customEffectEval[type] !== '') {
                 this._pendingStateDamageIcon = state.iconIndex;
             }
             _EDI_customEffectEval.call(this, stateId, type);
-            // Если иконка не была использована в startDamagePopup, удаляем её
             if (this._pendingStateDamageIcon !== undefined) {
                 delete this._pendingStateDamageIcon;
             }
         };
-
-        if (Game_Battler.prototype.reactEffectEval) {
-            var _EDI_reactEffectEval = Game_Battler.prototype.reactEffectEval;
-            Game_Battler.prototype.reactEffectEval = function(stateId) {
-                var state = $dataStates[stateId];
-                if (state && state._stateDamageIcon) {
-                    this._pendingStateDamageIcon = state.iconIndex;
-                }
-                _EDI_reactEffectEval.call(this, stateId);
-                if (this._pendingStateDamageIcon !== undefined) {
-                    delete this._pendingStateDamageIcon;
-                }
-            };
-        }
     }
 
-    //=============================================================================
-    // Переопределяем startDamagePopup, чтобы иконка попадала только в нужный тип урона
-    // Копируем код из LGP_BetterDamagePopup и добавляем вставку _stateDamageIcon
-    //=============================================================================
-
+    // startDamagePopup – стандартный перехват (без изменений)
     Game_Battler.prototype.startDamagePopup = function() {
         var result = this.result();
         if (result.missed || result.evaded) {
@@ -191,7 +154,6 @@ EDamageIcons.version = '1.4';
             copyResult.addedBuffs = [];
             copyResult.addedDebuffs = [];
             copyResult.removedBuffs = [];
-            // Вставляем иконку состояния, если она ожидает
             if (this._pendingStateDamageIcon !== undefined && this._pendingStateDamageIcon !== null) {
                 copyResult._stateDamageIcon = this._pendingStateDamageIcon;
                 delete this._pendingStateDamageIcon;
@@ -240,19 +202,14 @@ EDamageIcons.version = '1.4';
             copyResult.addedBuffs = result.addedBuffs;
             copyResult.addedDebuffs = result.addedDebuffs;
             copyResult.removedBuffs = result.removedBuffs;
-            // Иконку состояния в статусные попапы не добавляем
             this._damagePopup.push(copyResult);
         }
     };
 
-    //=============================================================================
-    // Sprite_Damage — отрисовка иконок
-    //=============================================================================
-
+    // Отрисовка иконок (без изменений)
     var _Sprite_Damage_drawDefaultNumber = Sprite_Damage.prototype.drawDefaultNumber;
     Sprite_Damage.prototype.drawDefaultNumber = function() {
         _Sprite_Damage_drawDefaultNumber.call(this);
-
         if (this._result && this._result._stateDamageIcon) {
             this._addStateIcon();
         } else if (this._result && this._result.itemElements && this._result.itemElements.length > 0) {
@@ -263,25 +220,20 @@ EDamageIcons.version = '1.4';
     Sprite_Damage.prototype._addStateIcon = function() {
         var numberSprite = this.getChild('number');
         if (!numberSprite) return;
-
         if (numberSprite._elementIconContainer) {
             numberSprite.removeChild(numberSprite._elementIconContainer);
         }
-
         var container = new Sprite();
         numberSprite._elementIconContainer = container;
         numberSprite.addChild(container);
-
         var iconBitmap = ImageManager.loadSystem('IconSet');
         var pw = Window_Base._iconWidth;
         var ph = Window_Base._iconHeight;
         var iconIndex = this._result._stateDamageIcon;
-
         var bw = numberSprite.bitmap.width;
         var bh = numberSprite.bitmap.height;
         var startX, startY;
         var totalWidth = pw * iconScale;
-
         switch (iconPosition) {
             case 'right':
                 startX = bw / 2 + iconOffsetX;
@@ -300,10 +252,8 @@ EDamageIcons.version = '1.4';
                 startY = iconOffsetY;
                 break;
         }
-
         container.x = startX;
         container.y = startY;
-
         var iconSprite = new Sprite();
         iconSprite.bitmap = new Bitmap(pw, ph);
         var sx = iconIndex % 16 * pw;
@@ -312,7 +262,6 @@ EDamageIcons.version = '1.4';
         iconSprite.scale.x = iconScale;
         iconSprite.scale.y = iconScale;
         container.addChild(iconSprite);
-
         delete this._result._stateDamageIcon;
     };
 
@@ -322,31 +271,24 @@ EDamageIcons.version = '1.4';
             return iconMapping[elId] !== undefined;
         });
         if (elements.length === 0) return;
-
         if (maxIcons > 0 && elements.length > maxIcons) {
             elements = elements.slice(0, maxIcons);
         }
-
         var numberSprite = this.getChild('number');
         if (!numberSprite) return;
-
         if (numberSprite._elementIconContainer) {
             numberSprite.removeChild(numberSprite._elementIconContainer);
         }
-
         var container = new Sprite();
         numberSprite._elementIconContainer = container;
         numberSprite.addChild(container);
-
         var iconBitmap = ImageManager.loadSystem('IconSet');
         var pw = Window_Base._iconWidth;
         var ph = Window_Base._iconHeight;
-
         var bw = numberSprite.bitmap.width;
         var bh = numberSprite.bitmap.height;
         var totalIconsWidth = elements.length * pw * iconScale;
         var startX, startY;
-
         switch (iconPosition) {
             case 'right':
                 startX = bw / 2 + iconOffsetX;
@@ -365,10 +307,8 @@ EDamageIcons.version = '1.4';
                 startY = iconOffsetY;
                 break;
         }
-
         container.x = startX;
         container.y = startY;
-
         for (var i = 0; i < elements.length; i++) {
             var iconIndex = iconMapping[elements[i]];
             var iconSprite = new Sprite();
