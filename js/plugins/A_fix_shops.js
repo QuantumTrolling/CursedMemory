@@ -13,6 +13,7 @@
  * - Режим заполнения: "row" (рекомендуется) или "column" (без скролла)
  * - Окно описания поддерживает прокрутку (стрелки настраиваются)
  * - Системные стрелки списка товаров двигаются через listScrollArrowX/Y
+ * - Добавлено мигание и смещение вверх/вниз на пару пикселей для стрелок
  *
  * ============================
  * ОСНОВНЫЕ НАСТРОЙКИ
@@ -56,14 +57,14 @@
  * @default 0
  *
  * @param listWidth
- * @text Ширина списка
+ * @text Ширина списка (0 = авто)
  * @type number
- * @default 1000
+ * @default 0
  *
  * @param listHeight
- * @text Высота списка
+ * @text Высота списка (0 = авто)
  * @type number
- * @default 600
+ * @default 0
  *
  * @param listColumns
  * @text Количество колонок
@@ -87,6 +88,16 @@
  *
  * @param listScrollArrowY
  * @text Сист. стрелка списка Y
+ * @type number
+ * @default 0
+ *
+ * @param listInnerOffsetX
+ * @text Смещение сетки внутри окна X
+ * @type number
+ * @default 0
+ *
+ * @param listInnerOffsetY
+ * @text Смещение сетки внутри окна Y
  * @type number
  * @default 0
  *
@@ -232,13 +243,15 @@ if (!Imported.YEP_ShopMenuCore) {
         coinIcon:        Number(parameters['coinIcon'] || 313),
         listX:           Number(parameters['listX'] || 0),
         listY:           Number(parameters['listY'] || 0),
-        listWidth:       Number(parameters['listWidth'] || 1000),
-        listHeight:      Number(parameters['listHeight'] || 600),
+        listWidth:       Number(parameters['listWidth'] || 0),
+        listHeight:      Number(parameters['listHeight'] || 0),
         listColumns:     Number(parameters['listColumns'] || 4),
         listMaxRows:     Number(parameters['listMaxRows'] || 0),
         listFontSize:    Number(parameters['listFontSize'] || 18),
         listScrollArrowX: Number(parameters['listScrollArrowX'] || 0),
         listScrollArrowY: Number(parameters['listScrollArrowY'] || 0),
+        listInnerOffsetX: Number(parameters['listInnerOffsetX'] || 0),
+        listInnerOffsetY: Number(parameters['listInnerOffsetY'] || 0),
         descX:           Number(parameters['descX'] || 0),
         descY:           Number(parameters['descY'] || 440),
         descHeight:      Number(parameters['descHeight'] || 300),
@@ -421,7 +434,7 @@ if (!Imported.YEP_ShopMenuCore) {
 
     Window_ShopBuyAction.prototype.initialize = function(x, y, width) {
         Window_Base.prototype.initialize.call(this,
-            params.buyBtnX, params.buyBtnY, width, this.fittingHeight(1));
+            params.buyBtnX, params.buyBtnY, width, this.fittingHeight(1) + 1);
         this._enabled = false;
         this._hover = false;
         this._anim = 0;
@@ -478,6 +491,20 @@ if (!Imported.YEP_ShopMenuCore) {
         this._customDescWindow = null;
         this._customNameWindow = null;
         this._buyActionWindow = null;
+        this._arrowAnimPhase = 0;
+
+        // Отключаем системное обновление стрелок, чтобы они не смещались автоматически
+        this._updateArrows = function() {};
+
+        // Скрываем стандартные спрайты, чтобы они не мелькали в начальной позиции
+        if (this._upArrowSprite) {
+            this._upArrowSprite.visible = false;
+            this._upArrowSprite.bitmap = null;
+        }
+        if (this._downArrowSprite) {
+            this._downArrowSprite.visible = false;
+            this._downArrowSprite.bitmap = null;
+        }
     };
 
     // Нейтрализация SDJB_MouseHover
@@ -511,8 +538,15 @@ if (!Imported.YEP_ShopMenuCore) {
         }
     };
 
-    Window_ShopBuyCustom.prototype._refreshFrame = function() {};
-    Window_ShopBuyCustom.prototype._refreshBack = function() {};
+    // Фон окна: тёмный полупрозрачный, как у ячеек товаров
+    Window_ShopBuyCustom.prototype._refreshBack = function() {
+        var w = this.width;
+        var h = this.height;
+        var bitmap = new Bitmap(w, h);
+        bitmap.fillAll('rgba(0, 0, 0, 0.7)');
+        this._windowBackSprite.bitmap = bitmap;
+    };
+
     Window_ShopBuyCustom.prototype.isCursorVisible = function() { return false; };
 
     Window_ShopBuyCustom.prototype.windowWidth = function() { return params.listWidth; };
@@ -555,18 +589,25 @@ if (!Imported.YEP_ShopMenuCore) {
         return this.maxCols() * this.numVisibleRows();
     };
 
+    Window_ShopBuyCustom.prototype.maxTopRow = function() {
+        return Math.max(0, this.rows() - this.numVisibleRows());
+    };
+
     Window_ShopBuyCustom.prototype.itemRect = function(index) {
         var rect = new Rectangle();
         var maxCols = this.maxCols();
         var w = this.itemWidth();
         var h = this.itemHeight();
 
+        var offsetX = params.listInnerOffsetX || 0;
+        var offsetY = params.listInnerOffsetY || 0;
+
         if (params.fillMode === 'column') {
             var rowsPerScreen = this.numVisibleRows();
             var col = Math.floor(index / rowsPerScreen);
             var row = index % rowsPerScreen;
-            rect.x = col * w;
-            rect.y = row * h;
+            rect.x = col * w + offsetX;
+            rect.y = row * h + offsetY;
             rect.width = w;
             rect.height = h;
             return rect;
@@ -574,8 +615,8 @@ if (!Imported.YEP_ShopMenuCore) {
 
         var col = index % maxCols;
         var row = Math.floor(index / maxCols);
-        rect.x = col * w;
-        rect.y = (row - this.topRow()) * h;
+        rect.x = col * w + offsetX;
+        rect.y = (row - this.topRow()) * h + offsetY;
         rect.width = w;
         rect.height = h;
         return rect;
@@ -584,8 +625,6 @@ if (!Imported.YEP_ShopMenuCore) {
     Window_ShopBuyCustom.prototype.isHorizontal = function() {
         return false;
     };
-
-    // ... (остальные методы курсора, drawItem и т.д.) ...
 
     Window_ShopBuyCustom.prototype.drawItem = function(index) {
         var item = (index < this._data.length) ? this._data[index] : null;
@@ -629,7 +668,6 @@ if (!Imported.YEP_ShopMenuCore) {
         var boxX = cx - boxW / 2;
         var boxY = y + h - boxH;
 
-        this.drawSkinFrame(boxX, boxY, boxW, boxH);
         var canAfford = $gameParty.gold() >= this.price(item);
         this.changeTextColor(canAfford ? this.normalColor() : this.textColor(8));
         this.drawText(price, boxX + 24, boxY - 39, boxW - (coinIconIndex > 0 ? 24 : 0), boxH, 'right');
@@ -717,6 +755,31 @@ if (!Imported.YEP_ShopMenuCore) {
                 if (SceneManager._scene) SceneManager._scene.updateActionEnabled();
             }
         }
+
+        // --- Анимация стандартных стрелок прокрутки ---
+        var canScrollUp = this.topRow() > 0;
+        var canScrollDown = this.topRow() < this.maxTopRow();
+        var phase = this._arrowAnimPhase;
+
+        if (this._upArrowSprite) {
+            this._upArrowSprite.visible = canScrollUp;
+            if (canScrollUp) {
+                this._upArrowSprite.x = params.listScrollArrowX;
+                this._upArrowSprite.y = params.listScrollArrowY + Math.sin(phase * 2) * 2 - 352;
+                this._upArrowSprite.opacity = 128 + Math.sin(phase) * 127;
+            }
+        }
+
+        if (this._downArrowSprite) {
+            this._downArrowSprite.visible = canScrollDown;
+            if (canScrollDown) {
+                this._downArrowSprite.x = params.listScrollArrowX;
+                this._downArrowSprite.y = params.listScrollArrowY + 36 + Math.sin(phase * 2) * 2;
+                this._downArrowSprite.opacity = 128 + Math.sin(phase) * 127;
+            }
+        }
+
+        this._arrowAnimPhase += 0.08;
     };
 
     Window_ShopBuyCustom.prototype.processTouch = function() {};
@@ -851,25 +914,36 @@ if (!Imported.YEP_ShopMenuCore) {
             this._buyWindow = this.replaceBuyWindow(this._buyWindow);
             this._buyWindow.x = params.listX;
             this._buyWindow.y = params.listY;
-            this._buyWindow.width = params.listWidth;
-            if (params.listMaxRows > 0) {
-                var itemH = this._buyWindow.itemHeight();
-                var padding = this._buyWindow.standardPadding() * 2;
-                this._buyWindow.height = itemH * params.listMaxRows + padding;
+
+            // Авто-ширина: если параметр listWidth = 0, вычисляем точную ширину под колонки
+            if (params.listWidth <= 0) {
+                var itemW = this._buyWindow.itemWidth();
+                this._buyWindow.width = this._buyWindow.standardPadding() * 2 + this._buyWindow.textPadding() * 2 + this._buyWindow.maxCols() * itemW;
             } else {
-                this._buyWindow.height = params.listHeight;
+                this._buyWindow.width = params.listWidth;
             }
+
+            // Авто-высота: если listHeight = 0, вычисляем под количество строк
+            if (params.listHeight <= 0) {
+                var rows = params.listMaxRows > 0 ? params.listMaxRows : Math.ceil(this._buyWindow.maxItems() / this._buyWindow.maxCols());
+                var itemH = this._buyWindow.itemHeight();
+                this._buyWindow.height = itemH * rows + this._buyWindow.standardPadding() * 2;
+            } else {    
+                if (params.listMaxRows > 0) {
+                    var itemH = this._buyWindow.itemHeight();
+                    this._buyWindow.height = itemH * params.listMaxRows + this._buyWindow.standardPadding() * 2 + 12;
+                } else {
+                    this._buyWindow.height = params.listHeight + 12;
+                }
+            }
+
+            // Принудительно обновляем фон после изменения размеров
+            this._buyWindow._refreshBack();
             this._buyWindow.createContents();
             this._buyWindow.refresh();
 
-            if (this._buyWindow._scrollArrowUpSprite) {
-                this._buyWindow._scrollArrowUpSprite.x = params.listScrollArrowX;
-                this._buyWindow._scrollArrowUpSprite.y = params.listScrollArrowY;
-            }
-            if (this._buyWindow._scrollArrowDownSprite) {
-                this._buyWindow._scrollArrowDownSprite.x = params.listScrollArrowX;
-                this._buyWindow._scrollArrowDownSprite.y = params.listScrollArrowY + 36;
-            }
+            // Координаты стрелок теперь задаются в update() самого окна,
+            // поэтому здесь никакие _scrollArrowUpSprite и т.п. не трогаем.
         }
 
         // Полная деактивация командного окна
