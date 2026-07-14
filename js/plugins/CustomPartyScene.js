@@ -1,6 +1,6 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v56 (fixed window layer, more visible remove button)
+ * @plugindesc Custom Party Scene v57 (reserve swap selection)
  * @author ChatGPT (improved)
  *
  * @help
@@ -9,8 +9,15 @@
  * - Текст внутри кнопки можно смещать по X.
  * - При наведении на персонажа появляется системное окно с именем (настраивается по X/Y).
  * - Клик по HUD персонажа открывает экипировку.
- * - Портреты членов отряда подсвечиваются при наведении.
+ * - Портреты членов отряда при наведении поднимаются вверх (вместо увеличения).
+ * - Иконки резерва (лица) при наведении только подсвечиваются, не увеличиваются.
  * - Персонаж добавляется на крайнее правое пустое место.
+ *
+ * **Новое:**
+ * - При заполненном отряде клик по лицу в резерве заставляет его мигать.
+ *   После этого клик по портрету члена отряда меняет их местами.
+ * - Клик по другому лицу в резерве переносит мигание на него.
+ * - Повторный клик по мигающему лицу или Cancel снимает выделение.
  *
  * Команда плагина:
  *   OpenPartyMenu
@@ -427,6 +434,8 @@ Scene_PartyCustom.prototype.create = function() {
     loadStatusBitmaps.call(this);
     this._selectedActor = null;
     this._selectedSprite = null;
+    this._swapReserveActor = null;   // актёр из резерва, ожидающий замены
+    this._swapReserveSprite = null;  // его спрайт
     this._clickableSprites = [];
     this._reservePage = 0;
     this._animationsDone = false;
@@ -442,7 +451,7 @@ Scene_PartyCustom.prototype.create = function() {
     this._hoverNameWindow.backOpacity = 0;
     this._hoverNameWindow.contentsOpacity = 0;
     this._hoverNameWindow.contents = new Bitmap(280 - this._hoverNameWindow.padding * 2, 72 - this._hoverNameWindow.padding * 2);
-    this._hoverNameWindow.contents.fontSize = 24;
+    this._hoverNameWindow.contents.fontSize = 26;
     this.addWindow(this._hoverNameWindow);
     this._lastHoveredActor = null;
     this._hoverNameTargetY = -100;
@@ -512,7 +521,10 @@ Scene_PartyCustom.prototype.update = function() {
     }
 
     if (Input.isTriggered('cancel') || TouchInput.isCancelled()) {
-        if (this._selectedActor) {
+        if (this._swapReserveActor) {
+            SoundManager.playCancel();
+            this.clearSwapReserveSelection();
+        } else if (this._selectedActor) {
             SoundManager.playCancel();
             this.clearSelection();
         } else {
@@ -639,8 +651,8 @@ Scene_PartyCustom.prototype.createFaceBar = function() {
     var lineHeight = 36;
     var yText = (removeButtonHeight - lineHeight) / 2;
     this._removeButtonWindow.drawText(removeButtonText, removeButtonTextX, yText, removeButtonTextWidth, lineHeight, 'center');
-    this._removeButtonWindow.opacity = 240;          // более заметная
-    this._removeButtonWindow.backOpacity = 200;      // тёмный фон
+    this._removeButtonWindow.opacity = 240;
+    this._removeButtonWindow.backOpacity = 200;
     this._removeButtonWindow.contentsOpacity = 240;
     this.addWindow(this._removeButtonWindow);
 
@@ -715,6 +727,17 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
         sprite.opacity = 160;
         this.setupInteraction(sprite);
         this._faceContainer.addChild(sprite);
+
+        // Восстанавливаем мигание, если этот актёр ожидает замены
+        if (this._swapReserveActor && actor.actorId() === this._swapReserveActor.actorId()) {
+            this._swapReserveSprite = sprite;
+            sprite.startBlink();
+        }
+    }
+
+    // Если актёр, ожидавший замены, исчез из резерва (например, добавлен в отряд), снимаем выделение
+    if (this._swapReserveActor && !actors.contains(this._swapReserveActor)) {
+        this.clearSwapReserveSelection();
     }
 
     var maxPages = this.maxReservePages();
@@ -867,6 +890,8 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
     sprite._hovered = false;
     sprite._baseScaleX = sprite.scale.x || 1;
     sprite._baseScaleY = sprite.scale.y || 1;
+    sprite._baseY = sprite.y;
+
     sprite.update = function() {
         Sprite.prototype.update.call(this);
         if (this._slideWait != null && this._slideWait > 0) {
@@ -885,10 +910,15 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
 
         if (this._hovered && this._actor) {
             this.opacity = 255;
-            var targetScaleX = this._baseScaleX * 1.05;
-            var targetScaleY = this._baseScaleY * 1.05;
-            this.scale.x += (targetScaleX - this.scale.x) * 0.2;
-            this.scale.y += (targetScaleY - this.scale.y) * 0.2;
+            if (this._isReserveFace) {
+                // Только подсветка, без увеличения
+            } else {
+                // Поднимаем вверх на 10 пикселей
+                var targetY = (this._baseY || 0) - 10;
+                this.y += (targetY - this.y) * 0.2;
+                this.scale.x += (this._baseScaleX - this.scale.x) * 0.2;
+                this.scale.y += (this._baseScaleY - this.scale.y) * 0.2;
+            }
         } else {
             if (this._blink) {
                 this.opacity = 150 + Math.sin(Graphics.frameCount * 0.12) * 100;
@@ -899,8 +929,13 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
             }
             this.scale.x += (this._baseScaleX - this.scale.x) * 0.2;
             this.scale.y += (this._baseScaleY - this.scale.y) * 0.2;
+
+            if (this._baseY !== undefined && !this._isReserveFace) {
+                this.y += (this._baseY - this.y) * 0.2;
+            }
         }
     };
+
     sprite.isHovered = function() {
         var w = this.width * (this.scale.x || 1);
         var h = this.height * (this.scale.y || 1);
@@ -911,6 +946,7 @@ Scene_PartyCustom.prototype.setupInteraction = function(sprite) {
         return TouchInput.x >= left && TouchInput.x <= left + w &&
                TouchInput.y >= top + parentY && TouchInput.y <= top + parentY + h;
     };
+
     sprite.startBlink = function() { this._blink = true; };
     sprite.stopBlink = function() { this._blink = false; this.opacity = 255; };
 };
@@ -1024,6 +1060,7 @@ Scene_PartyCustom.prototype.onRemoveButtonClick = function() {
     this.refreshParty();
 };
 
+// === НОВАЯ ЛОГИКА КЛИКОВ ПО АКТЁРАМ ===
 Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
     if (seClickName !== '') {
         AudioManager.playSe({ name: seClickName, volume: seClickVolume, pitch: seClickPitch, pan: seClickPan });
@@ -1033,9 +1070,35 @@ Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
 
     var isInBattle = $gameParty._battleMembers.contains(actor.actorId());
 
+    // --- Обработка режима "замена из резерва" (мигающее лицо) ---
+    if (this._swapReserveActor) {
+        if (!isInBattle) {
+            // Клик по резерву, когда уже есть мигающий резерв
+            if (actor === this._swapReserveActor) {
+                // Повторный клик по тому же – снимаем выделение
+                this.clearSwapReserveSelection();
+            } else {
+                // Переключаем мигание на другого резервиста
+                this.clearSwapReserveSelection();
+                this._swapReserveActor = actor;
+                this._swapReserveSprite = sprite;
+                sprite.startBlink();
+            }
+        } else {
+            // Клик по члену отряда – меняем его с мигающим резервистом
+            this.swapActors(this._swapReserveActor, actor);
+            this.clearSwapReserveSelection();
+            this.refreshFaces();
+            this.refreshParty();
+        }
+        return;
+    }
+
+    // --- Стандартное поведение (без выделенного для замены резерва) ---
     if (!this._selectedActor) {
         if (isInBattle) {
-            this.clearSelection();
+            // Выбор члена отряда (режим удаления)
+            this.clearSelection(); // на всякий случай
             this._selectedActor = actor;
             this._selectedSprite = sprite;
             sprite.startBlink();
@@ -1047,20 +1110,28 @@ Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
                 this.updateRemoveButtonPosition();
             }
         } else {
-            if (this.hasEmptyBattleSlot()) {
+            // Клик по резерву, когда нет свободных мест
+            if (!this.hasEmptyBattleSlot()) {
+                // Включаем режим замены – мигание на этом резервисте
+                this.clearSelection(); // убираем любое предыдущее выделение отряда
+                this._swapReserveActor = actor;
+                this._swapReserveSprite = sprite;
+                sprite.startBlink();
+            } else {
+                // Есть пустое место – просто добавляем
                 this.addToParty(actor);
                 this.clearSelection();
                 this.refreshFaces();
                 this.refreshParty();
-            } else {
-                SoundManager.playBuzzer();
             }
         }
         return;
     }
 
+    // Есть выбранный член отряда (_selectedActor)
     if (this._selectedActor === actor) {
         if (isInBattle) {
+            // Повторный клик по выбранному члену отряда – удалить, если >1
             if ($gameParty.battleMembers().length <= 1) {
                 SoundManager.playBuzzer();
             } else {
@@ -1070,9 +1141,11 @@ Scene_PartyCustom.prototype.onActorClick = function(actor, sprite) {
                 this.refreshParty();
             }
         } else {
+            // Снятие выделения, если кликнули по резерву (но такого не должно быть, т.к. isInBattle false)
             this.clearSelection();
         }
     } else {
+        // Клик по другому актёру (члену отряда или резерву) – обмен
         if (this._swapLock) return;
         this._swapLock = true;
         this.swapActors(this._selectedActor, actor);
@@ -1126,6 +1199,15 @@ Scene_PartyCustom.prototype.clearSelection = function() {
     this._selectedActor = null;
     this._selectedSprite = null;
     if (this._removeButtonWindow) this._removeButtonWindow.visible = false;
+};
+
+// Новый метод: сброс выделения резерва для замены
+Scene_PartyCustom.prototype.clearSwapReserveSelection = function() {
+    if (this._swapReserveSprite) {
+        this._swapReserveSprite.stopBlink();
+        this._swapReserveSprite = null;
+    }
+    this._swapReserveActor = null;
 };
 
 Scene_PartyCustom.prototype.swapActors = function(a, b) {
