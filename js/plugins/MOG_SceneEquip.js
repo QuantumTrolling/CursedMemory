@@ -3,7 +3,7 @@
 //=============================================================================
 
 /*:
- * @plugindesc (v1.5.3) Modifica a cena de equipamento.
+ * @plugindesc (v1.5.4) Modifica a cena de equipamento.
  * (Иконки/текст ×2, окна подогнаны, навигация восстановлена,
  *  5-й слот отображается, параметры подписаны, фокус сразу на слотах,
  *  иконка оружия зависит от типа, стандартные рамки MV,
@@ -193,7 +193,7 @@
  *
  * @help
  * =============================================================================
- * +++ MOG - Scene Equip (v1.5.3) +++
+ * +++ MOG - Scene Equip (v1.5.4) +++
  * By Moghunter
  * https://mogplugins.com
  * =============================================================================
@@ -220,8 +220,11 @@
  * - Исправлен цвет названий предметов в слотах (белый).
  * - Настраиваемый заголовок "Equipment" (текст, размер, позиция).
  * - Настройки позиции лица и имени персонажа в окне статуса.
- * - Надпись "Снять" по центру, только если слот не пуст (оружие снять нельзя).
+ * - Надпись "Снять" сверху списка, шрифт как у предметов, выравнивание влево.
  * - Количество предметов в списке экипировки (если >1).
+ * - В окне статуса итоговые значения сдвинуты правее.
+ * - Имя персонажа в статусе увеличенным шрифтом.
+ * - Имя выровнено по центру относительно координаты X.
  */
 
 var Imported = Imported || {};
@@ -527,7 +530,8 @@ Window_EquipStatus.prototype.createFaceSprite = function() {
 
 Window_EquipStatus.prototype.refresh = function() {
     this.contents.clear();
-    this.contents.fontSize = Moghunter.scEquip_FontSize;
+    // Увеличенный шрифт для параметров
+    this.contents.fontSize = 22;
     if (this._actor) {
         this._parData[0] = this._parImg.width / 3;
         this._parData[1] = this._parImg.height;
@@ -535,7 +539,17 @@ Window_EquipStatus.prototype.refresh = function() {
         this.refreshFaceSprite();
         var nameX = this.textPadding() + Moghunter.scEquip_ActorNameX;
         var nameY = Moghunter.scEquip_ActorNameY;
-        this.drawActorName(this._actor, nameX, nameY);
+
+        // ИМЯ: временно увеличиваем шрифт и центрируем по координате X
+        var oldFontSize = this.contents.fontSize;
+        this.contents.fontSize = 26;  // крупнее
+        var name = this._actor.name();
+        var nameWidth = this.textWidth(name);
+        this.changeTextColor(this.hpColor(this._actor));
+        this.drawText(name, nameX - nameWidth / 2, nameY, nameWidth, 'center');
+        this.resetTextColor();
+        this.contents.fontSize = oldFontSize; // возвращаем обратно для параметров
+
         for (var i = 0; i < 8; i++) {
             this.drawItem(0, 53 + this.lineHeight() * i, i);
         }
@@ -587,7 +601,8 @@ Window_EquipStatus.prototype.drawItem = function(x, y, paramId) {
         }
     }
     if (this._tempActor) {
-        this.drawNewParam(x + 202, y, paramId);
+        // СДВИГ ИТОГОВОГО ЗНАЧЕНИЯ НА 20 ПИКСЕЛЕЙ ВПРАВО
+        this.drawNewParam(x + 222, y, paramId);
     }
 };
 
@@ -639,10 +654,11 @@ Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
     }
 };
 
-// Отображение надписи "Снять" по центру
+// Отображение надписи "Снять" — слева, шрифт как у предметов
 Window_EquipItem.prototype.drawItem = function(index) {
     if (this._actor) {
         var rect = this.itemRectForText(index);
+        this.contents.fontSize = Moghunter.scEquip_FontSize * 2; // Одинаковый размер
         this.resetTextColor();
         this.changePaintOpacity(this.isEnabled(index));
         var item = this._data && this._data[index] ? this._data[index] : null;
@@ -650,21 +666,34 @@ Window_EquipItem.prototype.drawItem = function(index) {
             this.drawItemName(item, rect.x, rect.y, rect.width);
         } else {
             this.changeTextColor(this.normalColor());
-            this.drawText('Снять', rect.x, rect.y, rect.width, 'center');
+            // Отступ как у иконки, чтобы текст был на одной линии с названиями
+            var iconWidth = Window_Base._iconWidth * 2;
+            var textX = rect.x + iconWidth + 8;
+            var textWidth = rect.width - iconWidth - 8;
+            this.drawText('Снять', textX, rect.y, textWidth, 'left');
         }
         this.changePaintOpacity(true);
     }
 };
 
-// Управление наличием опции "Снять"
+// "Снять" теперь всегда первая строка (для слотов, где можно снимать)
 var _mog_WindowEquipItem_makeItemList = Window_EquipItem.prototype.makeItemList;
 Window_EquipItem.prototype.makeItemList = function() {
     _mog_WindowEquipItem_makeItemList.call(this);
     if (this._slotId === 0) {
+        // Оружие снять нельзя — убираем null
         this._data = this._data.filter(function(item) { return item !== null; });
     } else {
         if (!this._actor.equips()[this._slotId]) {
+            // Слот пуст — убираем null (нечего снимать)
             this._data = this._data.filter(function(item) { return item !== null; });
+        } else {
+            // Слот занят — перемещаем "Снять" (null) в начало массива
+            var nullIndex = this._data.indexOf(null);
+            if (nullIndex > 0) {
+                this._data.splice(nullIndex, 1);
+                this._data.unshift(null);
+            }
         }
     }
 };
