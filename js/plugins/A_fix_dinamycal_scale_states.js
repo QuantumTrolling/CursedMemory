@@ -254,6 +254,23 @@
                     _Game_BattlerBase_param.call(actor, PARAM_MAP[target]);
                 bonusFlat += Math.floor(sourceValue * percent);
             }
+			
+			// НОВЫЙ ТЕГ: <TARGET Bonus from SOURCE Full HP: X%>
+            const regexSelfStatFullHP =
+                /<(\w+)\s+BONUS\s+FROM\s+(\w+)\s+FULL\s+HP\s*:\s*(-?\d+\.?\d*)%\s*>/gi;
+            let matchSelfFullHP;
+            while ((matchSelfFullHP = regexSelfStatFullHP.exec(note)) !== null) {
+                const target = matchSelfFullHP[1].toUpperCase();
+                const source = matchSelfFullHP[2].toUpperCase();
+                const percent = Number(matchSelfFullHP[3]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (PARAM_MAP[source] === undefined) continue;
+                if (this.hp < this.mhp) continue;   // только при полном HP
+
+                const sourceValue = _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
+                bonusFlat += Math.floor(sourceValue * percent);
+            }
         }
 
         return (
