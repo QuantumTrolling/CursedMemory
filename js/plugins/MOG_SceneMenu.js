@@ -148,7 +148,7 @@ Scene_Menu.prototype.createMonogatari = function() {
 
 Scene_Menu.prototype.createAfter = function() {
     this.createSelection();
-    this.createFaceArrows();
+    if (this._selField) this.createFaceArrows(); // только если панель лиц создана
     this.createGold();
 };
 
@@ -451,6 +451,8 @@ Scene_Menu.prototype.refreshActorName = function() {
 
 // *** ПАНЕЛЬ ВЫБОРА ЛИЦ (faces2): подсветка + стрелка СВЕРХУ (сдвинута на 20px вниз) ***
 Scene_Menu.prototype.createSelection = function() {
+    if (!this._facesBitmaps || this._facesBitmaps.length === 0) return;
+
     this._selection = [];
     this._selectionPos = [];
     this._selzoom = [];
@@ -461,7 +463,6 @@ Scene_Menu.prototype.createSelection = function() {
     this._selField.x = Moghunter.scMenu_FaceSelX + 50;
     this._selField.y = Moghunter.scMenu_FaceSelY;
 
-    // *** ИСПРАВЛЕНИЕ: используем боевой отряд ***
     var count = $gameParty.battleMembers().length;
     var faceWidth = this._facesBitmaps[0].width;
     var spacing = 4 + faceWidth;
@@ -793,7 +794,7 @@ Scene_Menu.prototype.update = function() {
     _mog_mono_scmenu_update.call(this)
     if (this._commands) {this.updateCommands()};
     if (this._commandName) {this.updateCommandName()};
-    if (!this._selection && this._facesBitmaps && this._facesBitmaps[0].isReady()) {this.createAfter()};
+    if (!this._selection && this._facesBitmaps && this._facesBitmaps.length > 0 && this._facesBitmaps[0].isReady()) {this.createAfter()};
     if (this._selection) {this.updateSelection()};
     if (this._playTime) {this.updateTime()};
     if (this._magicCircle) {this.updateMagicCircle()};
