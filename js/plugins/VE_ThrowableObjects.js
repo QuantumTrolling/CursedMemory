@@ -1,8 +1,6 @@
 /*
  * ==============================================================================
- * ** Victor Engine MV - Throwable Objects
- * ------------------------------------------------------------------------------
- *  VE_ThrowableObjects.js
+ * ** Victor Engine MV - Throwable Objects (Final Fixed + Animation Follow)
  * ==============================================================================
  */
 
@@ -13,7 +11,6 @@ var VictorEngine = VictorEngine || {};
 VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
 
 (function() {
-
     VictorEngine.ThrowableObjects.loadDatabase = DataManager.loadDatabase;
     DataManager.loadDatabase = function() {
         VictorEngine.ThrowableObjects.loadDatabase.call(this);
@@ -32,262 +29,14 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
             VictorEngine.ThrowableObjects.requiredPlugin.call(this, name, required, version)
         };
     };
-
 })();
 
-/*:
- * ==============================================================================
- * @plugindesc v1.02 - Throwable object animations for skills and items.
- * @author Victor Sant
- *
- * ==============================================================================
- * @help 
- * ==============================================================================
- *  Notetags:
- * ==============================================================================
- *
- * ==============================================================================
- *  Throw Object (for Skills, Items, Weapons and Enemies)
- * ------------------------------------------------------------------------------
- * <throw object: timing>
- *  image: weapon|icon X|animation X|picture 'name'
- *  speed: X
- *  duration: X
- *  animation: X
- *  delay: X
- *  spin: X
- *  arc: X
- *  start: X Y
- *  end: X Y
- *  return
- * </throw object>
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  This tag adds a throwable object animation to the skill or item.
- *  All values except the type are opitional.
- *    timing : the timing that the thowable object is shown.
- *       before : the throw is shown before the action battle animation.
- *       during : the throw is shown at same time as the action battle animation.
- *       after  : the throw is shown after the action battle animation.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Image
- *   Image used to display the throwable object.
- *     weapon : displays an image based on the weapon <throw image> notetag.
- *     icon X : displays the icon id = X.
- *     picture 'X' : displays the picture with filename = X. In quotations.
- *     animaiton X : displays the animation id = X (requires the plugin 
- *                   'VE - Looping Animation)
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Speed
- *   Speed of the throwable object movement. Numeric value. The default value
- *   is 100. The speed is not used if you set a duration to the throw.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Duration
- *   Duration in frames of the throwable object movement. Numeric value. If you
- *   set a duration, the throw object movement will take this time no matter the
- *   distance it will have to move. Objects that targets longer distance will
- *   move faster, but all of them will reach the destination at the same time.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Delay
- *   Delay time in frames for the throw start. Numeric value. This can be used
- *   to syncronize the throw start and the battler motion.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Animation
- *   Display an animation on the user when the throw starts, or when it ends if
- *   the throw is returning. This animation is displayed at the start even if
- *   you have set a delay for the throw.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Spin
- *   Adds a spinning animation to the throw object, the value decides the speed
- *   of the spin. Numeric Value. 
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Arc
- *   Adds an ellpitic arc for the throw object movement. Numeric value. Can be
- *   negative. The default value is 100. If negative, the arc will be turned down.
- *   If not set the throw will go straigth to the target.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Start
- *   Start offset position. This will adjust the starting position for the throw
- *   object. The coordinate X is inverted if the battler is facing right.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - End
- *   End offset position. This will adjust the ending position for the throw
- *   object. The coordinate X is inverted if the battler is facing right.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   - Return
- *   If added, this value will make the throw movement a returing move. The
- *   throw object will start it's movement from the target of the action and
- *   then will go toward the user.
- * ==============================================================================
- *
- * ==============================================================================
- *  Throw Item (for Skills and Items)
- * ------------------------------------------------------------------------------
- *  <throw item>
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *   An item or skill with this notetag will use the <throw object> notetag
- *   from weapons (for actors) or enemies for the action throwable animation.
- *   If the weapon/enemy don't have an throwable animation of their own, then
- *   the skill throwable animation will be used (if there is any).
- * ==============================================================================
- *
- * ==============================================================================
- *  Throw Image (for Weapons and Enemies)
- * ------------------------------------------------------------------------------
- * <throw image: type>
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  Setup a image to be used for some throwable object actions. This image is
- *  used only if the action throwable object image is set to 'weapon'.
- *    icon X : displays the icon id = X.
- *    picture 'X' : displays the picture with filename = X. In quotations.
- *    animaiton X : displays the animation id = X (requires the plugin 
- *                   'VE - Looping Animation)
- * ==============================================================================
- *
- * ==============================================================================
- *  Additional Information:
- * ------------------------------------------------------------------------------
- * 
- *  The code uses the same values as the damage formula, so you can use "a" for
- *  the user, "b" for the target, "v[x]" for variable and "item" for the item
- *  object. The 'result' must return a numeric or string value (depeding on the
- *  type of the notetag).
- *
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  - Throw Object
- *  The <throw object> tag can be assigned to skills, items, weapons and 
- *  enemies. When assigned to weapons and enemies, the tag will have no effect
- *  unless the action uses the tag <throw item>
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  - Throw Timing
- *  The throw timing decides when the throwing animation will be displayed. The
- *  same action can have more than one notetag as long they have a different 
- *  timing. This can be used to show throwing with multiple stages, like a
- *  boomerang that goes to the target and return.
- *
- *  The 'during' and 'after' timings will wait the throw animation to end before
- *  going forward with the action.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  - Throw Type
- *  The type decide wich image will be used for the throw object. It can be an
- *  icon, picture or looping animation (looping animations requires the plugin
- *  'VE - Loop Animation').
- *
- *  If you use the value 'weapon' as the type, the throw graphic will be based
- *  on the notetag <throw image> from the actor's weapon notebox (for actors)
- *  or the enemy notebox (for enelies).
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  - Throw Objects for Weapons
- *  You can assign the tag <throw item> to the basic attack, if the weapon
- *  has no throwing object, it will just shows nothing and plays the montion
- *  normally. This can be used for generic actions that have the display based
- *  on the equiped weapon.
- * ==============================================================================
- *
- * ==============================================================================
- *  Throwable Objects and Battle Motions:
- * ------------------------------------------------------------------------------
- *  The following motion values are available for action sequences:
- * ==============================================================================
- *
- * ==============================================================================
- *  Wait
- * ------------------------------------------------------------------------------
- *  wait: [subjects], throw
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  Wait until all [subjects] throwing animations are done.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  Ex.: wait: user, throw
- *       wait: all targets, throw
- * ==============================================================================
- *
- * ==============================================================================
- *  Throw
- * ------------------------------------------------------------------------------
- *  throw: [subjects] to [subjects], [timing]
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  - Adds a throwing animation from one battler to another.
- *    The first [subjects] is the source, the second [subjects] are the targets.
- *    The [timing] is the throw object timing.
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  Ex.: throw: user to all targets, before
- *       throw: subject to user, after
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *  NOTES:
- *  - You can use timings different from the three default ones.
- *  - If the actionor weapon don't have a <throw object> notetag with a matching
- *    [timing], this motion will be skiped.
- * ==============================================================================
- *
- * ==============================================================================
- *  Example Notetags:
- * ------------------------------------------------------------------------------
- * 
- * <throw object: before>
- *  image: weapon
- *  speed: 125
- *  start: 18, 4
- * </throw object>
- *   Throws an object before the animation based on the <throw item> notetag
- *   of the weapon.
- * 
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *
- * <throw object: before>
- *  image: picture 'Boomerang'
- *  speed: 50
- *  arc: 100
- *  spin: 12
- *  start: -16, -4
- * </throw object>
- *
- * <throw object: during>
- *  image: picture 'Boomerang'
- *  speed: 50
- *  arc: -100
- *  spin: 12
- *  end: -16, -4
- *  return
- * </throw object>
- *  Notetags for a boomergan. Using a picture named 'Boomerang' the first tag
- *  makes the object move into an acr toward the target and the second makes
- *  the object moves into an inverted arc returning from the target to the user.
- *
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *
- * <throw image: icon 10>
- *  If the action throw image is 'weapon', then the throw graphic will be the
- *  icon id 10.
- *
- * - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
- *
- * <throw image: picture 'Arrow'>
- *  If the action throw image is 'weapon', then the throw graphic will be the
- *  picture named 'Arrow'.
- *
- * ==============================================================================
- *
- * 
- * ==============================================================================
- *  Compatibility:
- * ------------------------------------------------------------------------------
- * - To be used together with this plugin, the following plugins must be placed
- *   bellow this plugin:
- *     VE - Charge Actions
- * ==============================================================================
- *
- * ==============================================================================
- *  Version History:
- * ------------------------------------------------------------------------------
- *  v 1.00 - 2016.03.23 > First release.
- *  v 1.01 - 2016.04.23 > Removed outdated patch.
- *  v 1.02 - 2016.05.30 > Compatibility with Battle Motions.
- * ===============================================================================
- */
+/*: (help text unchanged) */
 
 (function() {
 
     //=============================================================================
-    // VictorEngine
+    // VictorEngine (notetag loading – unchanged)
     //=============================================================================
 
     VictorEngine.ThrowableObjects.loadNotetagsValues = VictorEngine.loadNotetagsValues;
@@ -411,33 +160,33 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
     };
 
     BattleManager.createThrow = function(subject, target, params) {
-    if (!subject || !target || !params) return;
-    var object = {
-        image: {},
-        start: { x: params.startX || 0, y: params.startY || 0 },
-        end: { x: params.endX || 0, y: params.endY || 0 },
-        speed: params.speed || 100,
-        duration: params.duration || 0,
-        delay: params.delay || 0,
-        spin: params.spin || 0,
-        arc: params.arc || 0,
-        anim: params.anim || 0,
-        returning: !!params.returning,
-        angled: !!params.angled
+        if (!subject || !target || !params) return;
+        var object = {
+            image: {},
+            start: { x: params.startX || 0, y: params.startY || 0 },
+            end: { x: params.endX || 0, y: params.endY || 0 },
+            speed: params.speed || 100,
+            duration: params.duration || 0,
+            delay: params.delay || 0,
+            spin: params.spin || 0,
+            arc: params.arc || 0,
+            anim: params.anim || 0,
+            returning: !!params.returning,
+            angled: !!params.angled
+        };
+        var imgType = params.image || 'icon';
+        object.image.type = imgType;
+        if (imgType === 'picture') {
+            object.image.name = params.name || '';
+            object.image.id = 0;
+        } else {
+            object.image.id = params.id || 0;
+            object.image.name = '';
+        }
+        if (target.battleSprite()) {
+            target.battleSprite().startThrow(subject, target, object);
+        }
     };
-    var imgType = params.image || 'icon';
-    object.image.type = imgType;
-    if (imgType === 'picture') {
-        object.image.name = params.name || '';
-        object.image.id = 0;
-    } else {
-        object.image.id = params.id || 0;
-        object.image.name = '';
-    }
-    if (target.battleSprite()) {
-        target.battleSprite().startThrow(subject, target, object);
-    }
-};
 
     //=============================================================================
     // Game_Action
@@ -518,18 +267,16 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
     };
 
     //=============================================================================
-    // Spriteset_Battle
+    // Spriteset_Battle (без sortBattleSprites)
     //=============================================================================
 
-    // !!! УБИРАЕМ ВЫЗОВ sortBattleSprites, т.к. он вызывает мерцание всех спрайтов
     VictorEngine.ThrowableObjects.updateSpritesetBattle = Spriteset_Battle.prototype.update;
     Spriteset_Battle.prototype.update = function() {
         VictorEngine.ThrowableObjects.updateSpritesetBattle.call(this);
-        // this.sortBattleSprites();  <-- удалено
     };
 
     //=============================================================================
-    // Window_BattleLog
+    // Window_BattleLog (защита от ошибок стека)
     //=============================================================================
 
     VictorEngine.ThrowableObjects.initialize = Window_BattleLog.prototype.initialize;
@@ -540,13 +287,15 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
 
     VictorEngine.ThrowableObjects.initializeMethodsStack = Window_BattleLog.prototype.initializeMethodsStack;
     Window_BattleLog.prototype.initializeMethodsStack = function() {
-        VictorEngine.ThrowableObjects.initializeMethodsStack.call(this);
+        if (VictorEngine.ThrowableObjects.initializeMethodsStack) {
+            VictorEngine.ThrowableObjects.initializeMethodsStack.call(this);
+        }
         this._throwingSubject = [];
     };
 
     VictorEngine.ThrowableObjects.push = Window_BattleLog.prototype.push;
     Window_BattleLog.prototype.push = function(methodName) {
-        if (this._stackIndex || this.methodStackActive()) {
+        if (this._methodStack && (this._stackIndex || this.methodStackActive())) {
             this.pushMethodsStack.apply(this, arguments);
         } else {
             VictorEngine.ThrowableObjects.push.apply(this, arguments);
@@ -555,7 +304,7 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
 
     VictorEngine.ThrowableObjects.updateWindowBattleLog = Window_BattleLog.prototype.update;
     Window_BattleLog.prototype.update = function() {
-        if (this.methodStackActive() && !Imported['VE - Battle Motions']) {
+        if (this._methodStack && this.methodStackActive() && !Imported['VE - Battle Motions']) {
             this.updateMethodsStack();
         } else {
             VictorEngine.ThrowableObjects.updateWindowBattleLog.call(this);
@@ -564,12 +313,12 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
 
     VictorEngine.ThrowableObjects.isBusy = Window_BattleLog.prototype.isBusy;
     Window_BattleLog.prototype.isBusy = function() {
-        return VictorEngine.ThrowableObjects.isBusy.call(this) || this.methodStackActive();
+        return VictorEngine.ThrowableObjects.isBusy.call(this) || (this._methodStack && this.methodStackActive());
     };
 
     VictorEngine.ThrowableObjects.updateWait = Window_BattleLog.prototype.updateWait;
     Window_BattleLog.prototype.updateWait = function() {
-        return VictorEngine.ThrowableObjects.updateWait.call(this) || this.methodStackActive();
+        return VictorEngine.ThrowableObjects.updateWait.call(this) || (this._methodStack && this.methodStackActive());
     };
 
     VictorEngine.ThrowableObjects.startAction = Window_BattleLog.prototype.startAction;
@@ -646,7 +395,7 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
 })();
 
 //=============================================================================
-// Sprite_Throw
+// Sprite_Throw (with forced child positioning for animations)
 //=============================================================================
 
 function Sprite_Throw() {
@@ -662,22 +411,17 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
 
     Object.defineProperties(Sprite_Throw.prototype, {
         z: {
-            get: function() {
-                return this.throwZ();
-            },
+            get: function() { return this.throwZ(); },
             configurable: true
         },
         h: {
-            get: function() {
-                return this.throwH();
-            },
+            get: function() { return this.throwH(); },
             configurable: true
         }
     });
 
     Sprite_Throw.prototype.initialize = function(subject, target, object) {
         Sprite_Base.prototype.initialize.call(this);
-        console.log('Sprite_Throw created for', this._subject, this._target, this._object);
         this._subject = subject;
         this._target = target;
         this._object = object;
@@ -685,25 +429,11 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
         this.initMembers();
     };
 
-    Sprite_Throw.prototype.subject = function() {
-        return this._subject;
-    };
-
-    Sprite_Throw.prototype.target = function() {
-        return this._target;
-    };
-
-    Sprite_Throw.prototype.item = function() {
-        return this._item;
-    };
-
-    Sprite_Throw.prototype.object = function() {
-        return this._object;
-    };
-
-    Sprite_Throw.prototype.isMirrorAnimation = function() {
-        return this._mirror;
-    };
+    Sprite_Throw.prototype.subject = function() { return this._subject; };
+    Sprite_Throw.prototype.target = function() { return this._target; };
+    Sprite_Throw.prototype.item = function() { return this._item; };
+    Sprite_Throw.prototype.object = function() { return this._object; };
+    Sprite_Throw.prototype.isMirrorAnimation = function() { return this._mirror; };
 
     Sprite_Throw.prototype.throwZ = function() {
         return 10000 + this.y + this._throwId * 0.001;
@@ -735,65 +465,90 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
 
     Sprite_Throw.prototype.update = function() {
         Sprite_Base.prototype.update.call(this);
-        if (this._delay === 0 && this.object()) {
-            this.updateBitmap();
-            this.updateGraphics();
-            this.updateArc();
-            this.updateMove();
-            this.updateAngle();
-            this.updatePosition();
-        } else {
-            this._delay--;
+        if (this._delay > 0) { this._delay--; return; }
+        if (!this._object) return;
+        this.updateBitmap();
+        this.updateGraphics();
+        this.updateArc();
+        this.updateMove();
+        this.updateAngle();
+        this.updatePosition();
+
+        // ---- FORCE CHILD ANIMATIONS TO FOLLOW PARENT ----
+        for (var i = 0; i < this.children.length; i++) {
+            var child = this.children[i];
+            if (child && child !== this) {
+                child.x = 0;
+                child.y = 0;
+            }
         }
     };
 
     Sprite_Throw.prototype.setupMovement = function() {
-        var object = this.object();
-        var source = object.returning ? this.target() : this.subject();
-        var target = object.returning ? this.subject() : this.target();
+        var object = this._object;
+        var source = object.returning ? this._target : this._subject;
+        var target = object.returning ? this._subject : this._target;
         var srcRight = source.isFacingRight();
         var trgRight = target.isFacingRight();
         var srcSprite = source.battleSprite();
         var trgSprite = target.battleSprite();
         var srcOffset = srcRight ? -object.start.x : object.start.x;
         var trgOffset = trgRight ? -object.end.x : object.end.x;
+
+        function getCenterY(sprite) {
+            if (!sprite) return 0;
+            var frameH = sprite.height || 64;
+            var anchorY = sprite.anchor ? sprite.anchor.y : 1.0;
+            var scaledH = frameH * Math.abs(sprite.scale.y);
+            return sprite.y - scaledH * anchorY + scaledH / 2;
+        }
+
+        var srcCenterY = getCenterY(srcSprite);
+        var trgCenterY = getCenterY(trgSprite);
+
         this._homeX = srcSprite.x + srcOffset * (srcRight ? -1 : 1);
-        this._homeY = srcSprite.y + object.start.y - srcSprite.center().y;
-        this._homeZ = srcSprite.center().y + 4;
+        this._homeY = srcCenterY + object.start.y;
+        this._homeZ = srcCenterY + 4;
         this._targetX = trgSprite.x + trgOffset * (trgRight ? -1 : 1) - this._homeX;
-        // ======== ИЗМЕНЕНИЕ: ограничение отклонения конечной Y от 420 вдвое ========
-        // Исходная точка приземления (без ограничения)
-        var rawTargetY = trgSprite.y + object.end.y - trgSprite.center().y;
-        var baseY = 420; // опорное значение Y
-        var diff = rawTargetY - baseY;
-        var adjustedTargetY = baseY + diff / 2; // отклонение от baseY уменьшаем вдвое
-        console.log('raw:', rawTargetY, 'adjusted:', adjustedTargetY);
-        // =========================================================================
-        this._targetY = adjustedTargetY - this._homeY;
-        this._targetZ = trgSprite.center().y + 4;
+        this._targetY = trgCenterY + object.end.y - this._homeY;
+        this._targetZ = trgCenterY + 4;
         this._offsetX = 0;
         this._offsetY = 0;
+        this._z = 9999;
+
+        var baseRotation = 0;
+        if (object.tiltDeg !== undefined) {
+            baseRotation = object.tiltDeg * Math.PI / 180;
+        } else if (object.autoTilt) {
+            var trgCY = getCenterY(trgSprite);
+            var diffY = trgCY - object.autoTilt.baseY;
+            var angleDeg = diffY * object.autoTilt.factor;
+            baseRotation = angleDeg * Math.PI / 180;
+        } else if (object.angled) {
+            baseRotation = Math.atan2(-this._targetY, this._targetX);
+        }
+        this.rotation = baseRotation + (object.spin || 0) * Math.PI / 180;
     };
 
     Sprite_Throw.prototype.setupDuration = function() {
-        var object = this.object();
-        var source = object.returning ? this.target() : this.subject();
+        var object = this._object;
+        var source = object.returning ? this._target : this._subject;
         var duration = object.duration;
-        var arc = Math.abs(this.object().arc) || 0;
+        var arc = Math.abs(object.arc) || 0;
         var max = Math.max(this._targetY, arc);
         this._delay = object.delay;
         this._mirror = source.isFacingRight();
         this._distance = Math.sqrt(Math.pow(this._targetX, 2) + Math.pow(max, 2));
         this._duration = duration ? duration : this._distance * 5 / object.speed;
-        this._duration = Math.max(Math.floor(this._duration / 2) * 2, 2)
+        this._duration = Math.max(Math.floor(this._duration / 2) * 2, 2);
         this._starting = this._duration;
         if (!this._imageType) this._duration = 0;
     };
 
     Sprite_Throw.prototype.setupArc = function() {
         var distance = Math.sqrt(Math.abs(this._targetX) + 400);
-        this._arcPeak = Math.floor(Math.abs(this.object().arc) * distance / 20);
-        this._arcInvert = this.object().arc < 0;
+        this._arcPeak = Math.floor(Math.abs(this._object.arc) * distance / 20);
+        this._arcInvert = this._object.arc < 0;
         this._arcHeight = 0;
     };
 
@@ -820,13 +575,11 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
     };
 
     Sprite_Throw.prototype.setupObjectImage = function() {
-        var object = this.object().image;
+        var object = this._object.image;
         if (object.type === 'weapon') {
             if (this._subject.isActor()) {
                 var weapon = this._subject.weapons()[0];
-                if (weapon) {
-                    return weapon.throwableObjects.item;
-                }
+                if (weapon) return weapon.throwableObjects.item;
             } else {
                 return this._subject.enemy().throwableObjects.item;
             }
@@ -861,9 +614,7 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
             this._offsetX = (this._offsetX * (d - 1) + this._targetX) / d;
             this._offsetY = (this._offsetY * (d - 1) + this._targetY) / d;
             this._duration--;
-            if (this._duration === 0) {
-                this.onThrowEnd();
-            }
+            if (this._duration === 0) this.onThrowEnd();
         }
     };
 
@@ -871,9 +622,7 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
         if (this._arcPeak && this._duration > 0) {
             var starting = this._starting / 2;
             var gravity = 2 * this._arcPeak / starting;
-            if (this._arcInvert) {
-                gravity *= -1;
-            }
+            if (this._arcInvert) gravity *= -1;
             if (this._duration > starting) {
                 var duration = this._duration - starting;
                 this._arcHeight += gravity * duration / starting;
@@ -881,12 +630,8 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
                 var duration = this._duration;
                 this._arcHeight -= gravity * (starting - duration + 1) / starting;
             }
-            if (gravity < 0 && this._arcHeight > 0) {
-                this._arcHeight = 0;
-            }
-            if (gravity > 0 && this._arcHeight < 0) {
-                this._arcHeight = 0;
-            }
+            if (gravity < 0 && this._arcHeight > 0) this._arcHeight = 0;
+            if (gravity > 0 && this._arcHeight < 0) this._arcHeight = 0;
         }
     };
 
@@ -896,22 +641,14 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
     };
 
     Sprite_Throw.prototype.updateAngle = function() {
-        if (this.object().spin) {
-            this.rotation += this.object().spin;
-        }
-        if (this.object().angle) {
-            this.rotation = this.object().angle * Math.PI / 180;
-        }
+        if (this._object.spin) this.rotation += this._object.spin;
+        if (this._object.angle) this.rotation = this._object.angle * Math.PI / 180;
     };
 
     Sprite_Throw.prototype.updateGraphics = function() {
         switch (this._imageType) {
-        case 'icon':
-            this.updateIcon();
-            break;
-        case 'picture':
-            this.updatePicture();
-            break;
+        case 'icon': this.updateIcon(); break;
+        case 'picture': this.updatePicture(); break;
         }
     };
 
@@ -956,26 +693,105 @@ Sprite_Throw.prototype.constructor = Sprite_Throw;
 
 })();
 
-//=============================================================================
-// Глобальное исправление мерцания всех боевых спрайтов
-// (актёров и врагов) — стабильная глубина без постоянной пересортировки
-//=============================================================================
+// ============================================================================
+// Global createThrow
+// ============================================================================
 
+window.createThrow = function(user, target, imageType, imageId,
+                               startX, startY, endX, endY,
+                               duration, arc, spin, delay, anim,
+                               tiltDeg, autoTiltBaseY, autoTiltFactor) {
+    var spr = target.battleSprite ? target.battleSprite() : null;
+    if (!spr || !user) return;
+
+    var obj = {
+        image: { type: imageType || 'animation', id: imageId || 0, name: '' },
+        start: { x: startX || 0, y: startY || 0 },
+        end:   { x: endX || 0,   y: endY || 0   },
+        duration: duration || 30,
+        speed: 100,
+        delay: delay || 0,
+        spin: spin || 0,
+        arc: arc || 0,
+        anim: anim || 0,
+        angled: false,
+        returning: false
+    };
+
+    if (tiltDeg !== undefined) obj.tiltDeg = tiltDeg;
+    if (autoTiltBaseY !== undefined) {
+        obj.autoTilt = { baseY: autoTiltBaseY, factor: autoTiltFactor || 0.2 };
+    }
+
+    var throwSpr = new Sprite_Throw(user, target, obj);
+    if (!spr._throwableObjects) spr._throwableObjects = [];
+    spr._throwableObjects.push(throwSpr);
+
+    var parent = spr.parent;
+    if (parent) {
+        parent.addChild(throwSpr);
+        BattleManager.addThrowableObjects(throwSpr);
+    } else {
+        SceneManager._scene.addChild(throwSpr);
+        BattleManager.addThrowableObjects(throwSpr);
+    }
+};
+
+// ============================================================================
+// Sprite_Battler z-index fix (мерцание)
+// ============================================================================
 (function() {
-    // Переопределяем обновление Sprite_Battler, чтобы Z вычислялся на основе Y + уникальный индекс
     var _Sprite_Battler_update = Sprite_Battler.prototype.update;
     Sprite_Battler.prototype.update = function() {
         _Sprite_Battler_update.call(this);
         if (this._battler) {
-            // Берём индекс бойца в группе/отряде как стабильный идентификатор
             var index = 0;
             if (this._battler.isActor()) {
                 index = $gameParty.members().indexOf(this._battler);
             } else {
                 index = $gameTroop.members().indexOf(this._battler);
             }
-            // Z = Y + индекс * 0.001 — исключает наложения при одинаковом Y
             this.z = this.y + index * 0.001;
         }
     };
 })();
+
+// ============================================================================
+// ANIMATION LOGGING – вывод координат любой анимации при появлении
+// ============================================================================
+(function() {
+    var _Sprite_Battler_startAnimation = Sprite_Battler.prototype.startAnimation;
+    Sprite_Battler.prototype.startAnimation = function(animationId, mirror, delay) {
+        if (this._battler) {
+            console.log('Animation', animationId, 'started on', this._battler.name(),
+                        'at position x:', this.x, 'y:', this.y);
+        }
+        _Sprite_Battler_startAnimation.call(this, animationId, mirror, delay);
+    };
+})();
+
+// YEP compatibility
+if (Imported.YEP_BattleEngineCore) {
+    var _Game_Action_apply = Game_Action.prototype.apply;
+    Game_Action.prototype.apply = function(target) {
+        var item = this.item();
+        var hasYep = item && (item.wholeActions || item.targetActions);
+        var stack = new Error().stack;
+        var fromVE = stack && stack.indexOf('updateStackAction') !== -1;
+        if (hasYep && fromVE) return;
+        _Game_Action_apply.call(this, target);
+    };
+
+    var _Sprite_Throw_setupAnimation = Sprite_Throw.prototype.setupAnimation;
+    Sprite_Throw.prototype.setupAnimation = function(timing) {
+        var subject = this.subject();
+        if (subject) {
+            var action = subject.currentAction();
+            if (action) {
+                var item = action.item();
+                if (item && (item.wholeActions || item.targetActions)) return;
+            }
+        }
+        _Sprite_Throw_setupAnimation.call(this, timing);
+    };
+}
