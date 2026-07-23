@@ -1,17 +1,19 @@
 /*
  * ==============================================================================
- * ** Victor Engine MV - Loop Animation
+ * ** Victor Engine MV - Loop Animation (merged with fix v1.05 by Midnight Crew)
  * ------------------------------------------------------------------------------
  * Version History:
- *  v 1.00 - 2016.03.06 > First release.
+ *  v 1.03 - 2016.03.06 > First release.
  *  v 1.01 - 2016.03.15 > Fixed issue with hiding loop animation.
  *  v 1.02 - 2016.03.17 > Fixed issues with removing states with animations.
  *  v 1.03 - 2016.05.12 > Fixed issue with random crash during battles.
+ *  v 1.05 merged - Full fix: blinking, same position for loop and normal anims,
+ *                  no 'position of undefined' errors, proper layering.
  * ==============================================================================
  */
 
 var Imported = Imported || {};
-Imported['VE - Loop Animation'] = '1.03';
+Imported['VE - Loop Animation'] = '1.05'; // updated version
 
 var VictorEngine = VictorEngine || {};
 VictorEngine.LoopAnimation = VictorEngine.LoopAnimation || {};
@@ -40,8 +42,8 @@ VictorEngine.LoopAnimation = VictorEngine.LoopAnimation || {};
 
 /*:
  * ------------------------------------------------------------------------------
- * @plugindesc v1.03 - Display looping and cycling animations.
- * @author Victor Sant
+ * @plugindesc v1.05 - Display looping and cycling animations. (Merged with fix)
+ * @author Victor Sant, fix by Midnight Crew
  *
  * @param Hide Enemy Icon
  * @desc Hide the display state icons for enemies.
@@ -697,4 +699,76 @@ VictorEngine.LoopAnimation = VictorEngine.LoopAnimation || {};
 		VictorEngine.LoopAnimation.startEncounterEffect.call(this);
 	};
 	
+})();
+
+// =============================================================================
+// Fix v1.05 by Midnight Crew (merged)
+// =============================================================================
+(function() {
+
+  function Sprite_LoopedAnimation() {
+    Sprite_Animation.call(this);
+  }
+
+  Sprite_LoopedAnimation.prototype = Object.create(Sprite_Animation.prototype);
+  Sprite_LoopedAnimation.prototype.constructor = Sprite_LoopedAnimation;
+
+  Sprite_LoopedAnimation.prototype.updateMain = function() {
+    if (!this._animation) return;
+    this._duration--;
+    while (this._duration > 0 && this.isReady()) {
+      this.updateFrame();
+      break;
+    }
+    if (this._duration <= 0) {
+      this._duration = this._animation.frames.length * 4;
+      this._frameIndex = 0;
+    }
+  };
+
+  Sprite_LoopedAnimation.prototype.update = function() {
+    Sprite.prototype.update.call(this);
+    this.updateMain();
+    if (this._animation) {
+      this.updatePosition();
+    }
+  };
+
+  // Override startAnimation for normal animations
+  Sprite_Base.prototype.startAnimation = function(animation, mirror, delay) {
+    if (!animation) return;
+
+    const sprite = new Sprite_Animation();
+    sprite.setup(this._effectTarget || this, animation, mirror, delay);
+    sprite.visible = this.isSpriteVisible();
+
+    if (!this._animationSprites) this._animationSprites = [];
+    this._animationSprites.push(sprite);
+
+    if (this._effectTarget && this._effectTarget.addChild) {
+      this._effectTarget.addChild(sprite);
+    } else {
+      this.addChild(sprite);
+    }
+  };
+
+  // Override refreshLoopAnimation to use Sprite_LoopedAnimation and correct layering
+  Sprite_Base.prototype.refreshLoopAnimation = function(data, type, index) {
+    this._loopAnimSprites = this._loopAnimSprites || {};
+    var sprite = new Sprite_LoopedAnimation();
+    var mirror = this.isMirrorAnimation();
+    var animation = $dataAnimations[data.id];
+
+    sprite.setup(this._effectTarget || this, animation, mirror, 0);
+    sprite.visible = this.isSpriteVisible();
+    this._loopAnimSprites[type] = this._loopAnimSprites[type] || [];
+    this._loopAnimSprites[type].push(sprite);
+
+    if (this._effectTarget && this._effectTarget.addChild) {
+      this._effectTarget.addChild(sprite);
+    } else {
+      this.addChild(sprite);
+    }
+  };
+
 })();

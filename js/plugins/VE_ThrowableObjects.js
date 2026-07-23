@@ -2,10 +2,13 @@
  * ==============================================================================
  * ** Victor Engine MV - Throwable Objects (Final Fixed + Animation Follow)
  * ==============================================================================
+ * v1.03 (loop animation friendly)
+ * FIX: setupStartAction вызывается только при реальном throwable объекте,
+ * чтобы не смещать баттлеров во время обычных анимаций состояний.
  */
 
 var Imported = Imported || {};
-Imported['VE - Throwable Objects'] = '1.02';
+Imported['VE - Throwable Objects'] = '1.03';
 
 var VictorEngine = VictorEngine || {};
 VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
@@ -321,12 +324,6 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
         return VictorEngine.ThrowableObjects.updateWait.call(this) || (this._methodStack && this.methodStackActive());
     };
 
-    VictorEngine.ThrowableObjects.startAction = Window_BattleLog.prototype.startAction;
-    Window_BattleLog.prototype.startAction = function(subject, action, targets) {
-        VictorEngine.ThrowableObjects.startAction.call(this, subject, action, targets);
-        this.setupStartAction(subject, action, targets);
-    };
-
     VictorEngine.ThrowableObjects.updateStackWaitMode = Window_BattleLog.prototype.updateStackWaitMode;
     Window_BattleLog.prototype.updateStackWaitMode = function(index) {
         var battler = this.stackBattler(index);
@@ -342,24 +339,43 @@ VictorEngine.ThrowableObjects = VictorEngine.ThrowableObjects || {};
         return VictorEngine.ThrowableObjects.updateStackWaitMode.call(this, index);
     };
 
+    // -------------------- ИСПРАВЛЕНИЕ 1: ожидания только для throwable --------------------
     VictorEngine.ThrowableObjects.prepareUniqueActionStep1 = Window_BattleLog.prototype.prepareUniqueActionStep1;
     Window_BattleLog.prototype.prepareUniqueActionStep1 = function(subject, action, target, repeat) {
-        this.push('startThrow', subject, action, target, 'before');
-        this.push('waitForThrow', this._stackIndex, subject);
+        if (action.throwableObject('before')) {
+            this.push('startThrow', subject, action, target, 'before');
+            this.push('waitForThrow', this._stackIndex, subject);
+        }
         VictorEngine.ThrowableObjects.prepareUniqueActionStep1.call(this, subject, action, target, repeat);
     };
 
     VictorEngine.ThrowableObjects.prepareUniqueActionStep2 = Window_BattleLog.prototype.prepareUniqueActionStep2;
     Window_BattleLog.prototype.prepareUniqueActionStep2 = function(subject, action, target, repeat) {
-        this.push('startThrow', subject, action, target, 'during');
+        if (action.throwableObject('during')) {
+            this.push('startThrow', subject, action, target, 'during');
+        }
         VictorEngine.ThrowableObjects.prepareUniqueActionStep2.call(this, subject, action, target, repeat);
     };
 
     VictorEngine.ThrowableObjects.prepareUniqueActionStep3 = Window_BattleLog.prototype.prepareUniqueActionStep3;
     Window_BattleLog.prototype.prepareUniqueActionStep3 = function(subject, action, target, repeat) {
-        this.push('startThrow', subject, action, target, 'after');
+        if (action.throwableObject('after')) {
+            this.push('startThrow', subject, action, target, 'after');
+        }
         VictorEngine.ThrowableObjects.prepareUniqueActionStep3.call(this, subject, action, target, repeat);
-        this.push('waitForThrow', this._stackIndex, subject);
+        if (action.throwableObject('after')) {
+            this.push('waitForThrow', this._stackIndex, subject);
+        }
+    };
+
+    // -------------------- ИСПРАВЛЕНИЕ 2: setupStartAction только для throwable --------------------
+    VictorEngine.ThrowableObjects.startAction = Window_BattleLog.prototype.startAction;
+    Window_BattleLog.prototype.startAction = function(subject, action, targets) {
+        VictorEngine.ThrowableObjects.startAction.call(this, subject, action, targets);
+        // ВЫЗЫВАЕМ setupStartAction ТОЛЬКО ЕСЛИ ЕСТЬ МЕТАТЕЛЬНЫЙ ОБЪЕКТ
+        if (action.isThrowable()) {
+            this.setupStartAction(subject, action, targets);
+        }
     };
 
     Window_BattleLog.prototype.waitForThrow = function(index, subject) {
@@ -738,7 +754,7 @@ window.createThrow = function(user, target, imageType, imageId,
 };
 
 // ============================================================================
-// Sprite_Battler z-index fix (мерцание)
+// Sprite_Battler z-index fix (можно отключить, если мешает)
 // ============================================================================
 (function() {
     var _Sprite_Battler_update = Sprite_Battler.prototype.update;
@@ -757,7 +773,7 @@ window.createThrow = function(user, target, imageType, imageId,
 })();
 
 // ============================================================================
-// ANIMATION LOGGING – вывод координат любой анимации при появлении
+// ANIMATION LOGGING
 // ============================================================================
 (function() {
     var _Sprite_Battler_startAnimation = Sprite_Battler.prototype.startAnimation;
