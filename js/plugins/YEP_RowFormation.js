@@ -2684,6 +2684,16 @@ Game_Enemy.prototype.appear = function() {
     if (this.setMirror) this.setMirror(true);
 };
 
+// Принудительно зеркалим актёров сразу после установки домашней позиции (YEP_RowFormation)
+var _Sprite_Actor_setActorHome = Sprite_Actor.prototype.setActorHome;
+Sprite_Actor.prototype.setActorHome = function(index) {
+    _Sprite_Actor_setActorHome.call(this, index);
+    // Если в боковом виде и есть актёр – ставим зеркало согласно вашей расстановке
+    if (this._actor && this._actor.isActor() && $gameSystem.isSideView()) {
+        this._actor.setMirror(true); // true = смотрит вправо (находится слева)
+    }
+};
+
 //=============================================================================
 // End of File
 //=============================================================================

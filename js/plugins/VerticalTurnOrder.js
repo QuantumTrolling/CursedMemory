@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v1.9 CTB Vertical Turn Order (With Future Clone Preview) - Only for Actors
+ * @plugindesc v1.10 CTB Vertical Turn Order (With Future Clone Preview) - Only for Actors
  * @author You
  *
  * @param HorizontalAlign
@@ -80,7 +80,7 @@ const LETTER_OFFSET_X = Number(params.LetterOffsetX || 0);
 const LETTER_OFFSET_Y = Number(params.LetterOffsetY || 0);
 const LETTER_FONT_SIZE = Number(params.LetterFontSize || 20);
 
-const VISIBLE_COUNT = 6;
+const VISIBLE_COUNT = 7;
 const ICON_GAP    = 6;
 const ACTIVE_GAP  = 10;
 const ACTIVE_LIFT = 10;
@@ -393,7 +393,7 @@ Window_CTBClone.prototype.setFutureIndex = function(index) {
 };
 
 // ==================================================
-// УПРАВЛЕНИЕ КЛОНОМ
+// УПРАВЛЕНИЕ КЛОНОМ (с ограничением по видимости)
 // ==================================================
 
 function showCloneForActor(actor) {
@@ -405,7 +405,11 @@ function showCloneForActor(actor) {
     if (!order) { hideClone(); return; }
 
     const currentIndex = order.indexOf(actor);
-    if (currentIndex < 0) { hideClone(); return; }
+    // Не показываем, если актёр не виден в очереди
+    if (currentIndex < 0 || currentIndex >= VISIBLE_COUNT) { 
+        hideClone(); 
+        return; 
+    }
 
     const futureIndex = calcFutureIndexForBattler(actor);
     if (futureIndex < 0) { hideClone(); return; }
@@ -415,6 +419,12 @@ function showCloneForActor(actor) {
         visualIndex = currentIndex + 1;
     } else {
         visualIndex = futureIndex + 1;
+    }
+
+    // Запрещаем показ, если будущая позиция ниже последнего видимого слота
+    if (visualIndex >= VISIBLE_COUNT) {
+        hideClone();
+        return;
     }
 
     _cloneVisualIndex = visualIndex;
@@ -476,10 +486,19 @@ Scene_Battle.prototype.update = function() {
         const order = BattleManager.ctbTurnOrder();
         if (!order) return;
         const currentIndex = order.indexOf(_cloneBattler);
-        if (currentIndex < 0) { hideClone(); return; }
+        // Дополнительная проверка: если вдруг актёр исчез из видимой зоны
+        if (currentIndex < 0 || currentIndex >= VISIBLE_COUNT) {
+            hideClone();
+            return;
+        }
         const futureIndex = calcFutureIndexForBattler(_cloneBattler);
         if (futureIndex < 0) { hideClone(); return; }
         let visualIndex = (futureIndex <= currentIndex) ? currentIndex + 1 : futureIndex + 1;
+        // Если будущая позиция вышла за пределы — скрываем
+        if (visualIndex >= VISIBLE_COUNT) {
+            hideClone();
+            return;
+        }
         if (visualIndex !== _cloneVisualIndex) {
             _cloneVisualIndex = visualIndex;
             _ctbCloneWindow.setFutureIndex(visualIndex);
