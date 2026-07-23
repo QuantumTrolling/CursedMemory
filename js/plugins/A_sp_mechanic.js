@@ -3,11 +3,11 @@
 //=============================================================================
 // Дополнение к MOG_BattleHud + Double Icon Skills:
 // общие SP для отряда, плашка в окне навыков и стоимость SP под иконкой.
-// Версия 2.3 – добавлен общий сдвиг всех стоимостей по X (Cost X Offset)
+// Версия 2.4 – SP отображается только для указанных актёров
 //=============================================================================
 
 /*:
- * @plugindesc v2.3 SP для партии + плашка + сдвиг всех стоимостей (AP/EP/SP).
+ * @plugindesc v2.4 SP для партии + плашка + стоимость под иконкой (ограничение по актёрам).
  * @author Дополнение сообществом
  *
  * @help
@@ -22,8 +22,9 @@
  * Стоимость SP отображается в списке навыков ПОД ИКОНКОЙ, справа, в формате
  * "X SP", оранжевым цветом (\C[30]), на строке ниже стоимости AP/EP.
  *
- * Параметр "Cost X Offset" сдвигает ВСЕ стоимости (AP, EP, SP) по горизонтали.
- * Параметр "SP Cost X Offset (extra)" добавляет дополнительный сдвиг только для SP.
+ * Параметр "Required Actor IDs" — список ID актёров (через запятую), для которых
+ * работает система SP. Если в битве нет ни одного из них, SP не отображается
+ * и навыки со стоимостью SP недоступны.
  *
  * ============================================================================
  * Параметры
@@ -41,6 +42,11 @@
  * @type number
  * @min 0
  * @default 4
+ *
+ * @param Required Actor IDs
+ * @text ID актёров (через запятую)
+ * @desc Список ID персонажей, для которых работает SP. Оставьте пустым, чтобы работало для всех.
+ * @default 8,12,13,16
  *
  * @param SP Layout X Offset
  * @text Смещение плашки SP по X
@@ -99,6 +105,26 @@
     var spFontSize = Number(parameters['SP Font Size'] || 28);
     var costXOffset = Number(parameters['Cost X Offset'] || 0);
     var spCostXOffset = Number(parameters['SP Cost X Offset'] || 2);
+    var requiredActorIdsStr = parameters['Required Actor IDs'] || '8,12,13,16';
+    var requiredActorIds = requiredActorIdsStr.split(',').map(function(id) {
+        return parseInt(id.trim());
+    }).filter(function(id) {
+        return !isNaN(id) && id > 0;
+    });
+
+    //=========================================================================
+    // Проверка, есть ли в текущей битве хотя бы один нужный актёр
+    //=========================================================================
+    function isSPAvailable() {
+        if (requiredActorIds.length === 0) return true; // если список пуст — доступно всем
+        var members = $gameParty.battleMembers();
+        for (var i = 0; i < members.length; i++) {
+            if (requiredActorIds.contains(members[i].actorId())) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     //=========================================================================
     // Game_Party – храним SP
@@ -157,7 +183,7 @@
     var _mogSP_GameActor_paySkillCost = Game_Actor.prototype.paySkillCost;
     Game_Actor.prototype.paySkillCost = function(skill) {
         _mogSP_GameActor_paySkillCost.call(this, skill);
-        if (skill.spCost > 0) {
+        if (skill.spCost > 0 && isSPAvailable()) {
             $gameParty.gainSp(-skill.spCost);
         }
     };
@@ -168,8 +194,11 @@
     var _mogSP_WindowBattleSkill_isEnabled = Window_BattleSkill.prototype.isEnabled;
     Window_BattleSkill.prototype.isEnabled = function(item) {
         if (!_mogSP_WindowBattleSkill_isEnabled.call(this, item)) return false;
-        if (item && item.spCost > 0 && $gameParty.sp() < item.spCost) {
-            return false;
+        if (item && item.spCost > 0) {
+            // Если нет нужных актёров или не хватает SP — навык недоступен
+            if (!isSPAvailable() || $gameParty.sp() < item.spCost) {
+                return false;
+            }
         }
         return true;
     };
@@ -179,12 +208,11 @@
     //=========================================================================
     var _doubleIconSkills_drawSkillCost = Window_BattleSkill.prototype.drawSkillCost;
     Window_BattleSkill.prototype.drawSkillCost = function(skill, x, y, width) {
-        // Сдвигаем начальную позицию для всех стоимостей
         var baseX = x + costXOffset;
-        // Рисуем AP/EP с учётом общего сдвига
         _doubleIconSkills_drawSkillCost.call(this, skill, baseX, y, width);
 
-        if (skill && skill.spCost > 0) {
+        // Показываем SP только если есть нужные актёры и стоимость > 0
+        if (skill && skill.spCost > 0 && isSPAvailable()) {
             var iconSize = width;
             var textY = y + iconSize + 8;
             var actor = this._actor;
@@ -195,7 +223,6 @@
             }
             var spText = skill.spCost + ' SP';
             var textHeight = 24;
-            // К общему сдвигу добавляем дополнительный сдвиг SP
             var drawX = baseX + spCostXOffset;
             this.changeTextColor(this.textColor(30));
             this.contents.drawText(spText, drawX, textY, iconSize, textHeight, 'center');
@@ -204,7 +231,7 @@
     };
 
     //=========================================================================
-    // Scene_Battle – создание и обновление плашки SP
+    // Scene_Battle – создание и обновление плашки SP (только для нужных актёров)
     //=========================================================================
     var _mogSP_SceneBattle_createSpriteset = Scene_Battle.prototype.createSpriteset;
     Scene_Battle.prototype.createSpriteset = function() {
@@ -241,7 +268,8 @@
         var skillWindow = this._skillWindow;
         var visible = false;
 
-        if (skillWindow && skillWindow.visible && skillWindow.isOpenAndActive()) {
+        // Плашка видна только если есть нужные актёры и окно навыков активно
+        if (skillWindow && skillWindow.visible && skillWindow.isOpenAndActive() && isSPAvailable()) {
             visible = true;
         }
 
