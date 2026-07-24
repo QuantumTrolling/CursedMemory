@@ -43,9 +43,16 @@
  *    <MAT Bonus from Allies Missing HP: 5%>
  *    // +5% от общей недостающей HP живых членов отряда к маг. атаке владельца
  *
+ * 9. Бонус ко ВСЕМ параметрам от параметров другого актёра:
+ *    <ALLSTAT Bonus from Actor: 3, 50%>
+ *    // +50% от соответствующего параметра актёра 3 к каждому параметру владельца
+ *    <ALLSTAT Bonus from Actor: 3, 50%, ALLSTAT>
+ *    // (аналогично, с явным указанием ALLSTAT)
+ *
  * ============================================================================
  * Источники:
- * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield
+ * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield,
+ * ALLSTAT (для целого набора параметров)
  * (процентные версии: Current HP%, Missing HP%)
  * ============================================================================
  */
@@ -254,8 +261,8 @@
                     _Game_BattlerBase_param.call(actor, PARAM_MAP[target]);
                 bonusFlat += Math.floor(sourceValue * percent);
             }
-			
-			// НОВЫЙ ТЕГ: <TARGET Bonus from SOURCE Full HP: X%>
+
+            // <TARGET Bonus from SOURCE Full HP: X%>
             const regexSelfStatFullHP =
                 /<(\w+)\s+BONUS\s+FROM\s+(\w+)\s+FULL\s+HP\s*:\s*(-?\d+\.?\d*)%\s*>/gi;
             let matchSelfFullHP;
@@ -271,6 +278,24 @@
                 const sourceValue = _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
                 bonusFlat += Math.floor(sourceValue * percent);
             }
+
+            // ===== НОВЫЙ ТЕГ: <ALLSTAT Bonus from Actor: ID, X%> =====
+            // Применяет процент от каждого параметра актёра ID к такому же параметру цели
+            const regexAllstatActor =
+                /<ALLSTAT\s+BONUS\s+FROM\s+ACTOR\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)%\s*(?:,\s*ALLSTAT\s*)?>/gi;
+            let matchAllstat;
+            while ((matchAllstat = regexAllstatActor.exec(note)) !== null) {
+                const actorId = Number(matchAllstat[1]);
+                const percent = Number(matchAllstat[2]) / 100;
+
+                const actor = $gameActors.actor(actorId);
+                if (!actor) continue;
+
+                // Берём значение того же параметра (paramId) у актёра
+                const sourceValue = _Game_BattlerBase_param.call(actor, paramId);
+                bonusFlat += Math.floor(sourceValue * percent);
+            }
+            // ===========================================================
         }
 
         return (
@@ -303,15 +328,15 @@
             }
             return (this.mhp || 0) - (this.hp || 0);
         }
-		
-		// Добавить в getSourceValue, после блока MISSING HP
-		if (source === "CURRENT MP") {
-			if (isPercent) {
-				const mmp = this.mmp || 1;
-				return (this.mp || 0) / mmp * 100;   // 0..100
-			}
-			return this.mp || 0;
-		}
+
+        // Добавить в getSourceValue, после блока MISSING HP
+        if (source === "CURRENT MP") {
+            if (isPercent) {
+                const mmp = this.mmp || 1;
+                return (this.mp || 0) / mmp * 100;   // 0..100
+            }
+            return this.mp || 0;
+        }
 
         // Shield / Current Shield
         if (source === "CURRENT SHIELD" || source === "SHIELD") {
