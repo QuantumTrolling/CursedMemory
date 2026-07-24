@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v1.10 CTB Vertical Turn Order (With Future Clone Preview) - Only for Actors
+ * @plugindesc v1.13 CTB Vertical Turn Order (With Future Clone Preview) - Only for Actors
  * @author You
  *
  * @param HorizontalAlign
@@ -357,6 +357,7 @@ Window_CTBClone.prototype.constructor = Window_CTBClone;
 Window_CTBClone.prototype.initialize = function() {
     const dummy = { _battler: null };
     Window_CTBIcon.prototype.initialize.call(this, dummy);
+    this._isClone = true;       // ← ФЛАГ, ЧТОБЫ НЕ УДАЛЯТЬ КЛОН
     this.opacity = 0;
     this.contentsOpacity = 160;
 };
@@ -475,6 +476,7 @@ Game_Battler.prototype.endTurnAllCTB = function() {
 const _Scene_Battle_update = Scene_Battle.prototype.update;
 Scene_Battle.prototype.update = function() {
     _Scene_Battle_update.call(this);
+
     const actor = BattleManager.actor();
     if (BattleManager.isInputting() && actor) {
         showCloneForActor(actor);
