@@ -69,7 +69,9 @@ Battle_Hud.prototype.getStateDataList = function() {
 var _mog_bhud_create_states = Battle_Hud.prototype.create_states;
 Battle_Hud.prototype.create_states = function() {
     _mog_bhud_create_states.call(this);
-    if (this._state_icon && !this._stateTurnText) {
+    if (this._state_icon) {
+    if (!this._stateTurnText || this._stateTurnText.bitmap._destroyed) {
+        if (this._stateTurnText) this._state_icon.removeChild(this._stateTurnText);
         this._stateTurnText = new Sprite(new Bitmap(32, 32));
         this._stateTurnText.bitmap.fontSize = fontSize;
         this._stateTurnText.bitmap.textColor = '#ffffff';
@@ -79,6 +81,7 @@ Battle_Hud.prototype.create_states = function() {
         this._stateTurnText.y = textOffsetY;
         this._state_icon.addChild(this._stateTurnText);
     }
+}
 };
 
 var _mog_bhud_refresh_states = Battle_Hud.prototype.refresh_states;
