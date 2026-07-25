@@ -72,7 +72,7 @@ var $plugins =
 {"name":"text_box_v2","status":true,"description":"","parameters":{}},
 {"name":"text_box_v2Addon","status":true,"description":"Расширение окна помощи: колонки (\\col[N]) и выравнивание текста.","parameters":{"textAlign":"left"}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
-{"name":"Cv2_DeathCommonEvent","status":false,"description":"[v1.2.0] Calls a Common Event on character death.","parameters":{"DCE Fallthrough":"false","All Ally Dead DCE":"0","All Enemy Dead DCE":"0","Any Ally DCE":"79","Any Enemy DCE":"0"}},
+{"name":"Cv2_DeathCommonEvent","status":true,"description":"[v1.2.0] Calls a Common Event on character death.","parameters":{"DCE Fallthrough":"false","All Ally Dead DCE":"0","All Enemy Dead DCE":"0","Any Ally DCE":"79","Any Enemy DCE":"0"}},
 {"name":"PKD_VPlayer","status":true,"description":"(v.1.3)[BASIC] Extended WEBM Video Player","parameters":{}},
 {"name":"YKNR_MessageKeyWord","status":true,"description":"You can register keywords that you want to use with- \r\n（\\KW[***]） control character","parameters":{"KeyWordList":"[\"{\\\"Key\\\":\\\"actor1\\\",\\\"Word\\\":\\\"\\\\\\\\C[1]\\\\\\\\N[1]\\\\\\\\C[0]\\\"}\",\"{\\\"Key\\\":\\\"actor2\\\",\\\"Word\\\":\\\"\\\\\\\\C[1]\\\\\\\\N[2]\\\\\\\\C[0]\\\"}\",\"{\\\"Key\\\":\\\"actor3\\\",\\\"Word\\\":\\\"\\\\\\\\C[1]\\\\\\\\N[3]\\\\\\\\C[0]\\\"}\",\"{\\\"Key\\\":\\\"actor4\\\",\\\"Word\\\":\\\"\\\\\\\\C[1]\\\\\\\\N[4]\\\\\\\\C[0]\\\"}\",\"{\\\"Key\\\":\\\"leader\\\",\\\"Word\\\":\\\"\\\\\\\\C[1]\\\\\\\\P[1]\\\\\\\\C[0]\\\"}\"]"}},
 {"name":"BackgroundImage","status":true,"description":"","parameters":{}},
