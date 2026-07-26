@@ -5,6 +5,7 @@
  * License: Creative Commons 4.0 Attribution, Share Alike, Non-Commercial
  *
  * Объединённая версия PKD_VPlayer v1.3 + мод восстановления и защиты от зависаний (Midnight Crew)
+ * Минимальный фикс: блокировка повторного ReplaceVAnimSmooth для одного ID.
  */
 
 // * CHANGELOG (оригинальный) ===================
@@ -1896,10 +1897,22 @@ VWSprite = class VWSprite extends Sprite {
     }
 
     //=============================================================================
-    // Улучшенный ReplaceVAnimSmooth с защитой от зависаний
+    // Улучшенный ReplaceVAnimSmooth с минимальной защитой от повторных вызовов
     //=============================================================================
 
+    // Флаг блокировки, чтобы избежать наложения замен для одного ID
+    if (!window._ReplaceVAnimLock) {
+        window._ReplaceVAnimLock = {};
+    }
+
     window.ReplaceVAnimSmooth = function (oldId, tempId, newName, x = 0, y = 0, isLoop = true) {
+        // Защита от повторного вызова для того же oldId
+        if (window._ReplaceVAnimLock[oldId]) {
+            console.warn(`[ReplaceVAnimSmooth] Замена для ${oldId} уже выполняется, повторный вызов проигнорирован.`);
+            return;
+        }
+        window._ReplaceVAnimLock[oldId] = true;
+
         ShowVAnimOnSpriteset(tempId, newName, x, y, isLoop);
 
         let frame = 0;
@@ -1912,6 +1925,7 @@ VWSprite = class VWSprite extends Sprite {
             const scene = SceneManager._scene;
             if (!scene) {
                 console.error(`[ReplaceVAnimSmooth] Scene lost while waiting for VM: ${tempId}`);
+                delete window._ReplaceVAnimLock[oldId];
                 return;
             }
 
@@ -1927,6 +1941,7 @@ VWSprite = class VWSprite extends Sprite {
                     requestAnimationFrame(checkReady);
                 } else {
                     console.error(`[ReplaceVAnimSmooth] Timeout waiting for VM to exist: ${tempId}`);
+                    delete window._ReplaceVAnimLock[oldId];
                 }
                 return;
             }
@@ -1934,6 +1949,7 @@ VWSprite = class VWSprite extends Sprite {
             // 3. Если VM уничтожена, завершаем
             if (newVM.isDestroyed()) {
                 console.error(`[ReplaceVAnimSmooth] VM ${tempId} was destroyed before loading`);
+                delete window._ReplaceVAnimLock[oldId];
                 return;
             }
 
@@ -1964,6 +1980,7 @@ VWSprite = class VWSprite extends Sprite {
                 }
 
                 console.log(`✅ Replaced animation: [${oldId}] -> ${newName}`);
+                delete window._ReplaceVAnimLock[oldId];
                 return;
             }
 
@@ -1978,6 +1995,7 @@ VWSprite = class VWSprite extends Sprite {
                 console.error(`[ReplaceVAnimSmooth] Timeout waiting for VM to load: ${tempId}`);
                 // Можно принудительно удалить временную VM, чтобы не оставлять мусор
                 try { DeleteVAnim(tempId); } catch (e) {}
+                delete window._ReplaceVAnimLock[oldId];
             }
         };
 
@@ -1994,6 +2012,10 @@ VWSprite = class VWSprite extends Sprite {
         const cache = VAnimRestoreCache();
         if (cache && cache[id]) {
             delete cache[id];
+        }
+        // Снимаем блокировку, если удаляется анимация, для которой шла замена
+        if (window._ReplaceVAnimLock && window._ReplaceVAnimLock[id]) {
+            delete window._ReplaceVAnimLock[id];
         }
     };
 
