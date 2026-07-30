@@ -136,5 +136,6 @@ var $plugins =
 {"name":"CustomAfterActionEffect","status":true,"description":"","parameters":{}},
 {"name":"A_fix_enemy_hud","status":true,"description":"","parameters":{}},
 {"name":"A_fix_notetag_ap_cost","status":true,"description":"v1.0 Позволяет состояниям изменять стоимость MP на фиксированное число.","parameters":{}},
-{"name":"A_sp_mechanic","status":true,"description":"v2.3 SP для партии + плашка + сдвиг всех стоимостей (AP/EP/SP).","parameters":{"Initial SP":"4","Max SP":"4","SP Layout X Offset":"20","SP Layout Y Offset":"-80","SP Text X Offset":"-20","SP Text Y Offset":"5","SP Font Size":"28","Cost X Offset":"5","SP Cost X Offset":"0"}}
+{"name":"A_sp_mechanic","status":true,"description":"v2.3 SP для партии + плашка + сдвиг всех стоимостей (AP/EP/SP).","parameters":{"Initial SP":"4","Max SP":"4","SP Layout X Offset":"20","SP Layout Y Offset":"-80","SP Text X Offset":"-20","SP Text Y Offset":"5","SP Font Size":"28","Cost X Offset":"5","SP Cost X Offset":"0"}},
+{"name":"A_equip_fix","status":true,"description":"v1.0 При экипировке восстанавливает HP/MP до максимума.","parameters":{}}
 ];
