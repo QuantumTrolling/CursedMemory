@@ -137,5 +137,6 @@ var $plugins =
 {"name":"A_fix_enemy_hud","status":true,"description":"","parameters":{}},
 {"name":"A_fix_notetag_ap_cost","status":true,"description":"v1.0 Позволяет состояниям изменять стоимость MP на фиксированное число.","parameters":{}},
 {"name":"A_sp_mechanic","status":true,"description":"v2.3 SP для партии + плашка + сдвиг всех стоимостей (AP/EP/SP).","parameters":{"Initial SP":"4","Max SP":"4","SP Layout X Offset":"20","SP Layout Y Offset":"-80","SP Text X Offset":"-20","SP Text Y Offset":"5","SP Font Size":"28","Cost X Offset":"5","SP Cost X Offset":"0"}},
-{"name":"A_equip_fix","status":true,"description":"v1.0 При экипировке восстанавливает HP/MP до максимума.","parameters":{}}
+{"name":"A_equip_fix","status":true,"description":"v1.0 При экипировке восстанавливает HP/MP до максимума.","parameters":{}},
+{"name":"SceneSave","status":true,"description":"(v1.0) Изменяет сцену сохранения/загрузки.\r\nВертикальные слоты, лица, кнопки сохранить/перезаписать/загрузить.","parameters":{"Title Text":"Save","Title X":"50","Title Y":"20","Title Font Size":"28","Background Image":"Layout","Slot Width":"600","Slot Height":"150","Slot Spacing Y":"10","Playtime X":"200","Playtime Y":"20","Faces X":"30","Faces Y":"70","Faces Spacing":"90","Save Button X":"400","Save Button Y":"80","Overwrite Button X":"300","Overwrite Button Y":"80","Load Button X":"480","Load Button Y":"80","Save Button Text":"Сохранить","Overwrite Button Text":"Перезаписать","Load Button Text":"Загрузить","Button Width":"120","Button Height":"40"}}
 ];
