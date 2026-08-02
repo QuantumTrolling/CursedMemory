@@ -1,6 +1,9 @@
 //=============================================================================
-// Yanfly Engine Plugins - Save Core
+// Yanfly Engine Plugins - Save Core (Autosave Edition)
 // YEP_SaveCore.js
+//=============================================================================
+// Доработанная версия: добавлено автосохранение в слот 1 при выходе в титул,
+// переименование первого слота в "Autosave" и запрет ручного удаления/перезаписи.
 //=============================================================================
 
 var Imported = Imported || {};
@@ -8,13 +11,13 @@ Imported.YEP_SaveCore = true;
 
 var Yanfly = Yanfly || {};
 Yanfly.Save = Yanfly.Save || {};
-Yanfly.Save.version = 1.06;
+Yanfly.Save.version = 1.07; // bumped version
 
 //=============================================================================
  /*:
- * @plugindesc v1.06 Alter the save menu for a more aesthetic layout
+ * @plugindesc v1.07 Alter the save menu for a more aesthetic layout
  * and take control over the file system's rules.
- * @author Yanfly Engine Plugins
+ * @author Yanfly Engine Plugins (modified)
  *
  * @param ---General---
  * @default
@@ -483,6 +486,12 @@ Yanfly.Save.version = 1.06;
  * Changelog
  * ============================================================================
  *
+ * Version 1.07:
+ * - Added autosave feature: slot 1 is automatically saved when returning to
+ *   the title screen (via Game End -> To Title).
+ * - Slot 1 is now labeled "Autosave" and cannot be manually overwritten or
+ *   deleted by the player.
+ *
  * Version 1.06:
  * - Updated for RPG Maker MV version 1.5.0.
  *
@@ -719,16 +728,22 @@ Window_SavefileList.prototype.itemHeight = function() {
     return this.lineHeight();
 };
 
+// --- Изменённый метод: первый слот помечается как "Autosave" ---
 Window_SavefileList.prototype.drawItem = function(index) {
     var id = index + 1;
     var valid = DataManager.isThisGameFile(id);
     var rect = this.itemRect(index);
     this.resetTextColor();
-    //if (this._mode === 'load') this.changePaintOpacity(valid);
     this.changePaintOpacity(valid);
     var icon = valid ? Yanfly.Param.SaveIconSaved : Yanfly.Param.SaveIconEmpty;
     this.drawIcon(icon, rect.x + 2, rect.y + 2);
-    this.drawFileId(id, rect.x + Window_Base._iconWidth + 4, rect.y);
+    if (index === 0) {
+        // Рисуем "Autosave" вместо номера для первого слота
+        this.drawText('Autosave', rect.x + Window_Base._iconWidth + 4, rect.y,
+                      rect.width - (Window_Base._iconWidth + 4), 'left');
+    } else {
+        this.drawFileId(id, rect.x + Window_Base._iconWidth + 4, rect.y);
+    }
 };
 
 Window_SavefileList.prototype.playOkSound = function() {
@@ -767,13 +782,21 @@ Window_SaveAction.prototype.savefileId = function() {
     return SceneManager._scene._listWindow.index() + 1;
 };
 
+// --- Изменённый метод: для первого слота отключаем Save и Delete ---
 Window_SaveAction.prototype.makeCommandList = function() {
     var id = this.savefileId();
     var enabled = DataManager.isThisGameFile(id);
     var valid = DataManager.loadSavefileInfo(id);
+    var saveEnabled = this.isSaveEnabled();
+    var deleteEnabled = enabled;
+    // Запрещаем ручное сохранение и удаление автосейва
+    if (id === 1) {
+        saveEnabled = false;
+        deleteEnabled = false;
+    }
     this.addCommand(this.getCommandName('load'), 'load', valid);
-    this.addCommand(this.getCommandName('save'), 'save', this.isSaveEnabled());
-    this.addCommand(this.getCommandName('delete'), 'delete', enabled);
+    this.addCommand(this.getCommandName('save'), 'save', saveEnabled);
+    this.addCommand(this.getCommandName('delete'), 'delete', deleteEnabled);
 };
 
 Window_SaveAction.prototype.getCommandName = function(type) {
@@ -1345,15 +1368,9 @@ Scene_File.prototype.performActionLoad = function() {
 };
 
 Scene_File.prototype.onLoadSuccess = function() {
-    // Обновляем версию сохранения до версии игры
     $gameSystem._versionId = $dataSystem.versionId;
-
     SoundManager.playLoad();
     this.fadeOutAll();
-
-    // Отключаем принудительный рестарт карты
-    // this.reloadMapIfUpdated();
-
     SceneManager.goto(Scene_Map);
     this._loadSuccess = true;
 };
@@ -1485,6 +1502,21 @@ if (!Yanfly.Util.toGroup) {
         return inVal;
     }
 };
+
+//=============================================================================
+// Autosave Feature
+//=============================================================================
+// При выходе в титульное меню автоматически сохраняем игру в слот 1.
+
+(function() {
+    var _Scene_GameEnd_commandToTitle = Scene_GameEnd.prototype.commandToTitle;
+    Scene_GameEnd.prototype.commandToTitle = function() {
+        // Выполняем автосохранение в первый слот
+        DataManager.saveGame(1);
+        // Затем переходим к оригинальному поведению (переход на титульный экран)
+        _Scene_GameEnd_commandToTitle.call(this);
+    };
+})();
 
 //=============================================================================
 // End of File
