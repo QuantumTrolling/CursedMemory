@@ -1,454 +1,134 @@
 //=============================================================================
-// A_fix_shops.js (сетка, row-major, скролл, контроль строк, SE и попап)
+// CustomSaveLayout.js
 //=============================================================================
+// v3.6 – каждая кнопка как отдельное окно "Купить" из A_fix_shops
+//=============================================================================
+
 /*:
- * @plugindesc Магазин с настраиваемыми колонками и скроллом
- * @author
+ * @plugindesc v3.6 Кнопки Save/Load/Overwrite — отдельные окна с подсветкой.
+ * @author YourName
+ *
+ * @param Save Button Text
+ * @default Save
+ * @param Load Button Text
+ * @default Load
+ * @param Overwrite Button Text
+ * @default Overwrite
+ * @param Confirm Overwrite Text
+ * @default Overwrite this save file?
  *
  * @help
- * - Сетка товаров с заданным количеством колонок (listColumns)
- * - Только кнопка "Купить"
- * - Вертикальный скролл, если товаров больше, чем видимых ячеек
- * - listMaxRows ограничивает количество видимых строк (0 = авто)
- * - Режим заполнения: "row" (рекомендуется) или "column" (без скролла)
- * - Окно описания поддерживает прокрутку (стрелки настраиваются)
- * - Системные стрелки списка товаров двигаются через listScrollArrowX/Y
- * - Добавлено мигание и смещение вверх/вниз на пару пикселей для стрелок
- *
- * ============================
- * ОСНОВНЫЕ НАСТРОЙКИ
- * ============================
- *
- * @param bgDefault
- * @text Фон магазина
- * @default fon_taverna
- *
- * @param traderDefault
- * @text Торговец
- * @default velrand_with_bag
- *
- * @param traderX
- * @text Торговец X
- * @type number
- * @default 480
- *
- * @param traderY
- * @text Торговец Y
- * @type number
- * @default 60
- *
- * @param coinIcon
- * @text Иконка валюты
- * @type number
- * @default 313
- *
- * ============================
- * СПИСОК ТОВАРОВ
- * ============================
- *
- * @param listX
- * @text Список X
- * @type number
- * @default 0
- *
- * @param listY
- * @text Список Y
- * @type number
- * @default 0
- *
- * @param listWidth
- * @text Ширина списка (0 = авто)
- * @type number
- * @default 0
- *
- * @param listHeight
- * @text Высота списка (0 = авто)
- * @type number
- * @default 0
- *
- * @param listColumns
- * @text Количество колонок
- * @type number
- * @default 4
- *
- * @param listMaxRows
- * @text Максимум видимых строк (0 = авто)
- * @type number
- * @default 0
- *
- * @param listFontSize
- * @text Шрифт цены
- * @type number
- * @default 18
- *
- * @param listScrollArrowX
- * @text Сист. стрелка списка X
- * @type number
- * @default 0
- *
- * @param listScrollArrowY
- * @text Сист. стрелка списка Y
- * @type number
- * @default 0
- *
- * @param listInnerOffsetX
- * @text Смещение сетки внутри окна X
- * @type number
- * @default 0
- *
- * @param listInnerOffsetY
- * @text Смещение сетки внутри окна Y
- * @type number
- * @default 0
- *
- * ============================
- * ОПИСАНИЕ
- * ============================
- *
- * @param descX
- * @text Описание X
- * @type number
- * @default 0
- *
- * @param descY
- * @text Описание Y
- * @type number
- * @default 440
- *
- * @param descWidth
- * @text Ширина описания
- * @type number
- * @default 800
- *
- * @param descHeight
- * @text Высота описания
- * @type number
- * @default 300
- *
- * @param descFontSize
- * @text Размер шрифта описания
- * @type number
- * @default 14
- *
- * @param descLines
- * @text Макс строк описания
- * @type number
- * @default 0
- *
- * @param descScrollArrowX
- * @text Стрелка описания X
- * @type number
- * @default 0
- *
- * @param descScrollArrowY
- * @text Стрелка описания Y
- * @type number
- * @default 0
- *
- * ============================
- * КНОПКА КУПИТЬ
- * ============================
- *
- * @param buyBtnX
- * @text Кнопка X
- * @type number
- * @default 516
- *
- * @param buyBtnY
- * @text Кнопка Y
- * @type number
- * @default 390
- *
- * ============================
- * НАЗВАНИЕ ПРЕДМЕТА
- * ============================
- *
- * @param nameX
- * @text Название X
- * @type number
- * @default 0
- *
- * @param nameY
- * @text Название Y
- * @type number
- * @default 410
- *
- * @param nameWidth
- * @text Ширина названия
- * @type number
- * @default 800
- *
- * @param nameFontSize
- * @text Размер шрифта названия
- * @type number
- * @default 32
- *
- * ============================
- * ПРОЧЕЕ
- * ============================
- *
- * @param goldX
- * @text Золото X
- * @type number
- * @default 0
- *
- * @param goldY
- * @text Золото Y
- * @type number
- * @default 0
- *
- * @param fillMode
- * @text Заполнение: row или column (column без скролла)
- * @type string
- * @default row
- *
- * @param buySe
- * @text SE при покупке
- * @desc Имя файла SE (без расширения), воспроизводимого при успешной покупке. Оставьте пустым для стандартного звука Shop.
- * @default Shop
- *
- * @param windowOpacity
- * @text Непрозрачность окон (0-255)
- * @desc Чем выше, тем темнее фон всех окон. 255 = полностью непрозрачно.
- * @type number
- * @default 255
- *
- * ============================
- * КОМАНДЫ ПЛАГИНА
- * ============================
- * FixShopBG [имя_файла]
- *   Устанавливает фон магазина (без расширения). Если не указан, сбрасывает на стандартный.
- * FixShopTrader [имя_персонажа]
- *   Устанавливает торговца (имя из VW-системы). Если не указан, сбрасывает на стандартного.
- * FixShopTraderPos [X] [Y]
- *   Устанавливает координаты торговца (X и Y). Если значения не указаны или некорректны, сбрасывает на стандартные.
+ * Разместите плагин ниже YEP_SaveCore, MOG_Weather_EX и SaveDisableDuringChoice.
  */
-
-var Imported = Imported || {};
-Imported.A_fix_shops = true;
-
-if (!Imported.YEP_ShopMenuCore) {
-    console.error('A_fix_shops: требуется YEP_ShopMenuCore!');
-}
 
 (function() {
     'use strict';
 
-    var parameters = PluginManager.parameters('A_fix_shops');
-    var params = {
-        bgDefault:       String(parameters['bgDefault'] || 'fon_taverna'),
-        traderDefault:   String(parameters['traderDefault'] || 'velrand_with_bag'),
-        traderX:         Number(parameters['traderX'] || 480),
-        traderY:         Number(parameters['traderY'] || 60),
-        coinIcon:        Number(parameters['coinIcon'] || 313),
-        listX:           Number(parameters['listX'] || 0),
-        listY:           Number(parameters['listY'] || 0),
-        listWidth:       Number(parameters['listWidth'] || 0),
-        listHeight:      Number(parameters['listHeight'] || 0),
-        listColumns:     Number(parameters['listColumns'] || 4),
-        listMaxRows:     Number(parameters['listMaxRows'] || 0),
-        listFontSize:    Number(parameters['listFontSize'] || 18),
-        listScrollArrowX: Number(parameters['listScrollArrowX'] || 0),
-        listScrollArrowY: Number(parameters['listScrollArrowY'] || 0),
-        listInnerOffsetX: Number(parameters['listInnerOffsetX'] || 0),
-        listInnerOffsetY: Number(parameters['listInnerOffsetY'] || 0),
-        descX:           Number(parameters['descX'] || 0),
-        descY:           Number(parameters['descY'] || 440),
-        descHeight:      Number(parameters['descHeight'] || 300),
-        descFontSize:    Number(parameters['descFontSize'] || 14),
-        descLines:       Number(parameters['descLines'] || 0),
-        descWidth:       Number(parameters['descWidth'] || 800),
-        descScrollArrowX: Number(parameters['descScrollArrowX'] || 0),
-        descScrollArrowY: Number(parameters['descScrollArrowY'] || 0),
-        buyBtnX:         Number(parameters['buyBtnX'] || 516),
-        buyBtnY:         Number(parameters['buyBtnY'] || 390),
-        nameX:           Number(parameters['nameX'] || 0),
-        nameY:           Number(parameters['nameY'] || 410),
-        nameWidth:       Number(parameters['nameWidth'] || 800),
-        nameFontSize:    Number(parameters['nameFontSize'] || 32),
-        goldX:           Number(parameters['goldX'] || 0),
-        goldY:           Number(parameters['goldY'] || 0),
-        fillMode:        String(parameters['fillMode'] || 'row').toLowerCase(),
-        buySe:           String(parameters['buySe'] || 'Shop'),
-        windowOpacity:   Number(parameters['windowOpacity'] || 255)
-    };
-
-    var coinIconIndex = params.coinIcon !== 0 ? params.coinIcon : ($dataSystem ? $dataSystem.currencyIcon || 313 : 313);
-
-    // Глобально повышаем непрозрачность всех окон в магазине
-    var _Window_Base_initialize = Window_Base.prototype.initialize;
-    Window_Base.prototype.initialize = function(x, y, width, height) {
-        _Window_Base_initialize.call(this, x, y, width, height);
-        if (SceneManager._scene instanceof Scene_Shop) {
-            this._windowBackOpacity = params.windowOpacity;
-            if (this._refreshBack) this._refreshBack();
-        }
-    };
-
-    // Инициализация переменных сохранения
-    var _DataManager_createGameObjects = DataManager.createGameObjects;
-    DataManager.createGameObjects = function() {
-        _DataManager_createGameObjects.call(this);
-        $gameSystem._shopBG = params.bgDefault;
-        $gameSystem._shopTrader = params.traderDefault;
-        $gameSystem._shopTraderX = params.traderX;
-        $gameSystem._shopTraderY = params.traderY;
-    };
-
-    // Обработка плагинных команд
-    var _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
-    Game_Interpreter.prototype.pluginCommand = function(command, args) {
-        _Game_Interpreter_pluginCommand.call(this, command, args);
-        if (command === 'FixShopBG') {
-            var bgName = args[0] && args[0].trim() ? args[0] : params.bgDefault;
-            $gameSystem._shopBG = bgName;
-        } else if (command === 'FixShopTrader') {
-            var traderName = args[0] && args[0].trim() ? args[0] : params.traderDefault;
-            $gameSystem._shopTrader = traderName;
-        } else if (command === 'FixShopTraderPos') {
-            if (args.length >= 2 && !isNaN(Number(args[0])) && !isNaN(Number(args[1]))) {
-                $gameSystem._shopTraderX = Number(args[0]);
-                $gameSystem._shopTraderY = Number(args[1]);
-            } else {
-                $gameSystem._shopTraderX = params.traderX;
-                $gameSystem._shopTraderY = params.traderY;
+    // === Патч для MOG_Weather_EX ===
+    if (typeof Moghunter !== 'undefined') {
+        var _Spriteset_Base_createUpperLayer = Spriteset_Base.prototype.createUpperLayer;
+        Spriteset_Base.prototype.createUpperLayer = function() {
+            try { _Spriteset_Base_createUpperLayer.call(this); }
+            catch (e) {
+                console.warn("MOG_Weather_EX error suppressed:", e.message);
+                this.createUpperLayerFallback();
             }
-        }
-    };
-
-    //=============================================================================
-    // Window_ShopItemName
-    //=============================================================================
-    function Window_ShopItemName() {
-        this.initialize.apply(this, arguments);
+        };
+        Spriteset_Base.prototype.createUpperLayerFallback = function() {
+            this._upperLayer = new Sprite();
+            this._upperLayer.setFrame(0, 0, Graphics.width, Graphics.height);
+            this.addChild(this._upperLayer);
+            this._weather = new Weather();
+            this._weather.type = 'none';
+            this.addChild(this._weather);
+            this._pictureContainer = new Sprite();
+            this._upperLayer.addChild(this._pictureContainer);
+            this._fogs = [];
+            this.createFlashSprite();
+            this.createTimerSprite();
+        };
     }
-    Window_ShopItemName.prototype = Object.create(Window_Base.prototype);
-    Window_ShopItemName.prototype.constructor = Window_ShopItemName;
 
-    Window_ShopItemName.prototype.initialize = function() {
-        var height = this.fittingHeight(1);
-        Window_Base.prototype.initialize.call(this,
-            params.nameX, params.nameY, params.nameWidth, height);
-        this._item = null;
-        this.refresh();
-    };
+    var params = PluginManager.parameters('CustomSaveLayout');
+    var SAVE_TEXT   = String(params['Save Button Text'] || 'Save');
+    var LOAD_TEXT   = String(params['Load Button Text'] || 'Load');
+    var OVERWRITE_TEXT = String(params['Overwrite Button Text'] || 'Overwrite');
+    var CONFIRM_OVERWRITE = String(params['Confirm Overwrite Text'] || 'Overwrite this save file?');
 
-    Window_ShopItemName.prototype.setItem = function(item) {
-        if (this._item === item) return;
-        this._item = item;
-        this.refresh();
-    };
+    DataManager.maxSavefiles = function() { return 3; };
 
-    Window_ShopItemName.prototype.refresh = function() {
-        this.contents.clear();
-        if (this._item) {
-            this.resetFontSettings();
-            this.contents.fontSize = params.nameFontSize;
-            this.changeTextColor(this.normalColor());
-            this.drawText(this._item.name, this.textPadding(), 0,
-                         this.contents.width - this.textPadding() * 2, 'left');
-        }
-    };
-
-    //=============================================================================
-    // Window_ShopDesc
-    //=============================================================================
-    function Window_ShopDesc() {
-        this.initialize.apply(this, arguments);
+    if (!ImageManager.loadMenusFaces2) {
+        ImageManager.loadMenusFaces2 = function(filename) {
+            return this.loadBitmap('img/menus/faces/faces2/', filename, 0, true);
+        };
     }
-    Window_ShopDesc.prototype = Object.create(Window_Base.prototype);
-    Window_ShopDesc.prototype.constructor = Window_ShopDesc;
 
-    Window_ShopDesc.prototype.initialize = function(x, y, width, height) {
-        Window_Base.prototype.initialize.call(this, x, y, width, height);
-        this._item = null;
-        this._scrollY = 0;
-        this._maxScrollY = 0;
-        this.refresh();
+    function isChoiceActive() {
+        return $gameMessage && $gameMessage.isChoice();
+    }
+
+    var _SceneManager_push = SceneManager.push;
+    SceneManager.push = function(sceneClass) {
+        if ((sceneClass === Scene_Save || sceneClass === Scene_CustomSave) && isChoiceActive()) {
+            SoundManager.playBuzzer();
+            return;
+        }
+        _SceneManager_push.call(this, sceneClass);
     };
 
-    Window_ShopDesc.prototype.standardFontSize = function() {
-        return params.descFontSize;
-    };
-
-    Window_ShopDesc.prototype.setItem = function(item) {
-        if (this._item === item) return;
-        this._item = item;
-        this._scrollY = 0;
-        this.refresh();
-    };
-
-    Window_ShopDesc.prototype.maxVisibleLines = function() {
-        return Math.floor(this.contentsHeight() / this.lineHeight());
-    };
-
-    Window_ShopDesc.prototype.refresh = function() {
-        this.contents.clear();
-        if (this._item) {
-            var desc = this._item.description.replace(/\\n/g, '\n');
-            var allLines = desc.split('\n');
-            if (params.descLines > 0) {
-                allLines = allLines.slice(0, params.descLines);
-            }
-            var visibleLines = this.maxVisibleLines();
-            this._maxScrollY = Math.max(0, allLines.length - visibleLines);
-            this._scrollY = Math.min(this._scrollY, this._maxScrollY);
-
-            var startLine = this._scrollY;
-            var endLine = Math.min(startLine + visibleLines, allLines.length);
-            var shownLines = allLines.slice(startLine, endLine);
-            this.resetFontSettings();
-            this.drawTextEx(shownLines.join('\n'), this.textPadding(), 0);
+    function getSlotButtons(savefileId, mode) {
+        var hasSave = !!DataManager.loadSavefileInfo(savefileId);
+        var btns = [];
+        var saveDisabled = isChoiceActive();
+        if (savefileId === 1) {
+            btns.push({ text: LOAD_TEXT, action: 'load', enabled: hasSave });
         } else {
-            this._maxScrollY = 0;
-            this._scrollY = 0;
+            if (mode === 'save') {
+                if (hasSave) {
+                    btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
+                    btns.push({ text: OVERWRITE_TEXT, action: 'overwrite', enabled: !saveDisabled });
+                } else {
+                    btns.push({ text: SAVE_TEXT, action: 'save', enabled: !saveDisabled });
+                }
+            } else if (mode === 'load') {
+                if (hasSave) btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
+            }
         }
-    };
+        return btns;
+    }
 
-    Window_ShopDesc.prototype.scrollDown = function() {
-        if (this._scrollY < this._maxScrollY) {
-            this._scrollY++;
-            this.refresh();
-        }
-    };
+    //-----------------------------------------------------------------------------
+    // Window_SaveSingleButton (одна кнопка, как Window_ShopBuyAction)
+    //-----------------------------------------------------------------------------
 
-    Window_ShopDesc.prototype.scrollUp = function() {
-        if (this._scrollY > 0) {
-            this._scrollY--;
-            this.refresh();
-        }
-    };
-
-    Window_ShopDesc.prototype.isScrollable = function() {
-        return this._maxScrollY > 0;
-    };
-
-    //=============================================================================
-    // Window_ShopBuyAction
-    //=============================================================================
-    function Window_ShopBuyAction() {
+    function Window_SaveSingleButton() {
         this.initialize.apply(this, arguments);
     }
-    Window_ShopBuyAction.prototype = Object.create(Window_Base.prototype);
-    Window_ShopBuyAction.prototype.constructor = Window_ShopBuyAction;
+    Window_SaveSingleButton.prototype = Object.create(Window_Base.prototype);
+    Window_SaveSingleButton.prototype.constructor = Window_SaveSingleButton;
 
-    Window_ShopBuyAction.prototype.initialize = function(x, y, width) {
-        Window_Base.prototype.initialize.call(this,
-            params.buyBtnX, params.buyBtnY, width, this.fittingHeight(1) + 1);
-        this._enabled = false;
+    Window_SaveSingleButton.prototype.initialize = function(x, y, w, h) {
+        Window_Base.prototype.initialize.call(this, x, y, w, h);
+        this.padding = 4;
+        this._text = '';
+        this._enabled = true;
         this._hover = false;
         this._anim = 0;
+        this._action = null;
+        this._actionCallback = null;
+        this.deactivate();
         this.refresh();
     };
 
-    Window_ShopBuyAction.prototype.setEnabled = function(enabled) {
-        if (this._enabled !== enabled) {
-            this._enabled = enabled;
-            this.refresh();
-        }
+    Window_SaveSingleButton.prototype.setButton = function(text, action, enabled, callback) {
+        this._text = text;
+        this._action = action;
+        this._enabled = enabled;
+        this._actionCallback = callback;
+        this.refresh();
     };
 
-    Window_ShopBuyAction.prototype.refresh = function() {
+    Window_SaveSingleButton.prototype.refresh = function() {
         this.contents.clear();
         var rect = new Rectangle(0, 0, this.contents.width, this.contents.height);
         var colorIndex = this._enabled ? 0 : 16;
@@ -458,668 +138,389 @@ if (!Imported.YEP_ShopMenuCore) {
             this.contents.fillRect(rect.x, rect.y, rect.width, rect.height,
                 'rgba(255, 255, 255, ' + alpha + ')');
         }
-        this.drawText("Купить", rect.x, rect.y, rect.width, 'center');
+        this.drawText(this._text, rect.x, rect.y, rect.width, 'center');
     };
 
-    Window_ShopBuyAction.prototype.update = function() {
+    Window_SaveSingleButton.prototype.update = function() {
         Window_Base.prototype.update.call(this);
+        if (!this.visible) return;
         var x = this.canvasToLocalX(TouchInput.x);
         var y = this.canvasToLocalY(TouchInput.y);
         this._hover = (x >= 0 && y >= 0 && x < this.width && y < this.height);
         this._anim += 0.05;
         this.refresh();
         if (TouchInput.isTriggered() && this._enabled && this._hover) {
-            SceneManager._scene.commandBuyAction();
+            if (this._actionCallback && this._action) {
+                this._actionCallback(this._action);
+            }
         }
     };
 
-    //=============================================================================
-    // Window_ShopBuyCustom
-    //=============================================================================
-    function Window_ShopBuyCustom() {
+    //-----------------------------------------------------------------------------
+    // Window_CustomSaveList (без изменений)
+    //-----------------------------------------------------------------------------
+
+    function Window_CustomSaveList() {
         this.initialize.apply(this, arguments);
     }
-    Window_ShopBuyCustom.prototype = Object.create(Window_ShopBuy.prototype);
-    Window_ShopBuyCustom.prototype.constructor = Window_ShopBuyCustom;
+    Window_CustomSaveList.prototype = Object.create(Window_Selectable.prototype);
+    Window_CustomSaveList.prototype.constructor = Window_CustomSaveList;
 
-    Window_ShopBuyCustom.prototype.initialize = function(x, y, height, goods) {
-        Window_ShopBuy.prototype.initialize.call(this, x, y, height, goods);
-        this._colMax = params.listColumns;
-        this._hoverIndex = -1;
-        this._hoverAnim = 0;
-        this._itemSelected = false;
-        this._customDescWindow = null;
-        this._customNameWindow = null;
-        this._buyActionWindow = null;
-        this._arrowAnimPhase = 0;
-
-        // Отключаем системное обновление стрелок, чтобы они не смещались автоматически
-        this._updateArrows = function() {};
-
-        // Скрываем стандартные спрайты, чтобы они не мелькали в начальной позиции
-        if (this._upArrowSprite) {
-            this._upArrowSprite.visible = false;
-            this._upArrowSprite.bitmap = null;
-        }
-        if (this._downArrowSprite) {
-            this._downArrowSprite.visible = false;
-            this._downArrowSprite.bitmap = null;
-        }
+    Window_CustomSaveList.prototype.initialize = function(x, y, width, mode) {
+        this._mode = mode;
+        this._saveCache = {};
+        this._facesReady = [false, false, false];
+        var slotH = this.lineHeight() * 3 + 8;
+        var height = slotH * 3 + this.standardPadding() * 2;
+        Window_Selectable.prototype.initialize.call(this, x, y, width, height);
+        this.refresh();
+        this.select(0);
     };
 
-    // Нейтрализация SDJB_MouseHover
-    Window_ShopBuyCustom.prototype.MoveMouseCursor = function() {};
+    Window_CustomSaveList.prototype.maxItems = function() { return 3; };
+    Window_CustomSaveList.prototype.itemHeight = function() { return this.lineHeight() * 3 + 8; };
+    Window_CustomSaveList.prototype.savefileId = function() { return this.index() + 1; };
 
-    Window_ShopBuyCustom.prototype.item = function() {
-        var index = this.index();
-        return (index >= 0 && index < this._data.length) ? this._data[index] : null;
+    Window_CustomSaveList.prototype.loadSaveContent = function(id) {
+        if (this._saveCache[id]) return this._saveCache[id];
+        var raw = StorageManager.load(id);
+        if (!raw) return null;
+        try { var data = JsonEx.parse(raw); this._saveCache[id] = data; return data; }
+        catch (e) { return null; }
     };
 
-    Window_ShopBuyCustom.prototype.callUpdateHelp = function() {
-        Window_ShopBuy.prototype.updateHelp.call(this);
-        var item = this.item();
-        if (item) {
-            if (this._customDescWindow) { this._customDescWindow.visible = true; this._customDescWindow.setItem(item); }
-            if (this._customNameWindow) { this._customNameWindow.visible = true; this._customNameWindow.setItem(item); }
-        } else {
-            if (this._customDescWindow) this._customDescWindow.visible = false;
-            if (this._customNameWindow) this._customNameWindow.visible = false;
-        }
-        if (SceneManager._scene) SceneManager._scene.updateActionEnabled();
+    Window_CustomSaveList.prototype.clearSaveCache = function(id) {
+        delete this._saveCache[id];
+        this._facesReady[id - 1] = false;
     };
 
-    Window_ShopBuyCustom.prototype.isTouchEnabled = function() { return true; };
-
-    Window_ShopBuyCustom.prototype.select = function(index) {
-        if (this._itemSelected && index !== this.index()) return;
-        Window_ShopBuy.prototype.select.call(this, index);
-        if (index !== -1) {
-            this.callUpdateHelp();
-        }
-    };
-
-    // Фон окна: тёмный полупрозрачный, как у ячеек товаров
-    Window_ShopBuyCustom.prototype._refreshBack = function() {
-        var w = this.width;
-        var h = this.height;
-        var bitmap = new Bitmap(w, h);
-        bitmap.fillAll('rgba(0, 0, 0, 0.7)');
-        this._windowBackSprite.bitmap = bitmap;
-    };
-
-    Window_ShopBuyCustom.prototype.isCursorVisible = function() { return false; };
-
-    Window_ShopBuyCustom.prototype.windowWidth = function() { return params.listWidth; };
-    Window_ShopBuyCustom.prototype.maxCols = function() { return params.listColumns; };
-    Window_ShopBuy.prototype.maxCols = function() { return params.listColumns; };
-
-    Window_ShopBuyCustom.prototype.spacing = function() { return 0; };
-    Window_ShopBuy.prototype.spacing = function() { return 0; };
-    Window_ShopBuy.prototype.colSpacing = function() { return 0; };
-
-    Window_ShopBuyCustom.prototype.numVisibleRows = function() {
-        var contentHeight = this.contentsHeight();
-        var autoRows = Math.floor(contentHeight / this.itemHeight());
-        if (params.listMaxRows > 0) {
-            return Math.min(params.listMaxRows, autoRows);
-        }
-        return autoRows;
-    };
-
-    Window_ShopBuyCustom.prototype.lineHeight = function() {
-        return Window_Base._iconHeight * 2 + Window_Base.prototype.lineHeight.call(this) + 24;
-    };
-    Window_ShopBuyCustom.prototype.itemHeight = function() { return this.lineHeight(); };
-
-    Window_ShopBuyCustom.prototype.itemWidth = function() {
-        var cols = this.maxCols();
-        var totalWidth = this.contents.width - this.textPadding() * 2;
-        return Math.floor(totalWidth / cols);
-    };
-
-    Window_ShopBuyCustom.prototype.rows = function() {
-        return Math.ceil(this.maxItems() / this.maxCols());
-    };
-
-    Window_ShopBuyCustom.prototype.maxItems = function() {
-        return this._data ? this._data.length : 0;
-    };
-
-    Window_ShopBuyCustom.prototype.maxPageItems = function() {
-        return this.maxCols() * this.numVisibleRows();
-    };
-
-    Window_ShopBuyCustom.prototype.maxTopRow = function() {
-        return Math.max(0, this.rows() - this.numVisibleRows());
-    };
-
-    Window_ShopBuyCustom.prototype.itemRect = function(index) {
-        var rect = new Rectangle();
-        var maxCols = this.maxCols();
-        var w = this.itemWidth();
-        var h = this.itemHeight();
-
-        var offsetX = params.listInnerOffsetX || 0;
-        var offsetY = params.listInnerOffsetY || 0;
-
-        if (params.fillMode === 'column') {
-            var rowsPerScreen = this.numVisibleRows();
-            var col = Math.floor(index / rowsPerScreen);
-            var row = index % rowsPerScreen;
-            rect.x = col * w + offsetX;
-            rect.y = row * h + offsetY;
-            rect.width = w;
-            rect.height = h;
-            return rect;
-        }
-
-        var col = index % maxCols;
-        var row = Math.floor(index / maxCols);
-        rect.x = col * w + offsetX;
-        rect.y = (row - this.topRow()) * h + offsetY;
-        rect.width = w;
-        rect.height = h;
-        return rect;
-    };
-
-    Window_ShopBuyCustom.prototype.isHorizontal = function() {
-        return false;
-    };
-
-    Window_ShopBuyCustom.prototype.drawItem = function(index) {
-        var item = (index < this._data.length) ? this._data[index] : null;
+    Window_CustomSaveList.prototype.drawItem = function(index) {
+        var id = index + 1;
         var rect = this.itemRect(index);
-        var x = rect.x, y = rect.y, w = rect.width, h = this.itemHeight();
-        var cx = x + w / 2;
+        this.resetTextColor();
+        var info = DataManager.loadSavefileInfo(id);
+        var hasSave = !!info;
 
-        if (y + h < 0 || y > this.contents.height) return;
+        var iconIndex = hasSave ? 231 : 230;
+        var iconY = rect.y + (rect.height - Window_Base._iconHeight) / 2;
+        this.drawIcon(iconIndex, rect.x + 4, iconY);
 
-        this.contents.fillRect(x, y, w, h, 'rgba(0, 0, 0, 0.7)');
-        this.drawSkinFrame(x, y, w, h);
-        if (!item) return;
-
-        var isHover = (!this._itemSelected && index === this._hoverIndex);
-        var isSelected = (this._itemSelected && index === this.index());
-        if (isHover || isSelected) {
-            var alpha = 0.15 + Math.sin(this._hoverAnim) * 0.1;
-            this.contents.fillRect(x, y, w, h, 'rgba(255,255,255,' + alpha + ')');
+        var faceAreaWidth = 210;
+        var faceAreaX = rect.x + rect.width - 10 - faceAreaWidth;
+        var textX = rect.x + Window_Base._iconWidth + 12;
+        var textWidth = faceAreaX - textX - 10;
+        var label = (id === 1) ? 'Autosave' : 'Slot ' + id;
+        if (hasSave) {
+            this.drawText(label, textX, rect.y + 2, textWidth, 'left');
+            this.drawText(info.playtime || '', textX, rect.y + this.lineHeight() + 2, textWidth, 'left');
+        } else {
+            this.drawText(label + '  (Empty)', textX, rect.y + rect.height / 2 - this.lineHeight() / 2, textWidth, 'left');
         }
 
-        this.resetFontSettings();
-        var iconWh = Math.min(64, w * 0.6);
-        var bitmap = ImageManager.loadSystem('IconSet');
-        var sx = item.iconIndex % 16 * Window_Base._iconWidth;
-        var sy = Math.floor(item.iconIndex / 16) * Window_Base._iconHeight;
-        var dx = cx - iconWh / 2, dy = y + 12;
-
-        var ctx = this.contents.context;
-        var smooth = ctx.imageSmoothingEnabled;
-        ctx.imageSmoothingEnabled = false;
-        this.contents.blt(bitmap, sx, sy, Window_Base._iconWidth, Window_Base._iconHeight, dx, dy, iconWh, iconWh);
-        ctx.imageSmoothingEnabled = smooth;
-
-        var price = Yanfly.Util.toGroup(this.price(item));
-        this.contents.fontSize = params.listFontSize || (Imported.YEP_CoreEngine ? Yanfly.Param.GoldFontSize : 18);
-        var textW = this.textWidth(price);
-        var iconW = (coinIconIndex > 0) ? Window_Base._iconWidth + 4 : 0;
-        var totalW = textW + iconW + 24;
-        var boxW = Math.min(totalW, w - 10) + 6;
-        var boxH = 49;
-        var boxX = cx - boxW / 2;
-        var boxY = y + h - boxH;
-
-        var canAfford = $gameParty.gold() >= this.price(item);
-        this.changeTextColor(canAfford ? this.normalColor() : this.textColor(8));
-        this.drawText(price, boxX + 24, boxY - 39, boxW - (coinIconIndex > 0 ? 24 : 0), boxH, 'right');
-        if (coinIconIndex > 0) {
-            var iconX = boxX + boxW - Window_Base._iconWidth - 7;
-            var iconY = boxY + (boxH - Window_Base._iconHeight) / 2;
-            this.drawIcon(coinIconIndex, iconX, iconY);
-        }
-        this.resetFontSettings();
+        if (hasSave) this.drawFacesForSlot(index, rect, faceAreaX, faceAreaWidth);
     };
 
-    Window_ShopBuyCustom.prototype.drawSkinFrame = function(x, y, w, h) {
-        var skin = this.windowskin;
-        var margin = 24, p = 96, q = 96;
-        this.contents.blt(skin, p, 0, margin, margin, x, y);
-        this.contents.blt(skin, p + q - margin, 0, margin, margin, x + w - margin, y);
-        this.contents.blt(skin, p, q - margin, margin, margin, x, y + h - margin);
-        this.contents.blt(skin, p + q - margin, q - margin, margin, margin, x + w - margin, y + h - margin);
-        this.contents.blt(skin, p + margin, 0, q - margin * 2, margin, x + margin, y, w - margin * 2, margin);
-        this.contents.blt(skin, p + margin, q - margin, q - margin * 2, margin, x + margin, y + h - margin, w - margin * 2, margin);
-        this.contents.blt(skin, p, margin, margin, q - margin * 2, x, y + margin, margin, h - margin * 2);
-        this.contents.blt(skin, p + q - margin, margin, margin, q - margin * 2, x + w - margin, y + margin, margin, h - margin * 2);
+    Window_CustomSaveList.prototype.drawFacesForSlot = function(index, rect, areaX, areaWidth) {
+        var content = this.loadSaveContent(index + 1);
+        if (!content || !content.party || !content.party._actors) return;
+        var actorIds = content.party._actors;
+        if (actorIds.length === 0) return;
+        var faceW = 48, faceH = 48, gap = 4;
+        var totalWidth = actorIds.length * faceW + (actorIds.length - 1) * gap;
+        var startX = areaX + (areaWidth - totalWidth) / 2;
+        var faceY = rect.y + (this.lineHeight() * 2 + 8 - faceH) / 2;
+        var allReady = true;
+        for (var i = 0; i < actorIds.length; i++) {
+            var bmp = ImageManager.loadMenusFaces2('Actor_' + actorIds[i]);
+            if (bmp.isReady()) {
+                var scale = Math.min(faceW / bmp.width, faceH / bmp.height);
+                var dw = bmp.width * scale, dh = bmp.height * scale;
+                var dx = startX + i * (faceW + gap) + (faceW - dw) / 2;
+                var dy = faceY + (faceH - dh) / 2;
+                this.contents.blt(bmp, 0, 0, bmp.width, bmp.height, dx, dy, dw, dh);
+            } else allReady = false;
+        }
+        this._facesReady[index] = allReady;
     };
 
-    Window_ShopBuyCustom.prototype.update = function() {
-        Window_ShopBuy.prototype.update.call(this);
-
-        var pad = this.padding || this.standardPadding();
-        var x = this.canvasToLocalX(TouchInput.x) - pad;
-        var y = this.canvasToLocalY(TouchInput.y) - pad;
-        var newHover = -1;
-
-        var top = this.topRow();
-        var maxCols = this.maxCols();
-        var visibleItems = this.maxPageItems();
-
-        for (var i = 0; i < visibleItems; i++) {
-            var index = top * maxCols + i;
-            if (index >= this.maxItems()) break;
-
-            var rect = this.itemRect(index);
-            if (x >= rect.x && x < rect.x + rect.width &&
-                y >= rect.y && y < rect.y + rect.height) {
-                newHover = index;
-                break;
+    Window_CustomSaveList.prototype.update = function() {
+        Window_Selectable.prototype.update.call(this);
+        for (var i = 0; i < 3; i++) {
+            if (!this._facesReady[i] && DataManager.loadSavefileInfo(i + 1)) {
+                var content = this.loadSaveContent(i + 1);
+                if (content && content.party && content.party._actors) {
+                    var allReady = true;
+                    var actorIds = content.party._actors;
+                    for (var j = 0; j < actorIds.length; j++) {
+                        if (!ImageManager.loadMenusFaces2('Actor_' + actorIds[j]).isReady()) {
+                            allReady = false; break;
+                        }
+                    }
+                    if (allReady) { this._facesReady[i] = true; this.refresh(); }
+                }
             }
         }
+    };
 
-        if (!this._itemSelected) {
-            if (newHover !== this._hoverIndex) {
-                this._hoverIndex = newHover;
-                var item = (newHover >= 0 && newHover < this._data.length) ? this._data[newHover] : null;
-                if (this._customDescWindow) {
-                    this._customDescWindow.visible = !!item;
-                    this._customDescWindow.setItem(item);
+    Window_CustomSaveList.prototype.processTouch = function() {
+        // Не обрабатываем касания, если мышь над кнопками — они сами обработают
+        if (!this.isOpenAndActive()) return;
+        if (TouchInput.isTriggered() && this.isTouchedInsideFrame()) {
+            var gx = TouchInput.x;
+            var gy = TouchInput.y;
+            var scene = SceneManager._scene;
+            if (scene && scene._buttonGroups) {
+                for (var i = 0; i < scene._buttonGroups.length; i++) {
+                    var group = scene._buttonGroups[i];
+                    if (group) {
+                        for (var j = 0; j < group.length; j++) {
+                            var btn = group[j];
+                            if (btn.visible && btn.x <= gx && gx < btn.x + btn.width &&
+                                btn.y <= gy && gy < btn.y + btn.height) {
+                                return; // кнопка сама обработает
+                            }
+                        }
+                    }
                 }
-                if (this._customNameWindow) {
-                    this._customNameWindow.visible = !!item;
-                    this._customNameWindow.setItem(item);
-                }
-                if (SceneManager._scene) {
-                    SceneManager._scene.updateActionEnabled();
-                }
-                this.refresh();
             }
-            this._hoverAnim += 0.05;
+            var x = this.canvasToLocalX(gx);
+            var y = this.canvasToLocalY(gy);
+            var index = this.hitTest(x, y);
+            if (index >= 0 && this._selectedIndex !== index) {
+                this.select(index);
+                SoundManager.playCursor();
+            }
         }
+    };
 
-        if (TouchInput.isTriggered()) {
-            if (newHover >= 0) {
-                if (this._itemSelected && this.index() === newHover) {
+    Window_CustomSaveList.prototype.processOk = function() {
+        if (this.isCurrentItemEnabled()) {
+            var index = this.index();
+            var scene = SceneManager._scene;
+            if (scene && scene._buttonGroups) {
+                var group = scene._buttonGroups[index];
+                if (group && group.length === 1 && group[0]._enabled) {
+                    if (this._handlers[group[0]._action]) {
+                        this._handlers[group[0]._action]();
+                    }
                     return;
                 }
-                Window_ShopBuy.prototype.select.call(this, newHover);
-                this._itemSelected = true;
-                this.callUpdateHelp();
-                this.refresh();
-            } else if (this._itemSelected) {
-                this._itemSelected = false;
-                this._hoverIndex = -1;
-                this.select(-1);
-                this.refresh();
-                if (this._customDescWindow) this._customDescWindow.hide();
-                if (this._customNameWindow) this._customNameWindow.hide();
-                if (SceneManager._scene) SceneManager._scene.updateActionEnabled();
             }
+            SoundManager.playBuzzer();
         }
-
-        // --- Анимация стандартных стрелок прокрутки ---
-        var canScrollUp = this.topRow() > 0;
-        var canScrollDown = this.topRow() < this.maxTopRow();
-        var phase = this._arrowAnimPhase;
-
-        if (this._upArrowSprite) {
-            this._upArrowSprite.visible = canScrollUp;
-            if (canScrollUp) {
-                this._upArrowSprite.x = params.listScrollArrowX;
-                this._upArrowSprite.y = params.listScrollArrowY + Math.sin(phase * 2) * 2 - 352;
-                this._upArrowSprite.opacity = 128 + Math.sin(phase) * 127;
-            }
-        }
-
-        if (this._downArrowSprite) {
-            this._downArrowSprite.visible = canScrollDown;
-            if (canScrollDown) {
-                this._downArrowSprite.x = params.listScrollArrowX;
-                this._downArrowSprite.y = params.listScrollArrowY + 36 + Math.sin(phase * 2) * 2;
-                this._downArrowSprite.opacity = 128 + Math.sin(phase) * 127;
-            }
-        }
-
-        this._arrowAnimPhase += 0.08;
     };
 
-    Window_ShopBuyCustom.prototype.processTouch = function() {};
-    Window_ShopBuyCustom.prototype.onTouchCancel = function() {};
+    //-----------------------------------------------------------------------------
+    // Scene_CustomSaveBase
+    //-----------------------------------------------------------------------------
 
-    //=============================================================================
-    // Scene_Shop
-    //=============================================================================
-    var _Scene_Shop_create = Scene_Shop.prototype.create;
-    Scene_Shop.prototype.create = function() {
-        this._vwStorage = {};
-        this._popups = [];
-        _Scene_Shop_create.call(this);
+    function Scene_CustomSaveBase() {
+        this.initialize.apply(this, arguments);
+    }
+    Scene_CustomSaveBase.prototype = Object.create(Scene_MenuBase.prototype);
+    Scene_CustomSaveBase.prototype.constructor = Scene_CustomSaveBase;
 
-        this._windowLayer.children.forEach(function(child) {
-            if (child._windowBackOpacity !== undefined) {
-                child._windowBackOpacity = params.windowOpacity;
-                if (child._refreshBack) child._refreshBack();
-            }
-        });
-
-        if (this._statusWindow) { this._statusWindow.hide(); this._statusWindow.visible = false; }
-        if (this._backgroundSprite) this._backgroundSprite.visible = false;
-
-        this.createShopBackground();
-        this.createShopTrader();
-        this.repositionStandardWindows();
-
-        if (this._buyWindow && this._descWindow && this._nameWindow) {
-            this._buyWindow._customDescWindow = this._descWindow;
-            this._buyWindow._customNameWindow = this._nameWindow;
-            this._buyWindow._buyActionWindow = this._buyActionWindow;
-        }
-
-        this._onContextMenu = function(e) {
-            e.preventDefault();
-            this.onCancel();
-        }.bind(this);
-        if (Graphics._canvas) {
-            Graphics._canvas.addEventListener('contextmenu', this._onContextMenu);
-        }
-
-        this.createDescScrollArrows();
-
-        // Финальное принудительное обновление фона для всех окон
-        this._windowLayer.children.forEach(function(child) {
-            if (child._windowBackOpacity !== undefined) {
-                child._windowBackOpacity = params.windowOpacity;
-                if (child._refreshBack) child._refreshBack();
-            }
-        });
+    Scene_CustomSaveBase.prototype.initialize = function() {
+        Scene_MenuBase.prototype.initialize.call(this);
+        this._mode = this.mode();
     };
 
-    var _Scene_Shop_update = Scene_Shop.prototype.update;
-    Scene_Shop.prototype.update = function() {
-        _Scene_Shop_update.call(this);
-        if (this._popups) {
-            for (var i = this._popups.length - 1; i >= 0; i--) {
-                var p = this._popups[i];
-                p.y -= 1;
-                p._life--;
-                p.opacity = Math.max(0, Math.floor(p._life / 60 * 255));
-                if (p._life <= 0) {
-                    this.removeChild(p);
-                    this._popups.splice(i, 1);
-                }
-            }
+    Scene_CustomSaveBase.prototype.create = function() {
+        Scene_MenuBase.prototype.create.call(this);
+        this.createListWindow();
+        this.createButtonWindows();
+    };
+
+    Scene_CustomSaveBase.prototype.createListWindow = function() {
+        var listWidth = 520;
+        var slotH = Window_CustomSaveList.prototype.itemHeight();
+        var listHeight = slotH * 3 + Window_Selectable.prototype.standardPadding() * 2;
+        var x = (Graphics.boxWidth - listWidth) / 2;
+        var y = (Graphics.boxHeight - listHeight) / 2;
+
+        this._listWindow = new Window_CustomSaveList(x, y, listWidth, this._mode);
+        this._listWindow.setHandler('save', this.onActionSave.bind(this));
+        this._listWindow.setHandler('load', this.onActionLoad.bind(this));
+        this._listWindow.setHandler('overwrite', this.onActionOverwrite.bind(this));
+        this._listWindow.setHandler('cancel', this.popScene.bind(this));
+        this.addWindow(this._listWindow);
+        this._listWindow.activate();
+    };
+
+    Scene_CustomSaveBase.prototype.createButtonWindows = function() {
+        // _buttonGroups[slotIndex] = массив Window_SaveSingleButton
+        this._buttonGroups = [];
+        for (var i = 0; i < 3; i++) {
+            this._buttonGroups[i] = [];
         }
-        if (this._descWindow && this._arrowUpDesc && this._arrowDownDesc) {
-            var scrollable = this._descWindow.isScrollable() && this._descWindow.visible;
-            this._arrowUpDesc.visible = scrollable && this._descWindow._scrollY > 0;
-            this._arrowDownDesc.visible = scrollable && this._descWindow._scrollY < this._descWindow._maxScrollY;
-            if (scrollable && TouchInput.isTriggered()) {
-                if (this._arrowUpDesc.visible && this.isSpriteTouched(this._arrowUpDesc)) {
-                    this._descWindow.scrollUp();
-                } else if (this._arrowDownDesc.visible && this.isSpriteTouched(this._arrowDownDesc)) {
-                    this._descWindow.scrollDown();
-                }
+        this.updateButtonWindows();
+    };
+
+    Scene_CustomSaveBase.prototype.updateButtonWindows = function() {
+        var list = this._listWindow;
+        for (var i = 0; i < 3; i++) {
+            var rect = list.itemRect(i);
+            var buttons = getSlotButtons(i + 1, this._mode);
+            var group = this._buttonGroups[i];
+
+            // Удаляем лишние окна, добавляем недостающие
+            while (group.length > buttons.length) {
+                var old = group.pop();
+                this.removeChild(old);
+            }
+            while (group.length < buttons.length) {
+                var newBtn = new Window_SaveSingleButton(0, 0, 1, 1);
+                newBtn.setActionCallback = function(cb) { this._actionCallback = cb; };
+                newBtn._actionCallback = this.onButtonAction.bind(this);
+                this.addWindow(newBtn);
+                group.push(newBtn);
+            }
+
+            // Обновляем текст и размеры каждой кнопки
+            var spacing = 8;
+            var btnHeight = 36 + 8; // высота окна = lineHeight + padding*2
+            var totalWidth = 0;
+            for (var b = 0; b < buttons.length; b++) {
+                var w = Math.max(60, list.textWidth(buttons[b].text) + 16);
+                totalWidth += w;
+            }
+            if (buttons.length > 1) totalWidth += spacing * (buttons.length - 1);
+
+            var slotCenterX = list.x + rect.x + rect.width / 2;
+            var slotBottomY = list.y + rect.y + rect.height - 4;
+            var startX = slotCenterX - totalWidth / 2;
+            var y = slotBottomY - btnHeight;
+
+            var x = startX;
+            for (var b = 0; b < buttons.length; b++) {
+                var btn = buttons[b];
+                var w = Math.max(60, list.textWidth(btn.text) + 16);
+                group[b].move(x, y, w, btnHeight);
+                group[b].setButton(btn.text, btn.action, btn.enabled, this.onButtonAction.bind(this));
+                x += w + spacing;
+            }
+
+            // Скрываем неиспользуемые окна (если buttons меньше длины group)
+            for (var b = buttons.length; b < group.length; b++) {
+                group[b].hide();
             }
         }
     };
 
-    Scene_Shop.prototype.isSpriteTouched = function(sprite) {
-        var x = TouchInput.x;
-        var y = TouchInput.y;
-        var local = sprite.worldTransform.applyInverse({x: x, y: y});
-        return local.x >= 0 && local.y >= 0 && local.x < sprite.width && local.y < sprite.height;
-    };
-
-    var _Scene_Shop_activateBuyWindow = Scene_Shop.prototype.activateBuyWindow;
-    Scene_Shop.prototype.activateBuyWindow = function() {
-        _Scene_Shop_activateBuyWindow.call(this);
-        if (this._statusWindow) this._statusWindow.hide();
-    };
-
-    Scene_Shop.prototype.createShopBackground = function() {
-        var bgName = ($gameSystem._shopBG !== undefined) ? $gameSystem._shopBG : params.bgDefault;
-        if (!bgName) return;
-        this._bgSprite = new Sprite(ImageManager.loadPicture(bgName));
-        this._bgSprite.width = Graphics.boxWidth;
-        this._bgSprite.height = Graphics.boxHeight;
-        this.addChildAt(this._bgSprite, 1);
-    };
-
-    Scene_Shop.prototype.createShopTrader = function() {
-        if (typeof VWSprite === 'undefined') return;
-        var traderName = ($gameSystem._shopTrader !== undefined) ? $gameSystem._shopTrader : params.traderDefault;
-        if (!traderName) return;
-        var vm = new VWSprite(traderName);
-        vm.setLoop(); vm.create();
-        var tx = ($gameSystem._shopTraderX !== undefined) ? $gameSystem._shopTraderX : params.traderX;
-        var ty = ($gameSystem._shopTraderY !== undefined) ? $gameSystem._shopTraderY : params.traderY;
-        vm.x = tx;
-        vm.y = ty;
-        this.addChildAt(vm, 2);
-        this._vwStorage['shopTrader'] = vm;
-    };
-
-    Scene_Shop.prototype.repositionStandardWindows = function() {
-        if (this._goldWindow) {
-            this._goldWindow.width = 140;
-            if (params.goldX > 0) {
-                this._goldWindow.x = params.goldX;
-            } else {
-                this._goldWindow.x = Graphics.boxWidth - this._goldWindow.width - 10;
-            }
-            this._goldWindow.y = params.goldY;
-            this._goldWindow.createContents();
-            this._goldWindow.refresh();
-        }
-        if (this._buyWindow) {
-            this._buyWindow = this.replaceBuyWindow(this._buyWindow);
-            this._buyWindow.x = params.listX;
-            this._buyWindow.y = params.listY;
-
-            // Авто-ширина: если параметр listWidth = 0, вычисляем точную ширину под колонки
-            if (params.listWidth <= 0) {
-                var itemW = this._buyWindow.itemWidth();
-                this._buyWindow.width = this._buyWindow.standardPadding() * 2 + this._buyWindow.textPadding() * 2 + this._buyWindow.maxCols() * itemW;
-            } else {
-                this._buyWindow.width = params.listWidth;
-            }
-
-            // Авто-высота: если listHeight = 0, вычисляем под количество строк
-            if (params.listHeight <= 0) {
-                var rows = params.listMaxRows > 0 ? params.listMaxRows : Math.ceil(this._buyWindow.maxItems() / this._buyWindow.maxCols());
-                var itemH = this._buyWindow.itemHeight();
-                this._buyWindow.height = itemH * rows + this._buyWindow.standardPadding() * 2;
-            } else {    
-                if (params.listMaxRows > 0) {
-                    var itemH = this._buyWindow.itemHeight();
-                    this._buyWindow.height = itemH * params.listMaxRows + this._buyWindow.standardPadding() * 2 + 12;
-                } else {
-                    this._buyWindow.height = params.listHeight + 12;
-                }
-            }
-
-            // Принудительно обновляем фон после изменения размеров
-            this._buyWindow._refreshBack();
-            this._buyWindow.createContents();
-            this._buyWindow.refresh();
-
-            // Координаты стрелок теперь задаются в update() самого окна,
-            // поэтому здесь никакие _scrollArrowUpSprite и т.п. не трогаем.
-        }
-
-        // Полная деактивация командного окна
-        if (this._commandWindow) {
-            this._commandWindow.hide();
-            this._commandWindow.active = false;
-            this._commandWindow.deactivate();
-            this._commandWindow.setHandler('cancel', null);
-        }
-        if (this._infoWindow) this._infoWindow.hide();
-        if (this._dummyWindow) this._dummyWindow.hide();
-        if (this._helpWindow) this._helpWindow.hide();
-
-        this.createDescWindow();
-        this.createNameWindow();
-        this.createActionWindow();
-
-        if (this._buyWindow && this._descWindow && this._nameWindow) {
-            this._buyWindow._customDescWindow = this._descWindow;
-            this._buyWindow._customNameWindow = this._nameWindow;
-            this._buyWindow._buyActionWindow = this._buyActionWindow;
+    Scene_CustomSaveBase.prototype.onButtonAction = function(action) {
+        switch (action) {
+            case 'save': this.onActionSave(); break;
+            case 'load': this.onActionLoad(); break;
+            case 'overwrite': this.onActionOverwrite(); break;
         }
     };
 
-    Scene_Shop.prototype.replaceBuyWindow = function(oldBuyWindow) {
-        var shopGoods = oldBuyWindow._shopGoods;
-        var newBuy = new Window_ShopBuyCustom(0, 0, params.listHeight, shopGoods);
-        newBuy.setHelpWindow(oldBuyWindow._helpWindow);
-        newBuy.setInfoWindow(oldBuyWindow._infoWindow);
-        newBuy.setStatusWindow(null);
-        newBuy.setHandler('cancel', this.onCancel.bind(this));
-        newBuy.select(-1);
-        newBuy._itemSelected = false;
-        newBuy.activate();
-        this.removeChild(oldBuyWindow);
-        this.addChild(newBuy);
-        return newBuy;
+    var _Scene_CustomSaveBase_update = Scene_CustomSaveBase.prototype.update;
+    Scene_CustomSaveBase.prototype.update = function() {
+        if (this._listWindow && this._buttonGroups) this.updateButtonWindows();
+        _Scene_CustomSaveBase_update.call(this);
     };
 
-    Scene_Shop.prototype.createDescWindow = function() {
-        this._descWindow = new Window_ShopDesc(params.descX, params.descY, params.descWidth, params.descHeight);
-        this.addWindow(this._descWindow);
-        this._descWindow.hide();
+    Scene_CustomSaveBase.prototype.onActionSave = function() {
+        if (isChoiceActive()) { SoundManager.playBuzzer(); return; }
+        var id = this._listWindow.savefileId();
+        $gameSystem.onBeforeSave();
+        if (DataManager.saveGame(id)) {
+            SoundManager.playSave();
+            this._listWindow.clearSaveCache(id);
+            this._listWindow.refresh();
+        } else SoundManager.playBuzzer();
     };
 
-    Scene_Shop.prototype.createNameWindow = function() {
-        this._nameWindow = new Window_ShopItemName();
-        this.addWindow(this._nameWindow);
-        this._nameWindow.hide();
+    Scene_CustomSaveBase.prototype.onActionLoad = function() {
+        var id = this._listWindow.savefileId();
+        if (DataManager.loadGame(id)) {
+            SoundManager.playLoad();
+            $gameSystem.onAfterLoad();
+            SceneManager.goto(Scene_Map);
+        } else SoundManager.playBuzzer();
     };
 
-    Scene_Shop.prototype.createActionWindow = function() {
-        this._buyActionWindow = new Window_ShopBuyAction(params.buyBtnX, params.buyBtnY, 180);
-        this.addWindow(this._buyActionWindow);
-        this._buyActionWindow.hide();
+    Scene_CustomSaveBase.prototype.onActionOverwrite = function() {
+        if (isChoiceActive()) { SoundManager.playBuzzer(); return; }
+        this._overwriteSlotId = this._listWindow.savefileId();
+        this.showConfirmWindow(CONFIRM_OVERWRITE);
     };
 
-    Scene_Shop.prototype.createDescScrollArrows = function() {
-        var arrowSize = 32;
-        this._arrowUpDesc = new Sprite();
-        this._arrowDownDesc = new Sprite();
-        var drawArrow = function(up) {
-            var bmp = new Bitmap(arrowSize, arrowSize);
-            bmp.fillAll('rgba(0,0,0,0)');
-            var ctx = bmp._context;
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            if (up) {
-                ctx.moveTo(arrowSize/2, 4);
-                ctx.lineTo(arrowSize-4, arrowSize-4);
-                ctx.lineTo(4, arrowSize-4);
-            } else {
-                ctx.moveTo(arrowSize/2, arrowSize-4);
-                ctx.lineTo(4, 4);
-                ctx.lineTo(arrowSize-4, 4);
-            }
-            ctx.closePath();
-            ctx.fill();
-            return bmp;
+    Scene_CustomSaveBase.prototype.showConfirmWindow = function(text) {
+        var win = new Window_SaveConfirm();
+        win.setData(text);
+        win.setHandler('confirm', this.onConfirmOverwrite.bind(this));
+        win.setHandler('cancel', this.onConfirmCancel.bind(this));
+        this.addWindow(win);
+        win.open();
+        win.activate();
+        win.select(0);
+        this._confirmWindow = win;
+    };
+
+    Scene_CustomSaveBase.prototype.onConfirmOverwrite = function() {
+        this._confirmWindow.close();
+        this.removeChild(this._confirmWindow);
+        var id = this._overwriteSlotId;
+        $gameSystem.onBeforeSave();
+        if (DataManager.saveGame(id)) {
+            SoundManager.playSave();
+            this._listWindow.clearSaveCache(id);
+            this._listWindow.refresh();
+        }
+    };
+
+    Scene_CustomSaveBase.prototype.onConfirmCancel = function() {
+        this._confirmWindow.close();
+        this.removeChild(this._confirmWindow);
+        this._listWindow.activate();
+    };
+
+    Scene_CustomSaveBase.prototype.mode = function() { return 'save'; };
+
+    function Scene_CustomSave() { this.initialize.apply(this, arguments); }
+    Scene_CustomSave.prototype = Object.create(Scene_CustomSaveBase.prototype);
+    Scene_CustomSave.prototype.constructor = Scene_CustomSave;
+    Scene_CustomSave.prototype.mode = function() { return 'save'; };
+
+    function Scene_CustomLoad() { this.initialize.apply(this, arguments); }
+    Scene_CustomLoad.prototype = Object.create(Scene_CustomSaveBase.prototype);
+    Scene_CustomLoad.prototype.constructor = Scene_CustomLoad;
+    Scene_CustomLoad.prototype.mode = function() { return 'load'; };
+
+    Scene_Save = Scene_CustomSave;
+    Scene_Load = Scene_CustomLoad;
+
+    // Window_SaveConfirm (запасной)
+    if (typeof Window_SaveConfirm === 'undefined') {
+        Window_SaveConfirm = function() { this.initialize.apply(this, arguments); };
+        Window_SaveConfirm.prototype = Object.create(Window_Command.prototype);
+        Window_SaveConfirm.prototype.constructor = Window_SaveConfirm;
+        Window_SaveConfirm.prototype.initialize = function() {
+            Window_Command.prototype.initialize.call(this, 0, 0);
+            this.openness = 0;
         };
-        this._arrowUpDesc.bitmap = drawArrow(true);
-        this._arrowDownDesc.bitmap = drawArrow(false);
-        this._arrowUpDesc.x = params.descScrollArrowX;
-        this._arrowUpDesc.y = params.descScrollArrowY;
-        this._arrowDownDesc.x = params.descScrollArrowX;
-        this._arrowDownDesc.y = params.descScrollArrowY + arrowSize + 4;
-        this._arrowUpDesc.visible = false;
-        this._arrowDownDesc.visible = false;
-        this.addChild(this._arrowUpDesc);
-        this.addChild(this._arrowDownDesc);
-    };
-
-    Scene_Shop.prototype.updateActionEnabled = function() {
-        if (this._buyActionWindow && this._buyWindow) {
-            var item = this._buyWindow.item();
-            var selected = this._buyWindow._itemSelected;
-            var visible = selected && !!item;
-            this._buyActionWindow.setEnabled(visible);
-            this._buyActionWindow.visible = visible;
-        }
-    };
-
-    Scene_Shop.prototype.onCancel = function() {
-        if (this._buyWindow && this._buyWindow._itemSelected) {
-            this._buyWindow._itemSelected = false;
-            this._buyWindow._hoverIndex = -1;
-            this._buyWindow.select(-1);
-            this._buyWindow.refresh();
-            if (this._descWindow) this._descWindow.hide();
-            if (this._nameWindow) this._nameWindow.hide();
-            this.updateActionEnabled();
-            this._buyWindow.activate();
-            return;
-        }
-        SceneManager.pop();
-    };
-
-    var _Scene_Shop_popScene = Scene_Shop.prototype.popScene;
-    Scene_Shop.prototype.popScene = function() {
-        this.onCancel();
-    };
-
-    var _Scene_Shop_terminate = Scene_Shop.prototype.terminate;
-    Scene_Shop.prototype.terminate = function() {
-        if (this._onContextMenu && Graphics.canvas) {
-            Graphics.canvas.removeEventListener('contextmenu', this._onContextMenu);
-        }
-        this._onContextMenu = null;
-        var vm = this._vwStorage ? this._vwStorage['shopTrader'] : null;
-        if (vm) { vm._selfDestroy(); delete this._vwStorage['shopTrader']; }
-        _Scene_Shop_terminate.call(this);
-    };
-
-    Scene_Shop.prototype.showBuyPopup = function(itemName) {
-        var popup = new Sprite();
-        var bitmap = new Bitmap(400, 48);
-        bitmap.fontSize = 28;
-        bitmap.textColor = '#ffffff';
-        bitmap.outlineColor = 'rgba(0, 0, 0, 0.8)';
-        bitmap.outlineWidth = 4;
-        bitmap.drawText('+' + itemName, 0, 0, 400, 48, 'center');
-        popup.bitmap = bitmap;
-        popup.x = (Graphics.boxWidth - 400) / 2;
-        popup.y = Graphics.boxHeight / 2 - 24;
-        popup._life = 60;
-        this.addChild(popup);
-        this._popups.push(popup);
-    };
-
-    Scene_Shop.prototype.onTouch = function() {};
-
-    Scene_Shop.prototype.commandBuyAction = function() {
-        var item = this._buyWindow.item();
-        if (item) {
-            var price = this._buyWindow.price(item);
-            if ($gameParty.gold() >= price) {
-                if (params.buySe && params.buySe.trim() !== '') {
-                    AudioManager.playSe({ name: params.buySe, volume: 90, pitch: 100, pan: 0 });
-                } else {
-                    SoundManager.playShop();
-                }
-
-                $gameParty.loseGold(price);
-                $gameParty.gainItem(item, 1);
-                this._goldWindow.refresh();
-                this._buyWindow.refresh();
-                this._buyWindow.select(-1);
-                this._buyWindow._itemSelected = false;
-                this.updateActionEnabled();
-                this._buyWindow.activate();
-
-                this.showBuyPopup(item.name);
-            } else {
-                SoundManager.playBuzzer();
-            }
-        }
-    };
+        Window_SaveConfirm.prototype.setData = function(text) {
+            this._text = text;
+            var tw = this.textWidthEx(this._text) + this.standardPadding() * 2 + this.textPadding() * 2;
+            this.width = Math.min(tw, Graphics.boxWidth);
+            this.refresh();
+            this.x = (Graphics.boxWidth - this.width) / 2;
+            this.y = (Graphics.boxHeight - this.height) / 2;
+            this.drawTextEx(this._text, this.textPadding(), 0);
+        };
+        Window_SaveConfirm.prototype.makeCommandList = function() {
+            this.addCommand('Yes', 'confirm');
+            this.addCommand('No', 'cancel');
+        };
+        Window_SaveConfirm.prototype.windowHeight = function() { return this.fittingHeight(3); };
+        Window_SaveConfirm.prototype.itemRect = function(index) {
+            var rect = Window_Selectable.prototype.itemRect.call(this, index);
+            rect.y += this.lineHeight();
+            return rect;
+        };
+        Window_SaveConfirm.prototype.itemTextAlign = function() { return 'center'; };
+    }
 
 })();
