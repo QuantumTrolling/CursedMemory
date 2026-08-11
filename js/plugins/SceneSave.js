@@ -1,11 +1,11 @@
 //=============================================================================
 // CustomSaveLayout.js
 //=============================================================================
-// v3.50 – текст пустых слотов выровнен по верху
+// v3.51 – исправлена ошибка AudioManager при загрузке
 //=============================================================================
 
 /*:
- * @plugindesc v3.50 Кастомное меню сохранения/загрузки (текст пустых слотов сверху).
+ * @plugindesc v3.51 Кастомное меню сохранения/загрузки (исправление загрузки).
  * @author YourName
  *
  * @param Save Button Text
@@ -204,7 +204,6 @@
     var SAVE_SLOT_FONT_SIZE = Number(parameters['Slot Font Size'] || 32);
     var BUTTON_FONT_SIZE = Number(parameters['Button Font Size'] || 32);
 
-    // Параметры заголовка
     var TITLE_TEXT = String(parameters['Title Text'] || 'Saves');
     var TITLE_FONT_SIZE = Number(parameters['Title Font Size'] || 32);
     var TITLE_WIDTH = Number(parameters['Title Width'] || 140);
@@ -222,7 +221,6 @@
         return $gameMessage && $gameMessage.isChoice();
     }
 
-    // --- БЛОКИРОВКА СЦЕН СОХРАНЕНИЯ/ЗАГРУЗКИ ---
     var _SceneManager_push = SceneManager.push;
     SceneManager.push = function(sceneClass) {
         if ((sceneClass === Scene_Save || sceneClass === Scene_Load || 
@@ -258,11 +256,9 @@
         _Scene_Menu_commandSave.call(this);
     };
 
-    // --- ТУСКЛАЯ ИКОНКА «СОХРАНИТЬ» ---
     var _Scene_Menu_updateCommands = Scene_Menu.prototype.updateCommands;
     Scene_Menu.prototype.updateCommands = function() {
         _Scene_Menu_updateCommands.call(this);
-
         if (isChoiceActive()) {
             var blockedSymbols = ['save', 'load'];
             for (var i = 0; i < blockedSymbols.length; i++) {
@@ -352,32 +348,25 @@
     Window_SaveSingleButton.prototype.refresh = function() {
         this.contents.clear();
         this.resetFontSettings();
-
         var defaultFontSize = this.contents.fontSize;
         if (BUTTON_FONT_SIZE > 0) {
             this.contents.fontSize = BUTTON_FONT_SIZE;
         }
-
         var cw = this.contents.width;
         var ch = this.contents.height;
         var textWidth = this.textWidth(this._text);
-
         var textX = (cw - textWidth) / 2 + TEXT_OFFSET_X;
         var textY = (ch - this.lineHeight()) / 2 + TEXT_OFFSET_Y;
-
         if (this._enabled && this._hover) {
             var alpha = 0.2 + Math.sin(this._anim) * 0.1;
             this.contents.fillRect(0, 0, cw, ch, 'rgba(255, 255, 255, ' + alpha + ')');
         }
-
         if (this._enabled) {
             this.changeTextColor(this.textColor(0));
         } else {
             this.changeTextColor(this.textColor(16));
         }
-
         this.drawText(this._text, textX, textY, textWidth, 'left');
-
         if (BUTTON_FONT_SIZE > 0) {
             this.contents.fontSize = defaultFontSize;
         }
@@ -386,14 +375,11 @@
     Window_SaveSingleButton.prototype.update = function() {
         Window_Base.prototype.update.call(this);
         if (!this.visible) return;
-
         var x = this.canvasToLocalX(TouchInput.x);
         var y = this.canvasToLocalY(TouchInput.y);
         this._hover = (x >= 0 && y >= 0 && x < this.width && y < this.height);
-
         this._anim += 0.05;
         this.refresh();
-
         if (TouchInput.isTriggered() && this._enabled && this._hover) {
             if (this._actionCallback && this._action) {
                 this._actionCallback(this._action, this._slotIndex);
@@ -414,16 +400,13 @@
     Window_SaveTitle.prototype.initialize = function() {
         Window_Base.prototype.initialize.call(this, 0, 0, 0, 0);
         this._text = TITLE_TEXT;
-
         var originalFontSize = this.contents.fontSize;
         if (TITLE_FONT_SIZE > 0) {
             this.contents.fontSize = TITLE_FONT_SIZE;
         }
-
         var textWidth = this.textWidth(this._text);
         var lineHeight = this.lineHeight();
         var pad = this.standardPadding();
-
         var tw, th;
         if (TITLE_WIDTH > 0) {
             tw = TITLE_WIDTH;
@@ -435,9 +418,7 @@
         } else {
             th = lineHeight + pad * 2;
         }
-
         this.contents.fontSize = originalFontSize;
-
         this.width = tw;
         this.height = th;
         this.createContents();
@@ -459,7 +440,7 @@
     };
 
     //-----------------------------------------------------------------------------
-    // Window_SaveSlot (текст пустого слота теперь вверху)
+    // Window_SaveSlot
     //-----------------------------------------------------------------------------
 
     function Window_SaveSlot() {
@@ -488,30 +469,24 @@
         var id = this._savefileId;
         var info = DataManager.loadSavefileInfo(id);
         var hasSave = !!info;
-
         var defaultFontSize = this.contents.fontSize;
         if (SAVE_SLOT_FONT_SIZE > 0) {
             this.contents.fontSize = SAVE_SLOT_FONT_SIZE;
         }
-
         var textX = 10;
         var faceAreaWidth = 210;
         var faceAreaX = this.contents.width - 10 - faceAreaWidth;
         var textWidth = faceAreaX - textX - 10;
         var label = (id === 1) ? 'Autosave' : 'Save' + (id - 1);
         var labelY = 2;
-
         if (hasSave) {
             this.drawText(label, textX, labelY, textWidth, 'left');
         } else {
-            // Текст пустого слота теперь тоже вверху
             this.drawText(label + '  (Empty)', textX, labelY, textWidth, 'left');
         }
-
         if (SAVE_SLOT_FONT_SIZE > 0) {
             this.contents.fontSize = defaultFontSize;
         }
-
         if (hasSave) this.drawFaces(faceAreaX, faceAreaWidth, labelY);
     };
 
@@ -529,12 +504,10 @@
         var actorIds = content.party._actors.slice(0, $gameParty.maxBattleMembers());
         if (actorIds.length === 0) return;
         this._actorIds = actorIds;
-
         var faceW = 48, faceH = 48, gap = 4;
         var totalWidth = actorIds.length * faceW + (actorIds.length - 1) * gap;
         var startX = areaX + (areaWidth - totalWidth) / 2;
         var faceDrawY = faceY;
-
         var allReady = true;
         for (var i = 0; i < actorIds.length; i++) {
             var bmp = ImageManager.loadMenusFaces2('Actor_' + actorIds[i]);
@@ -595,7 +568,6 @@
         this.createTitleWindow();
         this.createSlotWindows();
         this.createButtonWindows();
-
         this._onRightClick = this.onRightClick.bind(this);
         document.addEventListener('contextmenu', this._onRightClick);
     };
@@ -647,7 +619,6 @@
             var slotWin = this._slotWindows[i];
             var buttons = getSlotButtons(i + 1, this._mode);
             var group = this._buttonGroups[i];
-
             while (group.length > buttons.length) {
                 var old = group.pop();
                 this.removeChild(old);
@@ -658,7 +629,6 @@
                 this.addWindow(newBtn);
                 group.push(newBtn);
             }
-
             var tmpFontSize = slotWin.contents.fontSize;
             if (BUTTON_FONT_SIZE > 0) {
                 slotWin.contents.fontSize = BUTTON_FONT_SIZE;
@@ -679,12 +649,10 @@
                 slotWin.contents.fontSize = tmpFontSize;
             }
             if (buttons.length > 1) totalWidth += BTN_SPACING * (buttons.length - 1);
-
             var slotCenterX = slotWin.x + slotWin.width / 2;
             var slotBottomY = slotWin.y + slotWin.height;
             var startX = slotCenterX - totalWidth / 2;
             var x = startX;
-
             for (var b = 0; b < buttons.length; b++) {
                 var btn = buttons[b];
                 var cfgKey = btn.action;
@@ -701,17 +669,13 @@
                 var contentsH = textH + Math.abs(TEXT_OFFSET_Y) * 2 + 4;
                 var finalH = contentsH + pad * 2;
                 if (cfg.h > 0) finalH = cfg.h;
-
                 var btnX = x + cfg.x;
                 var btnY = slotBottomY + cfg.y - finalH;
-
                 group[b].move(btnX, btnY, widths[b], finalH);
                 group[b].createContents();
                 group[b].setButton(btn.text, btn.action, btn.enabled, this.onButtonAction.bind(this), i);
-
                 x += widths[b] + BTN_SPACING;
             }
-
             for (var b = buttons.length; b < group.length; b++) {
                 group[b].hide();
             }
@@ -734,7 +698,6 @@
         if (last !== this._selectedSlot) {
             SoundManager.playCursor();
         }
-
         if (TouchInput.isTriggered()) {
             var gx = TouchInput.x;
             var gy = TouchInput.y;
@@ -765,7 +728,6 @@
                 }
             }
         }
-
         if (Input.isTriggered('cancel')) {
             this.popScene();
         }
@@ -798,7 +760,12 @@
         var id = this._selectedSlot + 1;
         if (DataManager.loadGame(id)) {
             SoundManager.playLoad();
-            $gameSystem.onAfterLoad();
+            this.fadeOutAll();
+            try {
+                $gameSystem.onAfterLoad();
+            } catch (e) {
+                console.error("Error during onAfterLoad:", e);
+            }
             SceneManager.goto(Scene_Map);
         } else {
             SoundManager.playBuzzer();
