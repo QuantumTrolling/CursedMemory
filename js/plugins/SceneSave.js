@@ -1,11 +1,11 @@
 //=============================================================================
 // CustomSaveLayout.js
 //=============================================================================
-// v3.39 – заголовок "Saves" для обеих сцен
+// v3.50 – текст пустых слотов выровнен по верху
 //=============================================================================
 
 /*:
- * @plugindesc v3.39 Кастомное меню сохранения/загрузки с блокировкой при диалоге.
+ * @plugindesc v3.50 Кастомное меню сохранения/загрузки (текст пустых слотов сверху).
  * @author YourName
  *
  * @param Save Button Text
@@ -84,15 +84,59 @@
  * @desc Сдвиг текста относительно центра рамки по вертикали.
  * @default 0
  *
+ * @param Slot Font Size
+ * @text Размер шрифта слотов
+ * @type number
+ * @desc Размер шрифта для названий слотов (0 — стандартный).
+ * @default 0
+ *
+ * @param Button Font Size
+ * @text Размер шрифта кнопок
+ * @type number
+ * @desc Размер шрифта для текста кнопок Save/Load/Overwrite (0 — стандартный).
+ * @default 0
+ *
+ * @param Title Text
+ * @text Текст заголовка
+ * @desc Текст, отображаемый в заголовке окна сохранений.
+ * @default Saves
+ *
+ * @param Title Font Size
+ * @text Размер шрифта заголовка
+ * @type number
+ * @desc Размер шрифта заголовка (0 — стандартный).
+ * @default 0
+ *
+ * @param Title Width
+ * @text Ширина заголовка
+ * @type number
+ * @desc Ширина окна заголовка (0 — авто).
+ * @default 0
+ *
+ * @param Title Height
+ * @text Высота заголовка
+ * @type number
+ * @desc Высота окна заголовка (0 — авто).
+ * @default 0
+ *
  * @help
  * Разместите плагин ниже YEP_SaveCore, MOG_Weather_EX и MOG_SceneMenu.
  * При активном диалоге выбора иконка «Сохранить» затемнена, но доступна для наведения.
  * Нажатие и клик заблокированы.
  *
+ * Кнопки действий (Save/Load/Overwrite) активируются только кликом мыши или касанием.
+ * Клавиша Enter в сценах сохранения/загрузки не действует.
+ * Стрелки вверх/вниз переключают выбранный слот (без подсветки).
+ * Cancel (Esc) возвращает в предыдущее меню.
+ * Правая кнопка мыши также возвращает в предыдущее меню.
+ *
  * Текст внутри кнопок смещается на Text Offset X/Y относительно центра.
  * Если Button Width/Height = 0, размер рамки автоматически подбирается
  * так, чтобы текст со смещениями никогда не обрезался.
  * Если заданы фиксированные размеры — убедитесь, что они достаточны.
+ *
+ * При изменении размеров шрифтов может потребоваться вручную подобрать
+ * размеры окон через соответствующие параметры.
  *
  * @default
  */
@@ -138,24 +182,33 @@
     var BTN_CFG = {
         save: {
             x: Number(parameters['Save Button X'] || 0),
-            y: Number(parameters['Save Button Y'] || -4),
-            w: Number(parameters['Save Button Width'] || 120),
+            y: Number(parameters['Save Button Y'] || -15),
+            w: Number(parameters['Save Button Width'] || 160),
             h: Number(parameters['Save Button Height'] || 60)
         },
         load: {
             x: Number(parameters['Load Button X'] || 0),
-            y: Number(parameters['Load Button Y'] || 15),
-            w: Number(parameters['Load Button Width'] || 120),
+            y: Number(parameters['Load Button Y'] || -15),
+            w: Number(parameters['Load Button Width'] || 170),
             h: Number(parameters['Load Button Height'] || 60)
         },
         overwrite: {
-            x: Number(parameters['Overwrite Button X'] || 30),
-            y: Number(parameters['Overwrite Button Y'] || 15),
-            w: Number(parameters['Overwrite Button Width'] || 180),
+            x: Number(parameters['Overwrite Button X'] || 20),
+            y: Number(parameters['Overwrite Button Y'] || -15),
+            w: Number(parameters['Overwrite Button Width'] || 230),
             h: Number(parameters['Overwrite Button Height'] || 60)
         }
     };
-    var BTN_SPACING = Number(parameters['Button Spacing'] || 8);
+    var BTN_SPACING = Number(parameters['Button Spacing'] || 4);
+
+    var SAVE_SLOT_FONT_SIZE = Number(parameters['Slot Font Size'] || 32);
+    var BUTTON_FONT_SIZE = Number(parameters['Button Font Size'] || 32);
+
+    // Параметры заголовка
+    var TITLE_TEXT = String(parameters['Title Text'] || 'Saves');
+    var TITLE_FONT_SIZE = Number(parameters['Title Font Size'] || 32);
+    var TITLE_WIDTH = Number(parameters['Title Width'] || 140);
+    var TITLE_HEIGHT = Number(parameters['Title Height'] || 60);
 
     DataManager.maxSavefiles = function() { return 3; };
 
@@ -246,18 +299,20 @@
         var btns = [];
         var saveDisabled = isChoiceActive();
         if (savefileId === 1) {
-            btns.push({ text: LOAD_TEXT, action: 'load', enabled: hasSave });
-        } else {
-            if (mode === 'save') {
-                if (hasSave) {
-                    btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
-                    btns.push({ text: OVERWRITE_TEXT, action: 'overwrite', enabled: !saveDisabled });
-                } else {
-                    btns.push({ text: SAVE_TEXT, action: 'save', enabled: !saveDisabled });
-                }
-            } else if (mode === 'load') {
-                if (hasSave) btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
+            if (hasSave) {
+                btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
             }
+            return btns;
+        }
+        if (mode === 'save') {
+            if (hasSave) {
+                btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
+                btns.push({ text: OVERWRITE_TEXT, action: 'overwrite', enabled: !saveDisabled });
+            } else {
+                btns.push({ text: SAVE_TEXT, action: 'save', enabled: !saveDisabled });
+            }
+        } else if (mode === 'load') {
+            if (hasSave) btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
         }
         return btns;
     }
@@ -274,29 +329,35 @@
 
     Window_SaveSingleButton.prototype.initialize = function(x, y, w, h) {
         Window_Base.prototype.initialize.call(this, x, y, w, h);
-        this.padding = 0;
-        this.backOpacity = 0;
         this._text = '';
         this._enabled = true;
         this._hover = false;
         this._anim = 0;
         this._action = null;
         this._actionCallback = null;
+        this._slotIndex = 0;
         this.deactivate();
         this.refresh();
     };
 
-    Window_SaveSingleButton.prototype.setButton = function(text, action, enabled, callback) {
+    Window_SaveSingleButton.prototype.setButton = function(text, action, enabled, callback, slotIndex) {
         this._text = text;
         this._action = action;
         this._enabled = enabled;
         this._actionCallback = callback;
+        this._slotIndex = (slotIndex !== undefined) ? slotIndex : 0;
         this.refresh();
     };
 
     Window_SaveSingleButton.prototype.refresh = function() {
         this.contents.clear();
         this.resetFontSettings();
+
+        var defaultFontSize = this.contents.fontSize;
+        if (BUTTON_FONT_SIZE > 0) {
+            this.contents.fontSize = BUTTON_FONT_SIZE;
+        }
+
         var cw = this.contents.width;
         var ch = this.contents.height;
         var textWidth = this.textWidth(this._text);
@@ -316,6 +377,10 @@
         }
 
         this.drawText(this._text, textX, textY, textWidth, 'left');
+
+        if (BUTTON_FONT_SIZE > 0) {
+            this.contents.fontSize = defaultFontSize;
+        }
     };
 
     Window_SaveSingleButton.prototype.update = function() {
@@ -331,13 +396,13 @@
 
         if (TouchInput.isTriggered() && this._enabled && this._hover) {
             if (this._actionCallback && this._action) {
-                this._actionCallback(this._action);
+                this._actionCallback(this._action, this._slotIndex);
             }
         }
     };
 
     //-----------------------------------------------------------------------------
-    // Window_SaveTitle – всегда "Saves", по центру
+    // Window_SaveTitle
     //-----------------------------------------------------------------------------
 
     function Window_SaveTitle() {
@@ -347,106 +412,129 @@
     Window_SaveTitle.prototype.constructor = Window_SaveTitle;
 
     Window_SaveTitle.prototype.initialize = function() {
-        // Текст всегда "Saves"
-        var text = 'Saves';
-        // Ширина с запасом, высота — строка + отступы
-        var w = 120;
-        var h = this.lineHeight() + 12;
-        Window_Base.prototype.initialize.call(this, 0, 0, w, h);
-        this.padding = 0;
-        this.backOpacity = 0;
-        this._text = text;
+        Window_Base.prototype.initialize.call(this, 0, 0, 0, 0);
+        this._text = TITLE_TEXT;
+
+        var originalFontSize = this.contents.fontSize;
+        if (TITLE_FONT_SIZE > 0) {
+            this.contents.fontSize = TITLE_FONT_SIZE;
+        }
+
+        var textWidth = this.textWidth(this._text);
+        var lineHeight = this.lineHeight();
+        var pad = this.standardPadding();
+
+        var tw, th;
+        if (TITLE_WIDTH > 0) {
+            tw = TITLE_WIDTH;
+        } else {
+            tw = textWidth + pad * 2;
+        }
+        if (TITLE_HEIGHT > 0) {
+            th = TITLE_HEIGHT;
+        } else {
+            th = lineHeight + pad * 2;
+        }
+
+        this.contents.fontSize = originalFontSize;
+
+        this.width = tw;
+        this.height = th;
+        this.createContents();
         this.refresh();
     };
 
     Window_SaveTitle.prototype.refresh = function() {
         this.contents.clear();
+        var originalFontSize = this.contents.fontSize;
+        if (TITLE_FONT_SIZE > 0) {
+            this.contents.fontSize = TITLE_FONT_SIZE;
+        }
         this.changeTextColor(this.textColor(0));
         var textWidth = this.textWidth(this._text);
         var textX = (this.contents.width - textWidth) / 2;
         var textY = (this.contents.height - this.lineHeight()) / 2;
         this.drawText(this._text, textX, textY, textWidth, 'left');
+        this.contents.fontSize = originalFontSize;
     };
 
     //-----------------------------------------------------------------------------
-    // Window_CustomSaveList (без изменений)
+    // Window_SaveSlot (текст пустого слота теперь вверху)
     //-----------------------------------------------------------------------------
 
-    function Window_CustomSaveList() {
+    function Window_SaveSlot() {
         this.initialize.apply(this, arguments);
     }
-    Window_CustomSaveList.prototype = Object.create(Window_Selectable.prototype);
-    Window_CustomSaveList.prototype.constructor = Window_CustomSaveList;
+    Window_SaveSlot.prototype = Object.create(Window_Base.prototype);
+    Window_SaveSlot.prototype.constructor = Window_SaveSlot;
 
-    Window_CustomSaveList.prototype.initialize = function(x, y, width, mode) {
-        this._mode = mode;
-        this._saveCache = {};
-        this._facesReady = [false, false, false];
-        var slotH = this.itemHeight();
-        var height = slotH * 3 + this.standardPadding() * 2;
-        Window_Selectable.prototype.initialize.call(this, x, y, width, height);
+    Window_SaveSlot.prototype.initialize = function(x, y, width, slotIndex, sceneRef) {
+        this._slotIndex = slotIndex;
+        this._savefileId = slotIndex + 1;
+        this._scene = sceneRef;
+        this._needsFaceRefresh = false;
+        this._actorIds = null;
+        Window_Base.prototype.initialize.call(this, x, y, width, this.windowHeight());
         this.refresh();
-        this.select(0);
     };
 
-    Window_CustomSaveList.prototype.maxItems = function() { return 3; };
-    Window_CustomSaveList.prototype.itemHeight = function() { 
-        return this.lineHeight() * 3 + 18; 
-    };
-    Window_CustomSaveList.prototype.savefileId = function() { return this.index() + 1; };
-
-    Window_CustomSaveList.prototype.loadSaveContent = function(id) {
-        if (this._saveCache[id]) return this._saveCache[id];
-        var raw = StorageManager.load(id);
-        if (!raw) return null;
-        try { var data = JsonEx.parse(raw); this._saveCache[id] = data; return data; }
-        catch (e) { return null; }
+    Window_SaveSlot.prototype.windowHeight = function() {
+        return this.lineHeight() * 3 + this.standardPadding() * 2 + 18;
     };
 
-    Window_CustomSaveList.prototype.clearSaveCache = function(id) {
-        delete this._saveCache[id];
-        this._facesReady[id - 1] = false;
-    };
-
-    Window_CustomSaveList.prototype.drawItem = function(index) {
-        var id = index + 1;
-        var rect = this.itemRect(index);
-        this.resetTextColor();
+    Window_SaveSlot.prototype.refresh = function() {
+        this.contents.clear();
+        this.resetFontSettings();
+        var id = this._savefileId;
         var info = DataManager.loadSavefileInfo(id);
         var hasSave = !!info;
 
-        var iconIndex = hasSave ? 231 : 230;
-        var iconY = rect.y + (rect.height - Window_Base._iconHeight) / 2;
-        this.drawIcon(iconIndex, rect.x + 4, iconY);
-
-        var faceAreaWidth = 210;
-        var faceAreaX = rect.x + rect.width - 10 - faceAreaWidth;
-        var textX = rect.x + Window_Base._iconWidth + 12;
-        var textWidth = faceAreaX - textX - 10;
-        var label = (id === 1) ? 'Autosave' : 'Slot ' + id;
-        if (hasSave) {
-            this.drawText(label, textX, rect.y + 2, textWidth, 'left');
-            this.drawText(info.playtime || '', textX, rect.y + this.lineHeight() + 2, textWidth, 'left');
-        } else {
-            this.drawText(label + '  (Empty)', textX, rect.y + rect.height / 2 - this.lineHeight() / 2, textWidth, 'left');
+        var defaultFontSize = this.contents.fontSize;
+        if (SAVE_SLOT_FONT_SIZE > 0) {
+            this.contents.fontSize = SAVE_SLOT_FONT_SIZE;
         }
 
-        if (hasSave) this.drawFacesForSlot(index, rect, faceAreaX, faceAreaWidth);
+        var textX = 10;
+        var faceAreaWidth = 210;
+        var faceAreaX = this.contents.width - 10 - faceAreaWidth;
+        var textWidth = faceAreaX - textX - 10;
+        var label = (id === 1) ? 'Autosave' : 'Save' + (id - 1);
+        var labelY = 2;
+
+        if (hasSave) {
+            this.drawText(label, textX, labelY, textWidth, 'left');
+        } else {
+            // Текст пустого слота теперь тоже вверху
+            this.drawText(label + '  (Empty)', textX, labelY, textWidth, 'left');
+        }
+
+        if (SAVE_SLOT_FONT_SIZE > 0) {
+            this.contents.fontSize = defaultFontSize;
+        }
+
+        if (hasSave) this.drawFaces(faceAreaX, faceAreaWidth, labelY);
     };
 
-    Window_CustomSaveList.prototype.drawFacesForSlot = function(index, rect, areaX, areaWidth) {
-        var content = this.loadSaveContent(index + 1);
+    Window_SaveSlot.prototype.drawFaces = function(areaX, areaWidth, faceY) {
+        var cache = this._scene._saveCache;
+        var id = this._savefileId;
+        var content = cache[id];
+        if (!content) {
+            var raw = StorageManager.load(id);
+            if (raw) {
+                try { content = JsonEx.parse(raw); cache[id] = content; } catch(e) { return; }
+            }
+        }
         if (!content || !content.party || !content.party._actors) return;
-        var actorIds = content.party._actors;
+        var actorIds = content.party._actors.slice(0, $gameParty.maxBattleMembers());
         if (actorIds.length === 0) return;
-
-        var maxFaces = $gameParty.maxBattleMembers();
-        actorIds = actorIds.slice(0, maxFaces);
+        this._actorIds = actorIds;
 
         var faceW = 48, faceH = 48, gap = 4;
         var totalWidth = actorIds.length * faceW + (actorIds.length - 1) * gap;
         var startX = areaX + (areaWidth - totalWidth) / 2;
-        var faceY = rect.y + (this.lineHeight() * 2 + 8 - faceH) / 2;
+        var faceDrawY = faceY;
+
         var allReady = true;
         for (var i = 0; i < actorIds.length; i++) {
             var bmp = ImageManager.loadMenusFaces2('Actor_' + actorIds[i]);
@@ -454,76 +542,34 @@
                 var scale = Math.min(faceW / bmp.width, faceH / bmp.height);
                 var dw = bmp.width * scale, dh = bmp.height * scale;
                 var dx = startX + i * (faceW + gap) + (faceW - dw) / 2;
-                var dy = faceY + (faceH - dh) / 2;
+                var dy = faceDrawY + (faceH - dh) / 2;
                 this.contents.blt(bmp, 0, 0, bmp.width, bmp.height, dx, dy, dw, dh);
-            } else allReady = false;
-        }
-        this._facesReady[index] = allReady;
-    };
-
-    Window_CustomSaveList.prototype.update = function() {
-        Window_Selectable.prototype.update.call(this);
-        for (var i = 0; i < 3; i++) {
-            if (!this._facesReady[i] && DataManager.loadSavefileInfo(i + 1)) {
-                var content = this.loadSaveContent(i + 1);
-                if (content && content.party && content.party._actors) {
-                    var actorIds = content.party._actors.slice(0, $gameParty.maxBattleMembers());
-                    var allReady = true;
-                    for (var j = 0; j < actorIds.length; j++) {
-                        if (!ImageManager.loadMenusFaces2('Actor_' + actorIds[j]).isReady()) {
-                            allReady = false; break;
-                        }
-                    }
-                    if (allReady) { this._facesReady[i] = true; this.refresh(); }
-                }
+            } else {
+                allReady = false;
+                break;
             }
+        }
+        if (!allReady) {
+            this._needsFaceRefresh = true;
+        } else {
+            this._needsFaceRefresh = false;
         }
     };
 
-    Window_CustomSaveList.prototype.processTouch = function() {
-        if (!this.isOpenAndActive()) return;
-        if (TouchInput.isTriggered() && this.isTouchedInsideFrame()) {
-            var gx = TouchInput.x;
-            var gy = TouchInput.y;
-            var scene = SceneManager._scene;
-            if (scene && scene._buttonGroups) {
-                for (var i = 0; i < scene._buttonGroups.length; i++) {
-                    var group = scene._buttonGroups[i];
-                    if (group) {
-                        for (var j = 0; j < group.length; j++) {
-                            var btn = group[j];
-                            if (btn.visible && btn.x <= gx && gx < btn.x + btn.width &&
-                                btn.y <= gy && gy < btn.y + btn.height) {
-                                return;
-                            }
-                        }
-                    }
+    Window_SaveSlot.prototype.update = function() {
+        Window_Base.prototype.update.call(this);
+        if (this._needsFaceRefresh && this._actorIds) {
+            var allReady = true;
+            for (var i = 0; i < this._actorIds.length; i++) {
+                if (!ImageManager.loadMenusFaces2('Actor_' + this._actorIds[i]).isReady()) {
+                    allReady = false;
+                    break;
                 }
             }
-            var x = this.canvasToLocalX(gx);
-            var y = this.canvasToLocalY(gy);
-            var index = this.hitTest(x, y);
-            if (index >= 0 && this._selectedIndex !== index) {
-                this.select(index);
-                SoundManager.playCursor();
+            if (allReady) {
+                this._needsFaceRefresh = false;
+                this.refresh();
             }
-        }
-    };
-
-    Window_CustomSaveList.prototype.processOk = function() {
-        if (this.isCurrentItemEnabled()) {
-            var index = this.index();
-            var scene = SceneManager._scene;
-            if (scene && scene._buttonGroups) {
-                var group = scene._buttonGroups[index];
-                if (group && group.length === 1 && group[0]._enabled) {
-                    if (this._handlers[group[0]._action]) {
-                        this._handlers[group[0]._action]();
-                    }
-                    return;
-                }
-            }
-            SoundManager.playBuzzer();
         }
     };
 
@@ -540,37 +586,51 @@
     Scene_CustomSaveBase.prototype.initialize = function() {
         Scene_MenuBase.prototype.initialize.call(this);
         this._mode = this.mode();
+        this._selectedSlot = 0;
+        this._saveCache = {};
     };
 
     Scene_CustomSaveBase.prototype.create = function() {
         Scene_MenuBase.prototype.create.call(this);
         this.createTitleWindow();
-        this.createListWindow();
+        this.createSlotWindows();
         this.createButtonWindows();
+
+        this._onRightClick = this.onRightClick.bind(this);
+        document.addEventListener('contextmenu', this._onRightClick);
+    };
+
+    Scene_CustomSaveBase.prototype.onRightClick = function(event) {
+        event.preventDefault();
+        this.popScene();
+    };
+
+    var _Scene_CustomSaveBase_terminate = Scene_CustomSaveBase.prototype.terminate;
+    Scene_CustomSaveBase.prototype.terminate = function() {
+        document.removeEventListener('contextmenu', this._onRightClick);
+        _Scene_CustomSaveBase_terminate.call(this);
     };
 
     Scene_CustomSaveBase.prototype.createTitleWindow = function() {
-        // Всегда создаём заголовок с текстом "Saves"
         this._titleWindow = new Window_SaveTitle();
         this._titleWindow.x = 10;
         this._titleWindow.y = 10;
         this.addWindow(this._titleWindow);
     };
 
-    Scene_CustomSaveBase.prototype.createListWindow = function() {
-        var listWidth = 520;
-        var slotH = Window_CustomSaveList.prototype.itemHeight();
-        var listHeight = slotH * 3 + Window_Selectable.prototype.standardPadding() * 2;
-        var x = (Graphics.boxWidth - listWidth) / 2;
-        var y = (Graphics.boxHeight - listHeight) / 2;
-
-        this._listWindow = new Window_CustomSaveList(x, y, listWidth, this._mode);
-        this._listWindow.setHandler('save', this.onActionSave.bind(this));
-        this._listWindow.setHandler('load', this.onActionLoad.bind(this));
-        this._listWindow.setHandler('overwrite', this.onActionOverwrite.bind(this));
-        this._listWindow.setHandler('cancel', this.popScene.bind(this));
-        this.addWindow(this._listWindow);
-        this._listWindow.activate();
+    Scene_CustomSaveBase.prototype.createSlotWindows = function() {
+        this._slotWindows = [];
+        var slotWidth = 520;
+        var slotHeight = Window_SaveSlot.prototype.windowHeight();
+        var totalHeight = slotHeight * 3;
+        var startY = (Graphics.boxHeight - totalHeight) / 2;
+        for (var i = 0; i < 3; i++) {
+            var win = new Window_SaveSlot(0, 0, slotWidth, i, this);
+            win.x = (Graphics.boxWidth - slotWidth) / 2;
+            win.y = startY + i * slotHeight;
+            this.addWindow(win);
+            this._slotWindows.push(win);
+        }
     };
 
     Scene_CustomSaveBase.prototype.createButtonWindows = function() {
@@ -582,9 +642,9 @@
     };
 
     Scene_CustomSaveBase.prototype.updateButtonWindows = function() {
-        var list = this._listWindow;
+        var pad = Window_Base.prototype.standardPadding();
         for (var i = 0; i < 3; i++) {
-            var rect = list.itemRect(i);
+            var slotWin = this._slotWindows[i];
             var buttons = getSlotButtons(i + 1, this._mode);
             var group = this._buttonGroups[i];
 
@@ -599,25 +659,29 @@
                 group.push(newBtn);
             }
 
+            var tmpFontSize = slotWin.contents.fontSize;
+            if (BUTTON_FONT_SIZE > 0) {
+                slotWin.contents.fontSize = BUTTON_FONT_SIZE;
+            }
             var totalWidth = 0;
             var widths = [];
             for (var b = 0; b < buttons.length; b++) {
                 var cfgKey = buttons[b].action;
                 var cfg = BTN_CFG[cfgKey];
-                var textW = list.textWidth(buttons[b].text);
-                var baseW;
-                if (cfg.w > 0) {
-                    baseW = cfg.w;
-                } else {
-                    baseW = Math.ceil(textW) + Math.abs(TEXT_OFFSET_X) * 2 + 4;
-                }
+                var textW = slotWin.textWidth(buttons[b].text);
+                var contentsW = Math.ceil(textW) + Math.abs(TEXT_OFFSET_X) * 2 + 4;
+                var baseW = contentsW + pad * 2;
+                if (cfg.w > 0) baseW = cfg.w;
                 widths.push(baseW);
                 totalWidth += baseW;
             }
+            if (BUTTON_FONT_SIZE > 0) {
+                slotWin.contents.fontSize = tmpFontSize;
+            }
             if (buttons.length > 1) totalWidth += BTN_SPACING * (buttons.length - 1);
 
-            var slotCenterX = list.x + rect.x + rect.width / 2;
-            var slotBottomY = list.y + rect.y + rect.height;
+            var slotCenterX = slotWin.x + slotWin.width / 2;
+            var slotBottomY = slotWin.y + slotWin.height;
             var startX = slotCenterX - totalWidth / 2;
             var x = startX;
 
@@ -625,22 +689,25 @@
                 var btn = buttons[b];
                 var cfgKey = btn.action;
                 var cfg = BTN_CFG[cfgKey];
-                var textH = list.lineHeight();
-
-                var finalW = widths[b];
-                var finalH;
-                if (cfg.h > 0) {
-                    finalH = cfg.h;
+                var textH;
+                if (BUTTON_FONT_SIZE > 0) {
+                    var savedFontSize = slotWin.contents.fontSize;
+                    slotWin.contents.fontSize = BUTTON_FONT_SIZE;
+                    textH = slotWin.lineHeight();
+                    slotWin.contents.fontSize = savedFontSize;
                 } else {
-                    finalH = textH + Math.abs(TEXT_OFFSET_Y) * 2 + 4;
+                    textH = slotWin.lineHeight();
                 }
+                var contentsH = textH + Math.abs(TEXT_OFFSET_Y) * 2 + 4;
+                var finalH = contentsH + pad * 2;
+                if (cfg.h > 0) finalH = cfg.h;
 
                 var btnX = x + cfg.x;
                 var btnY = slotBottomY + cfg.y - finalH;
 
-                group[b].move(btnX, btnY, finalW, finalH);
+                group[b].move(btnX, btnY, widths[b], finalH);
                 group[b].createContents();
-                group[b].setButton(btn.text, btn.action, btn.enabled, this.onButtonAction.bind(this));
+                group[b].setButton(btn.text, btn.action, btn.enabled, this.onButtonAction.bind(this), i);
 
                 x += widths[b] + BTN_SPACING;
             }
@@ -651,7 +718,61 @@
         }
     };
 
-    Scene_CustomSaveBase.prototype.onButtonAction = function(action) {
+    Scene_CustomSaveBase.prototype.update = function() {
+        Scene_MenuBase.prototype.update.call(this);
+        this.updateSelection();
+        this.updateButtonWindows();
+    };
+
+    Scene_CustomSaveBase.prototype.updateSelection = function() {
+        var last = this._selectedSlot;
+        if (Input.isRepeated('up')) {
+            this._selectedSlot = (this._selectedSlot - 1 + 3) % 3;
+        } else if (Input.isRepeated('down')) {
+            this._selectedSlot = (this._selectedSlot + 1) % 3;
+        }
+        if (last !== this._selectedSlot) {
+            SoundManager.playCursor();
+        }
+
+        if (TouchInput.isTriggered()) {
+            var gx = TouchInput.x;
+            var gy = TouchInput.y;
+            var hitButton = false;
+            for (var i = 0; i < this._buttonGroups.length; i++) {
+                var group = this._buttonGroups[i];
+                for (var j = 0; j < group.length; j++) {
+                    var btn = group[j];
+                    if (btn.visible && btn.x <= gx && gx < btn.x + btn.width &&
+                        btn.y <= gy && gy < btn.y + btn.height) {
+                        hitButton = true;
+                        break;
+                    }
+                }
+                if (hitButton) break;
+            }
+            if (!hitButton) {
+                for (var i = 0; i < this._slotWindows.length; i++) {
+                    var win = this._slotWindows[i];
+                    if (win.x <= gx && gx < win.x + win.width &&
+                        win.y <= gy && gy < win.y + win.height) {
+                        if (this._selectedSlot !== i) {
+                            this._selectedSlot = i;
+                            SoundManager.playCursor();
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (Input.isTriggered('cancel')) {
+            this.popScene();
+        }
+    };
+
+    Scene_CustomSaveBase.prototype.onButtonAction = function(action, slotIndex) {
+        this._selectedSlot = slotIndex;
         switch (action) {
             case 'save': this.onActionSave(); break;
             case 'load': this.onActionLoad(); break;
@@ -659,35 +780,34 @@
         }
     };
 
-    var _Scene_CustomSaveBase_update = Scene_CustomSaveBase.prototype.update;
-    Scene_CustomSaveBase.prototype.update = function() {
-        if (this._listWindow && this._buttonGroups) this.updateButtonWindows();
-        _Scene_CustomSaveBase_update.call(this);
-    };
-
     Scene_CustomSaveBase.prototype.onActionSave = function() {
         if (isChoiceActive()) { SoundManager.playBuzzer(); return; }
-        var id = this._listWindow.savefileId();
+        var id = this._selectedSlot + 1;
         $gameSystem.onBeforeSave();
         if (DataManager.saveGame(id)) {
             SoundManager.playSave();
-            this._listWindow.clearSaveCache(id);
-            this._listWindow.refresh();
-        } else SoundManager.playBuzzer();
+            delete this._saveCache[id];
+            this._slotWindows[this._selectedSlot]._needsFaceRefresh = false;
+            this._slotWindows[this._selectedSlot].refresh();
+        } else {
+            SoundManager.playBuzzer();
+        }
     };
 
     Scene_CustomSaveBase.prototype.onActionLoad = function() {
-        var id = this._listWindow.savefileId();
+        var id = this._selectedSlot + 1;
         if (DataManager.loadGame(id)) {
             SoundManager.playLoad();
             $gameSystem.onAfterLoad();
             SceneManager.goto(Scene_Map);
-        } else SoundManager.playBuzzer();
+        } else {
+            SoundManager.playBuzzer();
+        }
     };
 
     Scene_CustomSaveBase.prototype.onActionOverwrite = function() {
         if (isChoiceActive()) { SoundManager.playBuzzer(); return; }
-        this._overwriteSlotId = this._listWindow.savefileId();
+        this._overwriteSlotId = this._selectedSlot + 1;
         this.showConfirmWindow(CONFIRM_OVERWRITE);
     };
 
@@ -710,15 +830,15 @@
         $gameSystem.onBeforeSave();
         if (DataManager.saveGame(id)) {
             SoundManager.playSave();
-            this._listWindow.clearSaveCache(id);
-            this._listWindow.refresh();
+            delete this._saveCache[id];
+            this._slotWindows[this._selectedSlot]._needsFaceRefresh = false;
+            this._slotWindows[this._selectedSlot].refresh();
         }
     };
 
     Scene_CustomSaveBase.prototype.onConfirmCancel = function() {
         this._confirmWindow.close();
         this.removeChild(this._confirmWindow);
-        this._listWindow.activate();
     };
 
     Scene_CustomSaveBase.prototype.mode = function() { return 'save'; };
