@@ -1,11 +1,11 @@
 //=============================================================================
 // CustomSaveLayout.js
 //=============================================================================
-// v3.51 – исправлена ошибка AudioManager при загрузке
+// v3.53 – окончательное исправление окна подтверждения перезаписи
 //=============================================================================
 
 /*:
- * @plugindesc v3.51 Кастомное меню сохранения/загрузки (исправление загрузки).
+ * @plugindesc v3.53 Кастомное меню сохранения/загрузки (исправление подтверждения).
  * @author YourName
  *
  * @param Save Button Text
@@ -375,11 +375,20 @@
     Window_SaveSingleButton.prototype.update = function() {
         Window_Base.prototype.update.call(this);
         if (!this.visible) return;
+
+        // Если сцена показывает окно подтверждения, игнорируем любые касания
+        var scene = SceneManager._scene;
+        if (scene && scene._confirmWindow && scene._confirmWindow.active) {
+            return;
+        }
+
         var x = this.canvasToLocalX(TouchInput.x);
         var y = this.canvasToLocalY(TouchInput.y);
         this._hover = (x >= 0 && y >= 0 && x < this.width && y < this.height);
+
         this._anim += 0.05;
         this.refresh();
+
         if (TouchInput.isTriggered() && this._enabled && this._hover) {
             if (this._actionCallback && this._action) {
                 this._actionCallback(this._action, this._slotIndex);
@@ -574,6 +583,11 @@
 
     Scene_CustomSaveBase.prototype.onRightClick = function(event) {
         event.preventDefault();
+        // Если открыто окно подтверждения, отменяем его, а не выходим из сцены
+        if (this._confirmWindow && this._confirmWindow.active) {
+            this._confirmWindow.processCancel();
+            return;
+        }
         this.popScene();
     };
 
@@ -689,6 +703,14 @@
     };
 
     Scene_CustomSaveBase.prototype.updateSelection = function() {
+        // Если окно подтверждения активно — не трогаем слоты, передаём Cancel ему
+        if (this._confirmWindow && this._confirmWindow.active) {
+            if (Input.isTriggered('cancel')) {
+                this._confirmWindow.processCancel();
+            }
+            return;
+        }
+
         var last = this._selectedSlot;
         if (Input.isRepeated('up')) {
             this._selectedSlot = (this._selectedSlot - 1 + 3) % 3;
@@ -698,6 +720,7 @@
         if (last !== this._selectedSlot) {
             SoundManager.playCursor();
         }
+
         if (TouchInput.isTriggered()) {
             var gx = TouchInput.x;
             var gy = TouchInput.y;
@@ -728,12 +751,16 @@
                 }
             }
         }
+
         if (Input.isTriggered('cancel')) {
             this.popScene();
         }
     };
 
     Scene_CustomSaveBase.prototype.onButtonAction = function(action, slotIndex) {
+        // Если открыто окно подтверждения, не реагируем на кнопки
+        if (this._confirmWindow && this._confirmWindow.active) return;
+
         this._selectedSlot = slotIndex;
         switch (action) {
             case 'save': this.onActionSave(); break;
@@ -774,6 +801,15 @@
 
     Scene_CustomSaveBase.prototype.onActionOverwrite = function() {
         if (isChoiceActive()) { SoundManager.playBuzzer(); return; }
+
+        // На всякий случай закрываем предыдущее окно подтверждения, если зависло
+        if (this._confirmWindow) {
+            this._confirmWindow.close();
+            this._confirmWindow.deactivate();
+            this.removeChild(this._confirmWindow);
+            this._confirmWindow = null;
+        }
+
         this._overwriteSlotId = this._selectedSlot + 1;
         this.showConfirmWindow(CONFIRM_OVERWRITE);
     };
@@ -791,8 +827,12 @@
     };
 
     Scene_CustomSaveBase.prototype.onConfirmOverwrite = function() {
-        this._confirmWindow.close();
-        this.removeChild(this._confirmWindow);
+        if (this._confirmWindow) {
+            this._confirmWindow.close();
+            this._confirmWindow.deactivate();
+            this.removeChild(this._confirmWindow);
+            this._confirmWindow = null;
+        }
         var id = this._overwriteSlotId;
         $gameSystem.onBeforeSave();
         if (DataManager.saveGame(id)) {
@@ -801,11 +841,23 @@
             this._slotWindows[this._selectedSlot]._needsFaceRefresh = false;
             this._slotWindows[this._selectedSlot].refresh();
         }
+        // Активируем выбранный слот, чтобы сцена не осталась без активного окна
+        if (this._slotWindows[this._selectedSlot]) {
+            this._slotWindows[this._selectedSlot].activate();
+        }
     };
 
     Scene_CustomSaveBase.prototype.onConfirmCancel = function() {
-        this._confirmWindow.close();
-        this.removeChild(this._confirmWindow);
+        if (this._confirmWindow) {
+            this._confirmWindow.close();
+            this._confirmWindow.deactivate();
+            this.removeChild(this._confirmWindow);
+            this._confirmWindow = null;
+        }
+        // Активируем выбранный слот
+        if (this._slotWindows[this._selectedSlot]) {
+            this._slotWindows[this._selectedSlot].activate();
+        }
     };
 
     Scene_CustomSaveBase.prototype.mode = function() { return 'save'; };
