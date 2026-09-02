@@ -5,10 +5,11 @@
 // + МГНОВЕННОЕ ОБНОВЛЕНИЕ ЦИФРЫ ХОДОВ (без задержки)
 // + Настройки: размер шрифта, смещение текста по X и Y
 // + Фикс: цифра не показывается, если у состояния autoRemovalTiming = 0
+// + Фикс: обновление счётчиков при возвращении актёра на поле боя
 //=============================================================================
 
 /*:
- * @plugindesc v1.1 Отображение оставшихся ходов состояний на иконках батл-худа
+ * @plugindesc v1.2 Отображение оставшихся ходов состояний на иконках батл-худа
  * @author Moghunter, дополнения fix
  *
  * @param fontSize
@@ -70,18 +71,18 @@ var _mog_bhud_create_states = Battle_Hud.prototype.create_states;
 Battle_Hud.prototype.create_states = function() {
     _mog_bhud_create_states.call(this);
     if (this._state_icon) {
-    if (!this._stateTurnText || this._stateTurnText.bitmap._destroyed) {
-        if (this._stateTurnText) this._state_icon.removeChild(this._stateTurnText);
-        this._stateTurnText = new Sprite(new Bitmap(32, 32));
-        this._stateTurnText.bitmap.fontSize = fontSize;
-        this._stateTurnText.bitmap.textColor = '#ffffff';
-        this._stateTurnText.bitmap.outlineColor = 'rgba(0,0,0,0.8)';
-        this._stateTurnText.bitmap.outlineWidth = 3;
-        this._stateTurnText.x = textOffsetX;
-        this._stateTurnText.y = textOffsetY;
-        this._state_icon.addChild(this._stateTurnText);
+        if (!this._stateTurnText || this._stateTurnText.bitmap._destroyed) {
+            if (this._stateTurnText) this._state_icon.removeChild(this._stateTurnText);
+            this._stateTurnText = new Sprite(new Bitmap(32, 32));
+            this._stateTurnText.bitmap.fontSize = fontSize;
+            this._stateTurnText.bitmap.textColor = '#ffffff';
+            this._stateTurnText.bitmap.outlineColor = 'rgba(0,0,0,0.8)';
+            this._stateTurnText.bitmap.outlineWidth = 3;
+            this._stateTurnText.x = textOffsetX;
+            this._stateTurnText.y = textOffsetY;
+            this._state_icon.addChild(this._stateTurnText);
+        }
     }
-}
 };
 
 var _mog_bhud_refresh_states = Battle_Hud.prototype.refresh_states;
@@ -107,11 +108,20 @@ Battle_Hud.prototype.refresh_states = function() {
     if (this._stateDataList.length === 0) {
         this._state_icon.visible = false;
         if (this._stateTurnText) this._stateTurnText.visible = false;
+        // сохраняем пустой объект счётчиков
+        this._lastStateTurns = {};
         return;
     }
     this._state_icon.visible = true;
     if (this._stateTurnText) this._stateTurnText.visible = true;
     this._updateStateIconAndTurns();
+
+    // сохраняем текущие значения _stateTurns для последующего сравнения
+    this._lastStateTurns = {};
+    var states = this._battler.states();
+    for (var i = 0; i < states.length; i++) {
+        this._lastStateTurns[states[i].id] = this._battler._stateTurns[states[i].id];
+    }
 };
 
 Battle_Hud.prototype._updateStateIconAndTurns = function() {
@@ -150,6 +160,34 @@ Battle_Hud.prototype._updateStateIconAndTurns = function() {
 var _mog_bhud_update_states = Battle_Hud.prototype.update_states;
 Battle_Hud.prototype.update_states = function() {
     if (!this._state_icon || !this._battler) return;
+
+    // Дополнительная проверка: если счётчики ходов изменились, принудительно обновляем
+    if (this._battler.isAlive() && !this._battler.need_refresh_bhud_states) {
+        var states = this._battler.states();
+        var stateChanged = false;
+        if (this._lastStateTurns) {
+            // проверяем каждое текущее состояние
+            for (var i = 0; i < states.length; i++) {
+                var id = states[i].id;
+                var newTurns = this._battler._stateTurns[id];
+                var oldTurns = this._lastStateTurns[id];
+                if (newTurns !== oldTurns) {
+                    stateChanged = true;
+                    break;
+                }
+            }
+            // проверяем, не исчезли ли состояния
+            if (!stateChanged && Object.keys(this._lastStateTurns).length !== states.length) {
+                stateChanged = true;
+            }
+        } else {
+            stateChanged = true; // если сохранённых данных нет, обновляем обязательно
+        }
+        if (stateChanged) {
+            this._battler.need_refresh_bhud_states = true;
+        }
+    }
+
     if (this._battler.need_refresh_bhud_states) {
         this._battler.need_refresh_bhud_states = false;
         this.refresh_states();
@@ -184,7 +222,10 @@ Battle_Hud.prototype.refresh_states2 = function() {
         }
     }
     this._stateDataList = this.getStateDataList();
-    if (this._stateDataList.length === 0) return;
+    if (this._stateDataList.length === 0) {
+        this._lastStateTurns = {};
+        return;
+    }
 
     var maxIcons = Math.min(this._stateDataList.length, Moghunter.bhud_statesMax);
     this._stateIcons = [];
@@ -222,6 +263,13 @@ Battle_Hud.prototype.refresh_states2 = function() {
     }
     this._state_icon.visible = true;
     this._updateStateTurnsLine();
+
+    // сохраняем текущие значения _stateTurns для последующего сравнения
+    this._lastStateTurns = {};
+    var states = this._battler.states();
+    for (var i = 0; i < states.length; i++) {
+        this._lastStateTurns[states[i].id] = this._battler._stateTurns[states[i].id];
+    }
 };
 
 Battle_Hud.prototype._updateStateTurnsLine = function() {
@@ -259,6 +307,33 @@ Battle_Hud.prototype._updateStateTurnsLine = function() {
 
 var _mog_bhud_update_states2 = Battle_Hud.prototype.update_states2;
 Battle_Hud.prototype.update_states2 = function() {
+    if (!this._state_icon || !this._battler) return;
+
+    // Дополнительная проверка изменения счётчиков
+    if (this._battler.isAlive() && !this._battler.need_refresh_bhud_states) {
+        var states = this._battler.states();
+        var stateChanged = false;
+        if (this._lastStateTurns) {
+            for (var i = 0; i < states.length; i++) {
+                var id = states[i].id;
+                var newTurns = this._battler._stateTurns[id];
+                var oldTurns = this._lastStateTurns[id];
+                if (newTurns !== oldTurns) {
+                    stateChanged = true;
+                    break;
+                }
+            }
+            if (!stateChanged && Object.keys(this._lastStateTurns).length !== states.length) {
+                stateChanged = true;
+            }
+        } else {
+            stateChanged = true;
+        }
+        if (stateChanged) {
+            this._battler.need_refresh_bhud_states = true;
+        }
+    }
+
     if (this._battler.need_refresh_bhud_states) {
         this._battler.need_refresh_bhud_states = false;
         this.refresh_states2();
