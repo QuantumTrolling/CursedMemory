@@ -1,131 +1,117 @@
 //=============================================================================
 // MOG_ConsecutiveBattles.js
-// (модифицированная версия с корректной последовательностью затемнения)
+// (модифицированная версия: корректное затемнение + вывод переменной без "X" + автообновление)
 //=============================================================================
 
 /*:
- * @plugindesc (v1.2 *) Ativa o sistema de batalhas consecutivas.
- * @author Moghunter 
- * 
+ * @plugindesc (v1.4 *) Система последовательных битв с выводом значения переменной.
+ * @author Moghunter (модификация: вывод переменной рядом с номером волны, автообновление)
+ *
  * @param Show Wave Number
- * @desc Apresentar o número de Wave.
+ * @desc Показывать номер волны.
  * @default true
- * @type boolean 
- * 
+ * @type boolean
+ *
  * @param X-Axis
- * @desc Definição X-axis.
+ * @desc Позиция по X для Wave_A.
  * @default 630
- * 
+ *
  * @param Y-Axis
- * @desc Definição Y-axis.
+ * @desc Позиция по Y для Wave_A.
  * @default 0
- * 
+ *
  * @param Number X-Axis
- * @desc Definição X-axis do número.
+ * @desc Смещение по X для номера в Wave_A.
  * @default 65
- * 
+ *
  * @param Number Y-Axis
- * @desc Definição Y-axis do número.
+ * @desc Смещение по Y для номера в Wave_A.
  * @default 3
- * 
+ *
  * @param Number FontSize
- * @desc Definição do tamanho da fonte.
+ * @desc Размер шрифта номера в Wave_A.
  * @default 20
- * 
+ *
  * @param Number Font Italic
- * @desc Ativar fonte em itálico.
+ * @desc Курсив для номера в Wave_A.
  * @default false
- * @type boolean 
- * 
+ * @type boolean
+ *
  * @param ---------------------
  *
  * @param Show Phase
- * @desc Apresentar a animação das fases.
+ * @desc Показывать анимацию фаз.
  * @default true
- * 
+ *
  * @param Phase Duration
- * @desc Definição da duração da animação.
+ * @desc Длительность анимации фазы.
  * @default 60
- * 
+ *
  * @param Phase X-Axis
- * @desc Definição X-axis.
+ * @desc Позиция по X для Wave_B.
  * @default 220
  *
  * @param Phase Y-Axis
- * @desc Definição Y-axis.
+ * @desc Позиция по Y для Wave_B.
  * @default 240
  *
  * @param Phase Number X-Axis
- * @desc Definição X-axis do número.
+ * @desc Смещение номера по X в Wave_B.
  * @default 10
  *
  * @param Phase Number Y-Axis
- * @desc Definição Y-axis do número.
+ * @desc Смещение номера по Y в Wave_B.
  * @default 10
- * 
+ *
  * @param Phase FontSize
- * @desc Definição do tamanho da fonte.
+ * @desc Размер шрифта номера в Wave_B.
  * @default 28
- * 
+ *
  * @param Phase Font Italic
- * @desc Ativar fonte em itálico.
+ * @desc Курсив для номера в Wave_B.
  * @default true
  *
  * @param Fade Out Duration
- * @desc Длительность затемнения экрана в кадрах (по умолчанию 20).
+ * @desc Длительность затемнения экрана в кадрах.
  * @default 20
  *
  * @param Fade In Duration
- * @desc Длительность прояснения экрана в кадрах (по умолчанию 30).
+ * @desc Длительность прояснения экрана в кадрах.
  * @default 30
  *
- * @help  
+ * @param Variable ID
+ * @desc ID переменной, значение которой будет показано после номера волны.
+ * @default 150
+ *
+ * @help
  * =============================================================================
- * +++ MOG - Consecutive Battles (v1.2) +++
- * By Moghunter 
- * https://mogplugins.com
+ * +++ MOG - Consecutive Battles (v1.4) +++
+ * By Moghunter (модифицировано)
  * =============================================================================
- * Ativa o sistema de batalhas consecutivas
+ * Активирует систему последовательных битв.
  *
  * =============================================================================
  * PLUGIN COMMAND
  * =============================================================================
- * Utilize o comando abaixo para definir as batalhas consecutivas, 
- *
- * consecutive_battles : X,X,X,X,X,X......
- *
- * X - ID  da batalha
- * 
- * =============================================================================
- * Para apresentar ou ocultar o número do Wave utilize os comandos abaixo. 
+ * consecutive_battles : X,X,X,X...
+ * X - ID битвы (troop).
  *
  * hide_wave_number
- *
  * show_wave_number
- *
- * =============================================================================
- * Para apresentar ou ocultar a animação das fases utilize os comandos abaixo. 
- *
  * hide_phase_animation
- *
  * show_phase_animation
- *
  * ============================================================================
- * - WHAT'S NEW (version 1.2)
+ * - ИЗМЕНЕНИЯ (v1.4)
  * ============================================================================
- * (FIX) - Corrigida a sequência de fade out/in na troca de waves.
- * (FIX) - Evita a criação duplicada do campo de batalha consecutivo.
- * (FIX) - Orientação temporária dos inimigos corrigida para resetar no fim do turno.
+ * - Добавлен параметр Variable ID для отображения значения переменной.
+ * - Текст волны теперь: "1/2 150" (где 150 - значение переменной).
+ * - Номер волны автоматически обновляется при изменении переменной.
  * ============================================================================
  */
 
-//=============================================================================
-// ** PLUGIN PARAMETERS
-//=============================================================================
-
 var Imported = Imported || {};
 Imported.MOG_ConsecutiveBattles = true;
-var Moghunter = Moghunter || {}; 
+var Moghunter = Moghunter || {};
 
 Moghunter.parameters = PluginManager.parameters('MOG_ConsecutiveBattles');
 Moghunter.consBat_SpriteWave = String(Moghunter.parameters['Show Wave Number'] || 'true');
@@ -145,9 +131,9 @@ Moghunter.consBat_SpriteTurnNumberFontSize = Number(Moghunter.parameters['Phase 
 Moghunter.consBat_SpriteTurnNumberFontItalic = String(Moghunter.parameters['Phase Font Italic'] || 'true');
 Moghunter.consBat_SpriteTurnDuration = Number(Moghunter.parameters['Phase Duration'] || 60);
 
-// Новые параметры для настройки длительности затемнения/прояснения
 Moghunter.consBat_FadeOutDuration = Number(Moghunter.parameters['Fade Out Duration'] || 20);
 Moghunter.consBat_FadeInDuration = Number(Moghunter.parameters['Fade In Duration'] || 30);
+Moghunter.consBat_VariableId = Number(Moghunter.parameters['Variable ID'] || 150);
 
 //=============================================================================
 // ** Game System
@@ -180,7 +166,7 @@ Game_System.prototype.clearConsBat = function() {
 
 //=============================================================================
 // ** Game_Interpreter
-//=============================================================================    
+//=============================================================================
 
 var _mog_cosBat_pluginCommand = Game_Interpreter.prototype.pluginCommand;
 Game_Interpreter.prototype.pluginCommand = function(command, args) {
@@ -224,7 +210,6 @@ var _mog_consBat_sprtBat_createEnemies = Spriteset_Battle.prototype.createEnemie
 Spriteset_Battle.prototype.createEnemies = function() {
     console.log("[ConsBatFix] createEnemies вызван. Индекс волны:", $gameSystem._consBat.index);
     _mog_consBat_sprtBat_createEnemies.call(this);
-    // Создаём поле только если его ещё нет
     if (!this._conBatField) {
         this.createConBatField();
     }
@@ -246,74 +231,43 @@ Spriteset_Battle.prototype.createConBatField = function() {
 
 Spriteset_Battle.prototype.turnEnemiesForNewWave = function() {
     if (!this._enemySprites) return;
-
     console.log("[ConsBatFix] === TURN ENEMIES FOR NEW WAVE ===");
-
     this._enemySprites.forEach(function(sprite) {
         if (!sprite || !sprite._enemy) return;
-
-        // Уже развернули эту волну
         if (sprite._consBatOrientationChanged) return;
-
-        // Запоминаем исходное направление
         sprite._consBatOriginalScaleX = sprite.scale.x;
         if (sprite._mainSprite) {
             sprite._consBatOriginalMainScaleX = sprite._mainSprite.scale.x;
         }
-
-        // Временно разворачиваем врага
         sprite.scale.x = -Math.abs(sprite.scale.x);
         if (sprite._mainSprite) {
             sprite._mainSprite.scale.x = -Math.abs(sprite._mainSprite.scale.x);
         }
-
         sprite._consBatOrientationChanged = true;
-
-        console.log(
-            "[ConsBatFix] Enemy:",
-            sprite._enemy.name(),
-            "temporary scale.x =",
-            sprite.scale.x
-        );
+        console.log("[ConsBatFix] Enemy:", sprite._enemy.name(), "temporary scale.x =", sprite.scale.x);
     });
 };
 
 Spriteset_Battle.prototype.restoreEnemyOrientation = function() {
     if (!this._enemySprites) return;
-
     console.log("[ConsBatFix] === RESTORE ENEMY ORIENTATION ===");
-
     this._enemySprites.forEach(function(sprite) {
         if (!sprite || !sprite._enemy) return;
-
         if (!sprite._consBatOrientationChanged) return;
-
-        // Возвращаем исходное направление
         if (sprite._consBatOriginalScaleX !== undefined) {
             sprite.scale.x = sprite._consBatOriginalScaleX;
         }
-        if (
-            sprite._mainSprite &&
-            sprite._consBatOriginalMainScaleX !== undefined
-        ) {
+        if (sprite._mainSprite && sprite._consBatOriginalMainScaleX !== undefined) {
             sprite._mainSprite.scale.x = sprite._consBatOriginalMainScaleX;
         }
-
         sprite._consBatOrientationChanged = false;
-
-        console.log(
-            "[ConsBatFix] Enemy:",
-            sprite._enemy.name(),
-            "restored scale.x =",
-            sprite.scale.x
-        );
+        console.log("[ConsBatFix] Enemy:", sprite._enemy.name(), "restored scale.x =", sprite.scale.x);
     });
 };
 
 var _mog_consBat_sprtBat_update = Spriteset_Battle.prototype.update;
 Spriteset_Battle.prototype.update = function() {
     _mog_consBat_sprtBat_update.call(this);
-
     if ($gameSystem._consBatWait > 0) $gameSystem._consBatWait--;
     if ($gameSystem._consBat.prepareSprite && $gameSystem._consBatWait === 0) {
         this.prepareConBatSprites();
@@ -323,25 +277,17 @@ Spriteset_Battle.prototype.update = function() {
 Spriteset_Battle.prototype.prepareConBatSprites = function() {
     console.log("[ConsBatFix] === PREPARE NEW WAVE ===");
     $gameSystem._consBat.prepareSprite = false;
-
     this.prepareComBatBefore();
     this.removeEnemiesConBat();
     this.createEnemies();
-
-    // Обновляем z контейнера в соответствии с новыми спрайтами
     if (this._enemySprites && this._enemySprites[0]) {
         this._conBatField.z = this._enemySprites[0].z;
     }
-
     this.turnEnemiesForNewWave();
     BattleManager._consBatTemporaryEnemyTurn = true;
-
     this.prepareComBatAfter();
     BattleManager.startBattle();
-
-    // Экран уже должен быть полностью чёрным – плавно проявляем
     $gameScreen.startFadeIn(Moghunter.consBat_FadeInDuration);
-
     if ($gameSystem._consBat.index >= $gameSystem._consBat.battles.length) {
         $gameSystem._consBat.enable = false;
     }
@@ -380,16 +326,6 @@ Spriteset_Battle.prototype.removeEnemiesConBat = function() {
 
 Spriteset_Battle.prototype.createEnemiesConBat = function() {
     // Не используется, оставлено для совместимости
-    var enemies = $gameTroop.members();
-    var sprites = [];
-    for (var i = 0; i < enemies.length; i++) {
-        sprites[i] = new Sprite_Enemy(enemies[i]);
-    }
-    sprites.sort(this.compareEnemySprite.bind(this));
-    for (var j = 0; j < sprites.length; j++) {
-        this._conBatField.addChild(sprites[j]);
-    }
-    this._enemySprites = sprites;
 };
 
 //=============================================================================
@@ -480,14 +416,9 @@ BattleManager.prototype.conBat = function(switches) {
     }
 };
 
-//------------------------------------------------------------------------
-// * processVictory
-//   Запускаем затемнение ДО подготовки следующей волны.
-//------------------------------------------------------------------------
 var _mog_conscBat_BatMngr_processVictory = BattleManager.processVictory;
 BattleManager.processVictory = function() {
     if (this.isConsBattle()) {
-        // Немедленно начинаем затемнение
         $gameScreen.startFadeOut(Moghunter.consBat_FadeOutDuration);
         console.log("[ConsBatFix] Fade Out started before wave preparation.");
         this.prepareConBat();
@@ -497,37 +428,25 @@ BattleManager.processVictory = function() {
     _mog_conscBat_BatMngr_processVictory.call(this);
 };
 
-//------------------------------------------------------------------------
-// * prepareConBat
-//   Подготовка следующей волны (без повторного запуска Fade Out).
-//------------------------------------------------------------------------
 BattleManager.prepareConBat = function() {
     this.getDataRewardsCB();
-
     this._phase = 'init';
     var troopID = $gameSystem._consBat.battles[$gameSystem._consBat.index];
-
     this._actorIndex = -1;
     this._actionForcedBattler = null;
     this._actionBattlers = [];
     this._subject = null;
     this._action = null;
     this._targets = [];
-
     $gameTroop.setup(troopID);
     $gameScreen.onBattleStart();
     this.makeEscapeRatio();
-
-    // Ждём завершения Fade Out (задержка чуть больше длительности затемнения)
     $gameSystem._consBat.prepareSprite = true;
     $gameSystem._consBat.index++;
     $gameSystem._consBatime = Moghunter.consBat_FadeOutDuration + 5;
     $gameSystem._consBatWait = Moghunter.consBat_FadeOutDuration + 5;
-
     if ($gameTemp._battleEnd) $gameTemp._battleEnd = false;
-
     if (Imported.MOG_BossHP) $gameTemp._forceCreateBossHud = true;
-
     if (Imported.MOG_ATB) {
         $gameTemp._refreshATBGauge = true;
         BattleManager.selectionComAtbClear();
@@ -584,13 +503,9 @@ BattleManager.displayStartMessages = function() {
     _mog_cBat_BatMngr_displayStartMessages.call(this);
 };
 
-//------------------------------------------------------------------------
-// * Restore Enemy Orientation At End Of First Turn
-//------------------------------------------------------------------------
 var _mog_consBat_BattleManager_endTurn = BattleManager.endTurn;
 BattleManager.endTurn = function() {
     _mog_consBat_BattleManager_endTurn.call(this);
-
     if (this._consBatTemporaryEnemyTurn) {
         var scene = SceneManager._scene;
         if (scene && scene._spriteset) {
@@ -621,6 +536,7 @@ WaveNumber.prototype.setup = function() {
     this._waveIndex = this.data().index;
     this._mwaveIndex = this.data().battles.length;
     this._showTurn = $gameSystem._consBaTurnVisible;
+    this._lastVariableValue = null; // ДОБАВЛЕНО: для отслеживания изменения переменной
     this.opacity = 0;
 };
 
@@ -661,13 +577,17 @@ WaveNumber.prototype.refreshWaveNumber = function() {
     this._number.bitmap.clear();
     var wave = this._waveIndex + 1;
     var mwave = this._mwaveIndex + 1;
-    var text = String(wave + "/" + mwave);
+    var variableValue = $gameVariables.value(Moghunter.consBat_VariableId);
+    this._lastVariableValue = variableValue; // ДОБАВЛЕНО: сохраняем текущее значение
+    var text = String(wave + "/" + mwave + " " + variableValue);
     this._number.bitmap.drawText(text, 0, 0, this._number.width - 5, this._number.height - 5, "center");
 };
 
 WaveNumber.prototype.needRefreshWaveNumber = function() {
     if (this._waveIndex != this.data().index) return true;
     if (this._mwaveIndex != this.data().battles.length) return true;
+    // ДОБАВЛЕНО: проверяем изменение переменной
+    if (this._lastVariableValue !== $gameVariables.value(Moghunter.consBat_VariableId)) return true;
     return false;
 };
 
@@ -698,10 +618,10 @@ WaveNumber.prototype.createTurnNumber = function() {
 
 WaveNumber.prototype.refreshNumberTurn = function() {
     this._numberTurn.bitmap.clear();
-    var waveWord = String(Moghunter.consBat_SpriteWaveWord);
     var wave = this._waveIndex + 1;
     var mwave = this._mwaveIndex + 1;
-    var text = String(wave + "/" + mwave);
+    var variableValue = $gameVariables.value(Moghunter.consBat_VariableId);
+    var text = String(wave + "/" + mwave + " " + variableValue);
     this._numberTurn.bitmap.drawText(text, 0, 0, this._numberTurn.width - 5, this._numberTurn.height - 5, "center");
 };
 
