@@ -139,5 +139,6 @@ var $plugins =
 {"name":"A_sp_mechanic","status":true,"description":"v2.3 SP для партии + плашка + сдвиг всех стоимостей (AP/EP/SP).","parameters":{"Initial SP":"4","Max SP":"4","SP Layout X Offset":"20","SP Layout Y Offset":"-80","SP Text X Offset":"-20","SP Text Y Offset":"5","SP Font Size":"28","Cost X Offset":"5","SP Cost X Offset":"0"}},
 {"name":"A_equip_fix","status":true,"description":"v1.0 При экипировке восстанавливает HP/MP до максимума.","parameters":{}},
 {"name":"SceneSave","status":true,"description":"v3.8 Индивидуальные координаты и размеры кнопок.","parameters":{"Save Button Text":"Сохранить","Load Button Text":"Загрузить","Overwrite Button Text":"Перезаписать","Confirm Overwrite Text":"Overwrite this save file?","Save Button X":"0","Save Button Y":"-4","Save Button Width":"60","Save Button Height":"0","Load Button X":"0","Load Button Y":"-4","Load Button Width":"120","Load Button Height":"120","Overwrite Button X":"0","Overwrite Button Y":"-4","Overwrite Button Width":"60","Overwrite Button Height":"0","Button Spacing":"4"}},
-{"name":"SaveDisableDuringChoice","status":true,"description":"v1.0 Запрещает сохранение игры во время активного окна выбора.","parameters":{}}
+{"name":"SaveDisableDuringChoice","status":true,"description":"v1.0 Запрещает сохранение игры во время активного окна выбора.","parameters":{}},
+{"name":"A_remove_on_death_states","status":true,"description":"Fix - запускает Custom Remove Effect всех состояний перед смертью.","parameters":{}}
 ];

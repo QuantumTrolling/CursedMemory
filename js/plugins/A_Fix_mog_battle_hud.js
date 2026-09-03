@@ -1,39 +1,7 @@
 //=============================================================================
 // A_fix_mog_battle_hud.js
-// Добавляет отображение оставшихся ходов состояний на иконках в HUD
-// + Автообновление иконок для пассивных состояний (исправлено)
-// + МГНОВЕННОЕ ОБНОВЛЕНИЕ ЦИФРЫ ХОДОВ (без задержки)
-// + Настройки: размер шрифта, смещение текста по X и Y
-// + Фикс: цифра не показывается, если у состояния autoRemovalTiming = 0
-// + Фикс: обновление счётчиков при возвращении актёра на поле боя
+// Исправленная версия: отображение оставшихся ходов состояний на иконках
 //=============================================================================
-
-/*:
- * @plugindesc v1.2 Отображение оставшихся ходов состояний на иконках батл-худа
- * @author Moghunter, дополнения fix
- *
- * @param fontSize
- * @desc Размер шрифта для цифры оставшихся ходов (по умолчанию 14)
- * @default 14
- *
- * @param textOffsetX
- * @desc Смещение текста по оси X (влево-вправо)
- * @default 0
- *
- * @param textOffsetY
- * @desc Смещение текста по оси Y (вверх-вниз)
- * @default 0
- *
- * @help
- * Плагин добавляет на иконки состояний в батл-худе число оставшихся ходов.
- * Если у состояния нет длительности (autoRemovalTiming = 0, т.е. "Удалить автоматически - Нет"),
- * цифра не отображается, даже если в _stateTurns остались старые данные.
- *
- * Настройки:
- * fontSize    - размер шрифта (по умолчанию 14)
- * textOffsetX - смещение цифры по горизонтали (от левого верхнего угла иконки)
- * textOffsetY - смещение цифры по вертикали
- */
 
 var Imported = Imported || {};
 Imported.A_fix_mog_battle_hud = true;
@@ -71,6 +39,7 @@ var _mog_bhud_create_states = Battle_Hud.prototype.create_states;
 Battle_Hud.prototype.create_states = function() {
     _mog_bhud_create_states.call(this);
     if (this._state_icon) {
+        // Создаём текстовый спрайт, если его нет
         if (!this._stateTurnText || this._stateTurnText.bitmap._destroyed) {
             if (this._stateTurnText) this._state_icon.removeChild(this._stateTurnText);
             this._stateTurnText = new Sprite(new Bitmap(32, 32));
@@ -80,8 +49,11 @@ Battle_Hud.prototype.create_states = function() {
             this._stateTurnText.bitmap.outlineWidth = 3;
             this._stateTurnText.x = textOffsetX;
             this._stateTurnText.y = textOffsetY;
-            this._state_icon.addChild(this._stateTurnText);
         }
+        // ГАРАНТИРОВАННО добавляем спрайт к иконке (поверх остальных)
+        this._state_icon.addChild(this._stateTurnText);
+        // Принудительно обновляем текст
+        this._updateStateIconAndTurns();
     }
 };
 
@@ -108,7 +80,6 @@ Battle_Hud.prototype.refresh_states = function() {
     if (this._stateDataList.length === 0) {
         this._state_icon.visible = false;
         if (this._stateTurnText) this._stateTurnText.visible = false;
-        // сохраняем пустой объект счётчиков
         this._lastStateTurns = {};
         return;
     }
@@ -116,7 +87,6 @@ Battle_Hud.prototype.refresh_states = function() {
     if (this._stateTurnText) this._stateTurnText.visible = true;
     this._updateStateIconAndTurns();
 
-    // сохраняем текущие значения _stateTurns для последующего сравнения
     this._lastStateTurns = {};
     var states = this._battler.states();
     for (var i = 0; i < states.length; i++) {
@@ -126,7 +96,8 @@ Battle_Hud.prototype.refresh_states = function() {
 
 Battle_Hud.prototype._updateStateIconAndTurns = function() {
     if (!this._stateDataList || this._stateDataList.length === 0) return;
-    var data = this._stateDataList[this._states_data[1] % this._stateDataList.length];
+    var index = this._states_data[1] || 0;
+    var data = this._stateDataList[index % this._stateDataList.length];
     var iconIndex = data.iconIndex;
     var sx = iconIndex % 16 * 32;
     var sy = Math.floor(iconIndex / 16) * 32;
@@ -140,7 +111,6 @@ Battle_Hud.prototype._updateStateIconAndTurns = function() {
             turns = (raw !== undefined && raw >= 0) ? raw : null;
         }
 
-        // Проверка: если состояние не имеет автоматического удаления (autoRemovalTiming = 0), цифру не показываем
         var state = $dataStates[data.stateId];
         if (!state || state.autoRemovalTiming === 0) {
             turns = null;
@@ -148,7 +118,12 @@ Battle_Hud.prototype._updateStateIconAndTurns = function() {
 
         if (turns !== null && turns > 0) {
             var text = String(turns);
-            var tw = this._stateTurnText.bitmap.measureTextWidth(text);
+            var tw = 0;
+            if (this._stateTurnText.bitmap.measureTextWidth) {
+                tw = this._stateTurnText.bitmap.measureTextWidth(text);
+            } else {
+                tw = Math.floor(fontSize * 0.6 * text.length);
+            }
             this._stateTurnText.bitmap.drawText(text, 32 - tw - 2, 32 - 20, tw + 4, 20, 'right');
             this._stateTurnText.visible = true;
         } else {
@@ -161,12 +136,10 @@ var _mog_bhud_update_states = Battle_Hud.prototype.update_states;
 Battle_Hud.prototype.update_states = function() {
     if (!this._state_icon || !this._battler) return;
 
-    // Дополнительная проверка: если счётчики ходов изменились, принудительно обновляем
     if (this._battler.isAlive() && !this._battler.need_refresh_bhud_states) {
         var states = this._battler.states();
         var stateChanged = false;
         if (this._lastStateTurns) {
-            // проверяем каждое текущее состояние
             for (var i = 0; i < states.length; i++) {
                 var id = states[i].id;
                 var newTurns = this._battler._stateTurns[id];
@@ -176,12 +149,11 @@ Battle_Hud.prototype.update_states = function() {
                     break;
                 }
             }
-            // проверяем, не исчезли ли состояния
             if (!stateChanged && Object.keys(this._lastStateTurns).length !== states.length) {
                 stateChanged = true;
             }
         } else {
-            stateChanged = true; // если сохранённых данных нет, обновляем обязательно
+            stateChanged = true;
         }
         if (stateChanged) {
             this._battler.need_refresh_bhud_states = true;
@@ -204,7 +176,7 @@ Battle_Hud.prototype.update_states = function() {
 };
 
 //-----------------------------------------------------------------------------
-// Режим 1 – Line Mode (с настройками и фиксом)
+// Режим 1 – Line Mode
 //-----------------------------------------------------------------------------
 var _mog_bhud_create_states2 = Battle_Hud.prototype.create_states2;
 Battle_Hud.prototype.create_states2 = function() {
@@ -264,7 +236,6 @@ Battle_Hud.prototype.refresh_states2 = function() {
     this._state_icon.visible = true;
     this._updateStateTurnsLine();
 
-    // сохраняем текущие значения _stateTurns для последующего сравнения
     this._lastStateTurns = {};
     var states = this._battler.states();
     for (var i = 0; i < states.length; i++) {
@@ -285,7 +256,6 @@ Battle_Hud.prototype._updateStateTurnsLine = function() {
                 turns = (raw !== undefined && raw >= 0) ? raw : null;
             }
 
-            // Проверка autoRemovalTiming
             var state = $dataStates[data.stateId];
             if (!state || state.autoRemovalTiming === 0) {
                 turns = null;
@@ -293,7 +263,12 @@ Battle_Hud.prototype._updateStateTurnsLine = function() {
 
             if (turns !== null && turns > 0) {
                 var text = String(turns);
-                var tw = txt.bitmap.measureTextWidth(text);
+                var tw = 0;
+                if (txt.bitmap.measureTextWidth) {
+                    tw = txt.bitmap.measureTextWidth(text);
+                } else {
+                    tw = Math.floor(fontSize * 0.6 * text.length);
+                }
                 txt.bitmap.drawText(text, 32 - tw - 2, 32 - 20, tw + 4, 20, 'right');
                 txt.visible = true;
             } else {
@@ -309,7 +284,6 @@ var _mog_bhud_update_states2 = Battle_Hud.prototype.update_states2;
 Battle_Hud.prototype.update_states2 = function() {
     if (!this._state_icon || !this._battler) return;
 
-    // Дополнительная проверка изменения счётчиков
     if (this._battler.isAlive()) {
         var states = this._battler.states();
         var stateChanged = false;
@@ -365,37 +339,26 @@ Game_BattlerBase.prototype._arrayDiff = function(a, b) {
 
 //=============================================================================
 // FIX: принудительное обновление длительности состояний
-// при повторном появлении актёра на поле боя
 //=============================================================================
-
 var _A_fix_mog_hud_update = Battle_Hud.prototype.update;
-
 Battle_Hud.prototype.update = function() {
-
     _A_fix_mog_hud_update.call(this);
-
     if (!this._battler) return;
 
-    // Проверяем, изменился ли набор/длительность состояний
     var currentStates = this._battler.states();
     var needRefresh = false;
 
     if (!this._lastStateTurns) {
         needRefresh = true;
     } else {
-
-        // Проверяем количество состояний
         if (Object.keys(this._lastStateTurns).length !== currentStates.length) {
             needRefresh = true;
         }
-
-        // Проверяем длительность каждого состояния
         if (!needRefresh) {
             for (var i = 0; i < currentStates.length; i++) {
                 var stateId = currentStates[i].id;
                 var currentTurns = this._battler._stateTurns[stateId];
                 var oldTurns = this._lastStateTurns[stateId];
-
                 if (currentTurns !== oldTurns) {
                     needRefresh = true;
                     break;
@@ -404,16 +367,12 @@ Battle_Hud.prototype.update = function() {
         }
     }
 
-    // Принудительно обновляем HUD
     if (needRefresh) {
         this._lastStateTurns = {};
-
         for (var i = 0; i < currentStates.length; i++) {
             var stateId = currentStates[i].id;
-            this._lastStateTurns[stateId] =
-                this._battler._stateTurns[stateId];
+            this._lastStateTurns[stateId] = this._battler._stateTurns[stateId];
         }
-
         this._battler.need_refresh_bhud_states = true;
     }
 };
