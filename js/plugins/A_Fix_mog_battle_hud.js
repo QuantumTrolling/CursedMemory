@@ -310,7 +310,7 @@ Battle_Hud.prototype.update_states2 = function() {
     if (!this._state_icon || !this._battler) return;
 
     // Дополнительная проверка изменения счётчиков
-    if (this._battler.isAlive() && !this._battler.need_refresh_bhud_states) {
+    if (this._battler.isAlive()) {
         var states = this._battler.states();
         var stateChanged = false;
         if (this._lastStateTurns) {
@@ -361,4 +361,59 @@ Game_BattlerBase.prototype._arrayDiff = function(a, b) {
         if (a[i] !== b[i]) return true;
     }
     return false;
+};
+
+//=============================================================================
+// FIX: принудительное обновление длительности состояний
+// при повторном появлении актёра на поле боя
+//=============================================================================
+
+var _A_fix_mog_hud_update = Battle_Hud.prototype.update;
+
+Battle_Hud.prototype.update = function() {
+
+    _A_fix_mog_hud_update.call(this);
+
+    if (!this._battler) return;
+
+    // Проверяем, изменился ли набор/длительность состояний
+    var currentStates = this._battler.states();
+    var needRefresh = false;
+
+    if (!this._lastStateTurns) {
+        needRefresh = true;
+    } else {
+
+        // Проверяем количество состояний
+        if (Object.keys(this._lastStateTurns).length !== currentStates.length) {
+            needRefresh = true;
+        }
+
+        // Проверяем длительность каждого состояния
+        if (!needRefresh) {
+            for (var i = 0; i < currentStates.length; i++) {
+                var stateId = currentStates[i].id;
+                var currentTurns = this._battler._stateTurns[stateId];
+                var oldTurns = this._lastStateTurns[stateId];
+
+                if (currentTurns !== oldTurns) {
+                    needRefresh = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Принудительно обновляем HUD
+    if (needRefresh) {
+        this._lastStateTurns = {};
+
+        for (var i = 0; i < currentStates.length; i++) {
+            var stateId = currentStates[i].id;
+            this._lastStateTurns[stateId] =
+                this._battler._stateTurns[stateId];
+        }
+
+        this._battler.need_refresh_bhud_states = true;
+    }
 };
