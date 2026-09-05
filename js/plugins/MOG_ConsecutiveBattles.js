@@ -573,7 +573,11 @@ WaveNumber.prototype.createNumber = function() {
 WaveNumber.prototype.refreshWaveNumber = function() {
     this._waveIndex = this.data().index;
     this._mwaveIndex = this.data().battles.length;
-    if (this._mwaveIndex === 0) return;
+    // Если волн нет, принудительно показываем 1/1
+    if (this._mwaveIndex === 0) {
+        this._waveIndex = 0;
+        this._mwaveIndex = 0;
+    }
     this._number.bitmap.clear();
     var wave = this._waveIndex + 1;
     var mwave = this._mwaveIndex + 1;
@@ -620,6 +624,11 @@ WaveNumber.prototype.refreshNumberTurn = function() {
     this._numberTurn.bitmap.clear();
     var wave = this._waveIndex + 1;
     var mwave = this._mwaveIndex + 1;
+    // Если волн нет, принудительно 1/1
+    if (this._mwaveIndex === 0) {
+        wave = 1;
+        mwave = 1;
+    }
     var variableValue = $gameVariables.value(Moghunter.consBat_VariableId);
     var text = String(wave + "/" + mwave + " " + variableValue);
     this._numberTurn.bitmap.drawText(text, 0, 0, this._numberTurn.width - 5, this._numberTurn.height - 5, "center");
@@ -627,7 +636,7 @@ WaveNumber.prototype.refreshNumberTurn = function() {
 
 WaveNumber.prototype.needFade = function() {
     if ($gameMessage.isBusy()) return true;
-    if (this._mwaveIndex === 0) return true;
+    // Убрано: if (this._mwaveIndex === 0) return true;  -- теперь показывается всегда
     if (!$gameSystem._consBaVisible) return true;
     return false;
 };
