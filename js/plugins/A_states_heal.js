@@ -4,6 +4,8 @@
 // Requires YEP_BuffsStatesCore
 // =============================================================================
 // New tag: <Ally Pre-Action: condRes,op,val,costRes,costPer,rewRes,rewAmt,stateId>
+// NEW tag: <BlockHealing>  — состояние полностью блокирует лечение баттлера
+// =============================================================================
 
 var Imported = Imported || {};
 Imported.HealStateTriggers = true;
@@ -35,6 +37,7 @@ Imported.HealStateTriggers = true;
       obj.allyTriggerSkillIds = [];
       obj.allyTriggerStateId = 0;
       obj.allyPreActionParams = null;
+      obj.blockHealing = false; // NEW
       var notedata = obj.note.split(/[\r\n]+/);
       var mode = "";
       for (var i = 0; i < notedata.length; i++) {
@@ -49,6 +52,9 @@ Imported.HealStateTriggers = true;
         if (/<\/CUSTOM ALLY PRE-ACTION EFFECT>/i.test(line)) { mode = ""; continue; }
         if (/<CUSTOM ALLY ACTION EFFECT>/i.test(line)) { mode = "allyaction"; continue; }
         if (/<\/CUSTOM ALLY ACTION EFFECT>/i.test(line)) { mode = ""; continue; }
+
+        // NEW: тег блокировки лечения
+        if (/<BlockHealing>/i.test(line)) obj.blockHealing = true;
 
         // Короткий тег
         if (/<Ally Pre-Action:\s*([^>]*)>/i.test(line)) {
@@ -84,6 +90,17 @@ Imported.HealStateTriggers = true;
   };
 
   //=============================================================================
+  // NEW: Проверка блокировки лечения
+  //=============================================================================
+  Game_BattlerBase.prototype.isHealingBlocked = function() {
+    var states = this.states();
+    for (var i = 0; i < states.length; i++) {
+      if (states[i] && states[i].blockHealing) return true;
+    }
+    return false;
+  };
+
+  //=============================================================================
   // BattleManager (без pre-action, оставляем только healer tracking)
   //=============================================================================
   var _BattleManager_startAction = BattleManager.startAction;
@@ -98,6 +115,10 @@ Imported.HealStateTriggers = true;
   var _Game_BattlerBase_setHp = Game_BattlerBase.prototype.setHp;
   Game_BattlerBase.prototype.setHp = function(hp) {
     var oldHp = this.hp;
+    // NEW: если это лечение и висит состояние-блокировщик — не даём HP расти
+    if (hp > oldHp && this.isAlive() && this.isHealingBlocked()) {
+      hp = oldHp;
+    }
     _Game_BattlerBase_setHp.call(this, hp);
     var healAmount = this.hp - oldHp;
     if (healAmount <= 0) return;
@@ -110,6 +131,13 @@ Imported.HealStateTriggers = true;
 
   var _Game_Battler_gainHp = Game_Battler.prototype.gainHp;
   Game_Battler.prototype.gainHp = function(value) {
+    // NEW: блокировка лечения — выходим до вызова оригинала,
+    // чтобы даже попап не отрисовался как хилл
+    if (value > 0 && this.isAlive() && this.isHealingBlocked()) {
+      this._result.hpDamage = 0;
+      this._result.hpAffected = true;
+      return;
+    }
     _Game_Battler_gainHp.call(this, value);
     if (value > 0 && this.processHealStateEffects) {
       if (!$gameParty.inBattle()) return;
