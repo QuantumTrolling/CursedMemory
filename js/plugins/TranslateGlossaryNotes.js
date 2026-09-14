@@ -58,23 +58,33 @@
         }
     }
 
-    function parseGlossaryTranslations(note) {
-        const allTranslations = {};
-        const regex = /<(\w+)\s+Translation>([\s\S]*?)<\/\1\s+Translation>/gi;
+function parseGlossaryTranslations(note) {
+    const allTranslations = {};
+    const blockRegex = /<(\w+)\s+Translation>([\s\S]*?)<\/\1\s+Translation>/gi;
 
-        let match;
-        while ((match = regex.exec(note)) !== null) {
-            const lang = match[1];
-            const body = match[2];
-            const fields = {};
+    let blockMatch;
+    while ((blockMatch = blockRegex.exec(note)) !== null) {
+        const lang = blockMatch[1];
+        const body = blockMatch[2];
+        const fields = {};
 
-            body.replace(/\[(.+?)\]:([\s\S]*?)(?=\n\[|$)/g, (_, key, value) => {
-                fields[key.trim()] = value.trim();
-            });
+        // Ищем все пары "[Tag]:<значение>".
+        // Значение — всё после ":" до следующего "\n[Tag]:" или до конца блока.
+        const fieldRegex = /\[([^\]\r\n]+)\]:([\s\S]*?)(?=\r?\n\[|$)/g;
+        let fieldMatch;
+        while ((fieldMatch = fieldRegex.exec(body)) !== null) {
+            const key = fieldMatch[1].trim();
 
-            allTranslations[lang] = fields;
+            // Единственное, что убираем — финальный перевод строки.
+            // Ведущий пробел после ":" НЕ трогаем.
+            const value = fieldMatch[2].replace(/[\r\n]+$/, '');
+
+            fields[key] = value;
         }
 
-        return allTranslations;
+        allTranslations[lang] = fields;
     }
+
+    return allTranslations;
+}
 })();
