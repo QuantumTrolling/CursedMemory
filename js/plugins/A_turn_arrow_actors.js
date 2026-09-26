@@ -182,6 +182,16 @@
  * @type number
  * @desc Смещение по Y для актора 16
  * @default -80
+ * 
+ * @param Actor17X
+ * @type number
+ * @desc Смещение по X для актора 17
+ * @default 0
+ *
+ * @param Actor17Y
+ * @type number
+ * @desc Смещение по Y для актора 17
+ * @default -80
  */
 
 (function() {
@@ -199,7 +209,7 @@ function getActorOffset(actorId) {
     var defaultOffsetX = Number(parameters["OffsetX"] || 0);
     var defaultOffsetY = Number(parameters["OffsetY"] || -80);
 
-    if (actorId >= 1 && actorId <= 16) {
+    if (actorId >= 1 && actorId <= 17) {
         var actorX = parameters["Actor" + actorId + "X"];
         var actorY = parameters["Actor" + actorId + "Y"];
 
