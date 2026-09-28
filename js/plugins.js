@@ -140,5 +140,6 @@ var $plugins =
 {"name":"A_equip_fix","status":true,"description":"v1.0 При экипировке восстанавливает HP/MP до максимума.","parameters":{}},
 {"name":"SceneSave","status":true,"description":"v3.8 Индивидуальные координаты и размеры кнопок.","parameters":{"Save Button Text":"Сохранить","Load Button Text":"Загрузить","Overwrite Button Text":"Перезаписать","Confirm Overwrite Text":"Overwrite this save file?","Save Button X":"0","Save Button Y":"-4","Save Button Width":"60","Save Button Height":"0","Load Button X":"0","Load Button Y":"-4","Load Button Width":"120","Load Button Height":"120","Overwrite Button X":"0","Overwrite Button Y":"-4","Overwrite Button Width":"60","Overwrite Button Height":"0","Button Spacing":"4"}},
 {"name":"SaveDisableDuringChoice","status":true,"description":"v1.0 Запрещает сохранение игры во время активного окна выбора.","parameters":{}},
-{"name":"A_remove_on_death_states","status":true,"description":"Fix - запускает Custom Remove Effect всех состояний перед смертью.","parameters":{}}
+{"name":"A_remove_on_death_states","status":true,"description":"Fix - запускает Custom Remove Effect всех состояний перед смертью.","parameters":{}},
+{"name":"A_target_dead_and_alive","status":true,"description":"Позволяет навыкам/предметам с <Any Ally> выбирать любого союзника, включая мёртвых.","parameters":{}}
 ];
