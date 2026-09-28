@@ -49,9 +49,19 @@
  *    <ALLSTAT Bonus from Actor: 3, 50%, ALLSTAT>
  *    // (аналогично, с явным указанием ALLSTAT)
  *
+ * 10. Бонус от HP живых союзников, имеющих определённое состояние:
+ *    <MDF Bonus from Actors Missing HP with state 292: 50%>
+ *    // +50% от суммарного недостающего HP союзников с состоянием 292
+ *    <MDF Bonus from Actors Current HP with state 292: 25%>
+ *    // +25% от суммарного текущего HP союзников с состоянием 292
+ *    <MDF Bonus from Actors Missing HP% with state 292: 50%>
+ *    // +50% от суммарного % недостающего HP союзников с состоянием 292 (0..100)
+ *    <MDF Bonus from Actors Current HP% with state 292: 30%>
+ *    // +30% от суммарного % текущего HP союзников с состоянием 292 (0..100)
+ *
  * ============================================================================
  * Источники:
- * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current Shield, Shield,
+ * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current MP, Current Shield, Shield,
  * ALLSTAT (для целого набора параметров)
  * (процентные версии: Current HP%, Missing HP%)
  * ============================================================================
@@ -86,7 +96,7 @@
         for (let i = 0; i < states.length; i++) {
             const note = states[i].note || "";
 
-            // Новый тег: <STAT Bonus from Actors PARAM with state ID: X%>
+            // <STAT Bonus from Actors PARAM with state ID: X%>
             const regexActorsWithState =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
             let matchActorsWithState;
@@ -110,7 +120,97 @@
                 bonusFlat += Math.floor(sum * percent);
             }
 
-            // Новый тег: <STAT Bonus from Actors PARAM Full HP: X%>
+            // НОВЫЙ ТЕГ: <STAT Bonus from Actors Missing HP with state ID: X%>
+            const regexActorsMissingHPWithState =
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+MISSING\s+HP\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+            let matchActorsMissingHPWithState;
+            while ((matchActorsMissingHPWithState = regexActorsMissingHPWithState.exec(note)) !== null) {
+                const target  = matchActorsMissingHPWithState[1].toUpperCase();
+                const stateId = Number(matchActorsMissingHPWithState[2]);
+                const percent = Number(matchActorsMissingHPWithState[3]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (!this.friendsUnit) continue;
+
+                const unit = this.friendsUnit();
+                let sum = 0;
+                for (const member of unit.members()) {
+                    if (member.hp > 0 && member.isStateAffected(stateId)) {
+                        sum += (member.mhp - member.hp);
+                    }
+                }
+                bonusFlat += Math.floor(sum * percent);
+            }
+
+            // НОВЫЙ ТЕГ: <STAT Bonus from Actors Current HP with state ID: X%>
+            const regexActorsCurrentHPWithState =
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+CURRENT\s+HP\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+            let matchActorsCurrentHPWithState;
+            while ((matchActorsCurrentHPWithState = regexActorsCurrentHPWithState.exec(note)) !== null) {
+                const target  = matchActorsCurrentHPWithState[1].toUpperCase();
+                const stateId = Number(matchActorsCurrentHPWithState[2]);
+                const percent = Number(matchActorsCurrentHPWithState[3]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (!this.friendsUnit) continue;
+
+                const unit = this.friendsUnit();
+                let sum = 0;
+                for (const member of unit.members()) {
+                    if (member.hp > 0 && member.isStateAffected(stateId)) {
+                        sum += member.hp;
+                    }
+                }
+                bonusFlat += Math.floor(sum * percent);
+            }
+
+            // НОВЫЙ ТЕГ: <STAT Bonus from Actors Missing HP% with state ID: X%>
+            const regexActorsMissingHPPercentWithState =
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+MISSING\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+            let matchActorsMissingHPPercent;
+            while ((matchActorsMissingHPPercent = regexActorsMissingHPPercentWithState.exec(note)) !== null) {
+                const target  = matchActorsMissingHPPercent[1].toUpperCase();
+                const stateId = Number(matchActorsMissingHPPercent[2]);
+                const percent = Number(matchActorsMissingHPPercent[3]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (!this.friendsUnit) continue;
+
+                const unit = this.friendsUnit();
+                let sum = 0;
+                for (const member of unit.members()) {
+                    if (member.hp > 0 && member.isStateAffected(stateId)) {
+                        const mhp = member.mhp || 1;
+                        sum += (member.mhp - member.hp) / mhp * 100;
+                    }
+                }
+                bonusFlat += Math.floor(sum * percent);
+            }
+
+            // НОВЫЙ ТЕГ: <STAT Bonus from Actors Current HP% with state ID: X%>
+            const regexActorsCurrentHPPercentWithState =
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+CURRENT\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+            let matchActorsCurrentHPPercent;
+            while ((matchActorsCurrentHPPercent = regexActorsCurrentHPPercentWithState.exec(note)) !== null) {
+                const target  = matchActorsCurrentHPPercent[1].toUpperCase();
+                const stateId = Number(matchActorsCurrentHPPercent[2]);
+                const percent = Number(matchActorsCurrentHPPercent[3]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (!this.friendsUnit) continue;
+
+                const unit = this.friendsUnit();
+                let sum = 0;
+                for (const member of unit.members()) {
+                    if (member.hp > 0 && member.isStateAffected(stateId)) {
+                        const mhp = member.mhp || 1;
+                        sum += member.hp / mhp * 100;
+                    }
+                }
+                bonusFlat += Math.floor(sum * percent);
+            }
+
+            // <STAT Bonus from Actors PARAM Full HP: X%>
             const regexActorsFullHP =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+FULL\s+HP\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
             let matchActorsFullHP;
@@ -134,7 +234,7 @@
                 bonusFlat += Math.floor(sum * percent);
             }
 
-            // НОВЫЙ ТЕГ: <STAT Bonus from Allies Missing HP: X%>
+            // <STAT Bonus from Allies Missing HP: X%>
             const regexAlliesMissingHP =
                 /<(\w+)\s+BONUS\s+FROM\s+ALLIES\s+MISSING\s+HP\s*:\s*(-?\d+\.?\d*)\s*%>/gi;
             let matchAlliesMissingHP;
@@ -279,7 +379,7 @@
                 bonusFlat += Math.floor(sourceValue * percent);
             }
 
-            // ===== НОВЫЙ ТЕГ: <ALLSTAT Bonus from Actor: ID, X%> =====
+            // ===== <ALLSTAT Bonus from Actor: ID, X%> =====
             // Применяет процент от каждого параметра актёра ID к такому же параметру цели
             const regexAllstatActor =
                 /<ALLSTAT\s+BONUS\s+FROM\s+ACTOR\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)%\s*(?:,\s*ALLSTAT\s*)?>/gi;
@@ -295,7 +395,7 @@
                 const sourceValue = _Game_BattlerBase_param.call(actor, paramId);
                 bonusFlat += Math.floor(sourceValue * percent);
             }
-            // ===========================================================
+            // =====================================================
         }
 
         return (
@@ -329,7 +429,7 @@
             return (this.mhp || 0) - (this.hp || 0);
         }
 
-        // Добавить в getSourceValue, после блока MISSING HP
+        // Current MP
         if (source === "CURRENT MP") {
             if (isPercent) {
                 const mmp = this.mmp || 1;

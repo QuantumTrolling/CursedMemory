@@ -115,40 +115,43 @@
         };
     }
 
-    if (Window_BattleSkill.prototype.drawSkillCost) {
-        Window_BattleSkill.prototype.drawSkillCost = function(skill, x, y, width) {
-            var actor = this._actor;
-            if (!actor) return;
+	if (Window_BattleSkill.prototype.drawSkillCost) {
+		Window_BattleSkill.prototype.drawSkillCost = function(skill, x, y, width) {
+			var actor = this._actor;
+			if (!actor) return;
 
-            var mpCost = actor.skillMpCost(skill);
-            var tpCost = actor.skillTpCost(skill);
+			var hpCost = actor.skillHpCost(skill);
+			var mpCost = actor.skillMpCost(skill);
+			var tpCost = actor.skillTpCost(skill);
 
-            var costValue = 0;
-            var costType = '';
-            var costColor = this.normalColor();
+			// Собираем все активные стоимости в один массив
+			var costs = [];
+			if (hpCost > 0) costs.push({ value: hpCost, label: 'HP', color: '#ff4444' });
+			if (mpCost > 0) costs.push({ value: mpCost, label: 'AP', color: this.mpCostColor() });
+			if (tpCost > 0) costs.push({ value: tpCost, label: 'EP', color: '#ffa500' });
 
-            if (mpCost > 0) {
-                costValue = mpCost;
-                costType = 'AP';
-                costColor = this.mpCostColor();
-            } else if (tpCost > 0) {
-                costValue = tpCost;
-                costType = 'EP';
-                costColor = '#ffa500';
-            } else {
-                return;
-            }
+			if (costs.length === 0) return;
 
-            var iconSize = width;
-            var textY = y + iconSize + 8;
-            var textHeight = 24;
-            var costText = costValue + ' ' + costType;
+			var iconSize = width;
+			var textY = y + iconSize + 8;
+			var textHeight = 24;
 
-            this.changeTextColor(costColor);
-            this.contents.drawText(costText, x, textY, iconSize, textHeight, 'center');
-            this.resetTextColor();
-        };
-    }
+			// Рисуем все стоимости в одной строке через пробел, по центру
+			var parts = costs.map(function(c) { return c.value + ' ' + c.label; });
+			var costText = parts.join('  ');
+
+			// Если показываем несколько — усредним цвет или возьмём первый
+			var drawColor = costs[0].color;
+			if (costs.length > 1) {
+				// при нескольких — нейтральный цвет, либо цвет первой стоимости
+				drawColor = costs[0].color;
+			}
+
+			this.changeTextColor(drawColor);
+			this.contents.drawText(costText, x - 8, textY, iconSize + 16, textHeight, 'center');
+			this.resetTextColor();
+		};
+	}
 
     // ========== ДОПОЛНЕНИЯ ДЛЯ Window_BattleItem (аналогично навыкам) ==========
     if (Window_BattleItem.prototype.itemWidth) {
