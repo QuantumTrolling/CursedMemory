@@ -1,5 +1,6 @@
 //=============================================================================
 // A_fix_shops.js (сетка, row-major, скролл, контроль строк, SE и попап)
+// + кнопка закрытия (img/pictures/close.png) в правом верхнем углу
 //=============================================================================
 /*:
  * @plugindesc Магазин с настраиваемыми колонками и скроллом
@@ -15,6 +16,8 @@
  * - Стрелки списка товаров — отдельные спрайты из img/battlehud/Turn.png
  *   (стандартные системные стрелки полностью отключены)
  * - Добавлено мигание и смещение вверх/вниз на пару пикселей для стрелок
+ * - В правом верхнем углу отображается кнопка закрытия (img/pictures/close.png).
+ *   ЛКМ по ней = нажатие ESC (закрыть магазин / снять выделение).
  *
  * ============================
  * ОСНОВНЫЕ НАСТРОЙКИ
@@ -221,6 +224,31 @@
  * @default 255
  *
  * ============================
+ * КНОПКА ЗАКРЫТИЯ
+ * ============================
+ *
+ * @param closeBtnImage
+ * @text Файл кнопки закрытия
+ * @desc Имя файла из img/pictures/ (без расширения).
+ * @default close
+ *
+ * @param closeBtnMarginRight
+ * @text Отступ кнопки закрытия справа
+ * @type number
+ * @default 20
+ *
+ * @param closeBtnMarginTop
+ * @text Отступ кнопки закрытия сверху
+ * @type number
+ * @default 20
+ *
+ * @param closeBtnScale
+ * @text Масштаб кнопки закрытия
+ * @type number
+ * @decimals 2
+ * @default 1
+ *
+ * ============================
  * КОМАНДЫ ПЛАГИНА
  * ============================
  * FixShopBG [имя_файла]
@@ -278,7 +306,13 @@ if (!Imported.YEP_ShopMenuCore) {
         goldY:           Number(parameters['goldY'] || 0),
         fillMode:        String(parameters['fillMode'] || 'row').toLowerCase(),
         buySe:           String(parameters['buySe'] || 'Shop'),
-        windowOpacity:   Number(parameters['windowOpacity'] || 255)
+        windowOpacity:   Number(parameters['windowOpacity'] || 255),
+
+        // === Кнопка закрытия ===
+        closeBtnImage:       String(parameters['closeBtnImage'] || 'close'),
+        closeBtnMarginRight: Number(parameters['closeBtnMarginRight'] || 140),
+        closeBtnMarginTop:   Number(parameters['closeBtnMarginTop'] || 2),
+        closeBtnScale:       Number(parameters['closeBtnScale'] || 1)
     };
 
     var coinIconIndex = params.coinIcon !== 0 ? params.coinIcon : ($dataSystem ? $dataSystem.currencyIcon || 313 : 313);
@@ -861,11 +895,75 @@ if (!Imported.YEP_ShopMenuCore) {
                 if (child._refreshBack) child._refreshBack();
             }
         });
+
+        // Кнопка закрытия — создаётся в самом конце, значит поверх всего
+        this.createCloseButton();
+    };
+
+    //=============================================================================
+    // Кнопка закрытия (аналог ESC) в правом верхнем углу Scene_Shop
+    //=============================================================================
+
+    Scene_Shop.prototype.createCloseButton = function() {
+        var bmp = ImageManager.loadPicture(params.closeBtnImage);
+        this._closeButton = new Sprite(bmp);
+        this._closeButton.scale.x = params.closeBtnScale;
+        this._closeButton.scale.y = params.closeBtnScale;
+        this._closeButton.opacity = 255;
+        this._closeBtnHovered = false;
+        // Позиция в правом верхнем углу выставляется в updateCloseButton()
+        // (картинка на момент создания ещё не готова).
+        this.addChild(this._closeButton);
+    };
+
+    Scene_Shop.prototype.isCloseButtonTouched = function() {
+        var s = this._closeButton;
+        if (!s || !s.visible || !s.bitmap || !s.bitmap.isReady()) return false;
+        var local = s.worldTransform.applyInverse({ x: TouchInput.x, y: TouchInput.y });
+        return local.x >= 0 && local.y >= 0 &&
+               local.x < s.width && local.y < s.height;
+    };
+
+    // Возвращает true, если клик в этом кадре был поглощён кнопкой.
+    Scene_Shop.prototype.updateCloseButton = function() {
+        var s = this._closeButton;
+        if (!s || !s.bitmap) return false;
+
+        // Держим кнопку в правом верхнем углу, пока картинка грузится
+        // и при смене разрешения.
+        if (s.bitmap.isReady()) {
+            var w = s.bitmap.width * params.closeBtnScale;
+            var h = s.bitmap.height * params.closeBtnScale;
+            s.x = Graphics.boxWidth - w - params.closeBtnMarginRight;
+            s.y = params.closeBtnMarginTop;
+        }
+
+        // Лёгкая подсветка при наведении.
+        var hovered = this.isCloseButtonTouched();
+        if (hovered !== this._closeBtnHovered) {
+            this._closeBtnHovered = hovered;
+            s.opacity = hovered ? 200 : 255;
+        }
+
+        // Клик ЛКМ по кнопке = ESC (полностью повторяет onCancel).
+        if (TouchInput.isTriggered() && hovered) {
+            SoundManager.playCancel();
+            this.onCancel();
+            return true;
+        }
+        return false;
     };
 
     var _Scene_Shop_update = Scene_Shop.prototype.update;
     Scene_Shop.prototype.update = function() {
         _Scene_Shop_update.call(this);
+
+        // Сначала обрабатываем клик по кнопке закрытия: если он был,
+        // TouchInput всё равно остаётся «нажатым» до конца кадра,
+        // но мы прерываем дальнейшую обработку кликов в окнах магазина,
+        // чтобы не сработали одновременно onCancel и, например, выбор товара.
+        var closeClicked = this.updateCloseButton();
+
         if (this._popups) {
             for (var i = this._popups.length - 1; i >= 0; i--) {
                 var p = this._popups[i];
@@ -882,7 +980,7 @@ if (!Imported.YEP_ShopMenuCore) {
             var scrollable = this._descWindow.isScrollable() && this._descWindow.visible;
             this._arrowUpDesc.visible = scrollable && this._descWindow._scrollY > 0;
             this._arrowDownDesc.visible = scrollable && this._descWindow._scrollY < this._descWindow._maxScrollY;
-            if (scrollable && TouchInput.isTriggered()) {
+            if (scrollable && TouchInput.isTriggered() && !closeClicked) {
                 if (this._arrowUpDesc.visible && this.isSpriteTouched(this._arrowUpDesc)) {
                     this._descWindow.scrollUp();
                 } else if (this._arrowDownDesc.visible && this.isSpriteTouched(this._arrowDownDesc)) {
@@ -1101,6 +1199,13 @@ if (!Imported.YEP_ShopMenuCore) {
         this._onContextMenu = null;
         var vm = this._vwStorage ? this._vwStorage['shopTrader'] : null;
         if (vm) { vm._selfDestroy(); delete this._vwStorage['shopTrader']; }
+
+        // Убираем кнопку закрытия
+        if (this._closeButton) {
+            this.removeChild(this._closeButton);
+            this._closeButton = null;
+        }
+
         _Scene_Shop_terminate.call(this);
     };
 
