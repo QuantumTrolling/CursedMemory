@@ -1,8 +1,38 @@
 //=============================================================================
 // MOG_SceneMenu.js (модифицированная версия для совместимости с YEP_PartySystem)
+// + кнопка закрытия (img/pictures/close.png) в правом верхнем углу
 //=============================================================================
 
-/*: ... (параметры плагина без изменений) ... */
+/*:
+ * @plugindesc MOG SceneMenu (с поддержкой YEP_PartySystem и кнопкой закрытия)
+ *
+ * ... (остальные параметры плагина без изменений) ...
+ *
+ * @param Close Button Image
+ * @text Файл кнопки закрытия
+ * @desc Имя файла из img/pictures/ (без расширения).
+ * @default close
+ *
+ * @param Close Button Margin Right
+ * @text Отступ кнопки закрытия справа
+ * @type number
+ * @default 20
+ *
+ * @param Close Button Margin Top
+ * @text Отступ кнопки закрытия сверху
+ * @type number
+ * @default 20
+ *
+ * @param Close Button Scale
+ * @text Масштаб кнопки закрытия
+ * @type number
+ * @decimals 2
+ * @default 1
+ *
+ * @help
+ * В правом верхнем углу меню отображается кнопка закрытия (img/pictures/close.png).
+ * ЛКМ по ней = нажатие ESC (выход из меню на карту).
+ */
 
 var Imported = Imported || {};
 Imported.MMOG_SceneMenu = true;
@@ -65,6 +95,12 @@ Moghunter.scMenu_menuLabelX = Number(Moghunter.parameters['Menu Label X-Axis'] |
 Moghunter.scMenu_menuLabelY = Number(Moghunter.parameters['Menu Label Y-Axis'] || 20);
 Moghunter.scMenu_menuLabelFontSize = Number(Moghunter.parameters['Menu Label FontSize'] || 28);
 
+// === Параметры кнопки закрытия ===
+Moghunter.scMenu_CloseBtnImage       = String(Moghunter.parameters['Close Button Image'] || 'close');
+Moghunter.scMenu_CloseBtnMarginRight = Number(Moghunter.parameters['Close Button Margin Right'] || 970);
+Moghunter.scMenu_CloseBtnMarginTop   = Number(Moghunter.parameters['Close Button Margin Top'] || 0);
+Moghunter.scMenu_CloseBtnScale       = Number(Moghunter.parameters['Close Button Scale'] || 1);
+
 //=============================================================================
 // ** ImageManager
 //=============================================================================
@@ -102,6 +138,7 @@ Scene_Menu.prototype.create = function() {
     this.loadBitmapsMain();
     this.createField();
     this.createMonogatari();
+    this.createCloseButton();
 };
 
 Scene_Menu.prototype.loadBitmapsMain = function() {
@@ -789,6 +826,68 @@ Scene_Menu.prototype.updateWindowStatus = function() {
     this._statusWindow.updateScrollRoll();
 };
 
+//=============================================================================
+// ** Кнопка закрытия (аналог ESC) в правом верхнем углу Scene_Menu
+//=============================================================================
+
+Scene_Menu.prototype.createCloseButton = function() {
+    var bmp = ImageManager.loadPicture(Moghunter.scMenu_CloseBtnImage);
+    this._closeButton = new Sprite(bmp);
+    this._closeButton.scale.x = Moghunter.scMenu_CloseBtnScale;
+    this._closeButton.scale.y = Moghunter.scMenu_CloseBtnScale;
+    this._closeButton.opacity = 255;
+    this._closeBtnHovered = false;
+    // Позиция в правом верхнем углу выставляется в updateCloseButton(),
+    // пока картинка ещё не загружена.
+    this.addChild(this._closeButton);
+};
+
+Scene_Menu.prototype.isCloseButtonTouched = function() {
+    var s = this._closeButton;
+    if (!s || !s.visible || !s.bitmap || !s.bitmap.isReady()) return false;
+    var local = s.worldTransform.applyInverse({ x: TouchInput.x, y: TouchInput.y });
+    return local.x >= 0 && local.y >= 0 &&
+           local.x < s.width && local.y < s.height;
+};
+
+// Возвращает true, если клик в этом кадре был поглощён кнопкой.
+Scene_Menu.prototype.updateCloseButton = function() {
+    var s = this._closeButton;
+    if (!s || !s.bitmap) return false;
+
+    // Держим кнопку в правом верхнем углу.
+    if (s.bitmap.isReady()) {
+        var w = s.bitmap.width * Moghunter.scMenu_CloseBtnScale;
+        var h = s.bitmap.height * Moghunter.scMenu_CloseBtnScale;
+        s.x = Graphics.boxWidth - w - Moghunter.scMenu_CloseBtnMarginRight;
+        s.y = Moghunter.scMenu_CloseBtnMarginTop;
+    }
+
+    // Подсветка при наведении.
+    var hovered = this.isCloseButtonTouched();
+    if (hovered !== this._closeBtnHovered) {
+        this._closeBtnHovered = hovered;
+        s.opacity = hovered ? 200 : 255;
+    }
+
+    // Клик ЛКМ = ESC.
+    if (TouchInput.isTriggered() && hovered) {
+        this.onCloseButtonClick();
+        return true;
+    }
+    return false;
+};
+
+Scene_Menu.prototype.onCloseButtonClick = function() {
+    SoundManager.playCancel();
+    // Эквивалент ESC в меню: закрыть сцену меню и вернуться на карту.
+    this.popScene();
+};
+
+//=============================================================================
+// ** Обновление и завершение
+//=============================================================================
+
 var _mog_mono_scmenu_update = Scene_Menu.prototype.update;
 Scene_Menu.prototype.update = function() {
     _mog_mono_scmenu_update.call(this)
@@ -801,6 +900,16 @@ Scene_Menu.prototype.update = function() {
     this.updateComField();
     this.updateWindowStatus();
     this.updateTouchScreen();
+    this.updateCloseButton();
+};
+
+var _mog_scmenu_terminate = Scene_Menu.prototype.terminate;
+Scene_Menu.prototype.terminate = function() {
+    if (this._closeButton) {
+        this.removeChild(this._closeButton);
+        this._closeButton = null;
+    }
+    _mog_scmenu_terminate.call(this);
 };
 
 //=============================================================================
