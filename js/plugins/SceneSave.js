@@ -1,11 +1,11 @@
 //=============================================================================
 // CustomSaveLayout.js
 //=============================================================================
-// v3.53 – окончательное исправление окна подтверждения перезаписи
+// v3.54 – добавлена кнопка закрытия (как ESC) в правом верхнем углу
 //=============================================================================
 
 /*:
- * @plugindesc v3.53 Кастомное меню сохранения/загрузки (исправление подтверждения).
+ * @plugindesc v3.54 Кастомное меню сохранения/загрузки + кнопка закрытия.
  * @author YourName
  *
  * @param Save Button Text
@@ -119,6 +119,27 @@
  * @desc Высота окна заголовка (0 — авто).
  * @default 0
  *
+ * @param Close Button Image
+ * @text Файл кнопки закрытия
+ * @desc Имя файла из img/pictures/ (без расширения).
+ * @default close
+ *
+ * @param Close Button Margin Right
+ * @text Отступ кнопки закрытия справа
+ * @type number
+ * @default 20
+ *
+ * @param Close Button Margin Top
+ * @text Отступ кнопки закрытия сверху
+ * @type number
+ * @default 20
+ *
+ * @param Close Button Scale
+ * @text Масштаб кнопки закрытия
+ * @type number
+ * @decimals 2
+ * @default 1
+ *
  * @help
  * Разместите плагин ниже YEP_SaveCore, MOG_Weather_EX и MOG_SceneMenu.
  * При активном диалоге выбора иконка «Сохранить» затемнена, но доступна для наведения.
@@ -129,6 +150,10 @@
  * Стрелки вверх/вниз переключают выбранный слот (без подсветки).
  * Cancel (Esc) возвращает в предыдущее меню.
  * Правая кнопка мыши также возвращает в предыдущее меню.
+ *
+ * В правом верхнем углу отображается кнопка закрытия (img/pictures/close.png).
+ * ЛКМ по ней = нажатие ESC (закрыть сцену). Если открыто окно подтверждения
+ * перезаписи — кнопка отменяет его, а не закрывает сцену.
  *
  * Текст внутри кнопок смещается на Text Offset X/Y относительно центра.
  * Если Button Width/Height = 0, размер рамки автоматически подбирается
@@ -208,6 +233,12 @@
     var TITLE_FONT_SIZE = Number(parameters['Title Font Size'] || 32);
     var TITLE_WIDTH = Number(parameters['Title Width'] || 140);
     var TITLE_HEIGHT = Number(parameters['Title Height'] || 60);
+
+    // === Параметры кнопки закрытия ===
+    var CLOSE_IMG          = String(parameters['Close Button Image'] || 'close');
+    var CLOSE_MARGIN_RIGHT = Number(parameters['Close Button Margin Right'] || 20);
+    var CLOSE_MARGIN_TOP   = Number(parameters['Close Button Margin Top'] || 20);
+    var CLOSE_SCALE        = Number(parameters['Close Button Scale'] || 1);
 
     DataManager.maxSavefiles = function() { return 3; };
 
@@ -577,6 +608,7 @@
         this.createTitleWindow();
         this.createSlotWindows();
         this.createButtonWindows();
+        this.createCloseButton();
         this._onRightClick = this.onRightClick.bind(this);
         document.addEventListener('contextmenu', this._onRightClick);
     };
@@ -594,8 +626,71 @@
     var _Scene_CustomSaveBase_terminate = Scene_CustomSaveBase.prototype.terminate;
     Scene_CustomSaveBase.prototype.terminate = function() {
         document.removeEventListener('contextmenu', this._onRightClick);
+        if (this._closeButton) {
+            this.removeChild(this._closeButton);
+            this._closeButton = null;
+        }
         _Scene_CustomSaveBase_terminate.call(this);
     };
+
+    // === Кнопка закрытия (аналог ESC) ===
+
+    Scene_CustomSaveBase.prototype.createCloseButton = function() {
+        var bmp = ImageManager.loadPicture(CLOSE_IMG);
+        this._closeButton = new Sprite(bmp);
+        this._closeButton.scale.x = CLOSE_SCALE;
+        this._closeButton.scale.y = CLOSE_SCALE;
+        this._closeButton.opacity = 255;
+        this._closeBtnHovered = false;
+        // Авто-позиция в правом верхнем углу будет выставлена в update(),
+        // т.к. на момент создания картинка ещё не загружена.
+        this.addChild(this._closeButton);
+    };
+
+    Scene_CustomSaveBase.prototype.isCloseButtonTouched = function() {
+        var s = this._closeButton;
+        if (!s || !s.visible || !s.bitmap || !s.bitmap.isReady()) return false;
+        var local = s.worldTransform.applyInverse({ x: TouchInput.x, y: TouchInput.y });
+        return local.x >= 0 && local.y >= 0 &&
+               local.x < s.width && local.y < s.height;
+    };
+
+    Scene_CustomSaveBase.prototype.updateCloseButton = function() {
+        var s = this._closeButton;
+        if (!s || !s.bitmap) return;
+
+        // Пересчитываем позицию, пока картинка грузится и при смене разрешения
+        if (s.bitmap.isReady()) {
+            var w = s.bitmap.width * CLOSE_SCALE;
+            var h = s.bitmap.height * CLOSE_SCALE;
+            s.x = Graphics.boxWidth - w - CLOSE_MARGIN_RIGHT;
+            s.y = CLOSE_MARGIN_TOP;
+        }
+
+        // Подсветка при наведении
+        var hovered = this.isCloseButtonTouched();
+        if (hovered !== this._closeBtnHovered) {
+            this._closeBtnHovered = hovered;
+            s.opacity = hovered ? 200 : 255;
+        }
+
+        // Клик = ESC
+        if (TouchInput.isTriggered() && hovered) {
+            this.onCloseButtonClick();
+        }
+    };
+
+    Scene_CustomSaveBase.prototype.onCloseButtonClick = function() {
+        // Если открыто окно подтверждения — отменяем его
+        if (this._confirmWindow && this._confirmWindow.active) {
+            this._confirmWindow.processCancel();
+            return;
+        }
+        SoundManager.playCancel();
+        this.popScene();
+    };
+
+    // === Остальные окна сцены ===
 
     Scene_CustomSaveBase.prototype.createTitleWindow = function() {
         this._titleWindow = new Window_SaveTitle();
@@ -700,6 +795,7 @@
         Scene_MenuBase.prototype.update.call(this);
         this.updateSelection();
         this.updateButtonWindows();
+        this.updateCloseButton();
     };
 
     Scene_CustomSaveBase.prototype.updateSelection = function() {
