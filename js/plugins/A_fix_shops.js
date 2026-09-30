@@ -12,7 +12,8 @@
  * - listMaxRows ограничивает количество видимых строк (0 = авто)
  * - Режим заполнения: "row" (рекомендуется) или "column" (без скролла)
  * - Окно описания поддерживает прокрутку (стрелки настраиваются)
- * - Системные стрелки списка товаров двигаются через listScrollArrowX/Y
+ * - Стрелки списка товаров — отдельные спрайты из img/battlehud/Turn.png
+ *   (стандартные системные стрелки полностью отключены)
  * - Добавлено мигание и смещение вверх/вниз на пару пикселей для стрелок
  *
  * ============================
@@ -82,14 +83,20 @@
  * @default 18
  *
  * @param listScrollArrowX
- * @text Сист. стрелка списка X
+ * @text Стрелка списка X (центр)
  * @type number
  * @default 0
  *
  * @param listScrollArrowY
- * @text Сист. стрелка списка Y
+ * @text Стрелка списка Y (центр)
  * @type number
  * @default 0
+ *
+ * @param listScrollArrowScale
+ * @text Масштаб стрелки списка
+ * @type number
+ * @decimals 2
+ * @default 1
  *
  * @param listInnerOffsetX
  * @text Смещение сетки внутри окна X
@@ -250,6 +257,7 @@ if (!Imported.YEP_ShopMenuCore) {
         listFontSize:    Number(parameters['listFontSize'] || 18),
         listScrollArrowX: Number(parameters['listScrollArrowX'] || 0),
         listScrollArrowY: Number(parameters['listScrollArrowY'] || 0),
+        listScrollArrowScale: Number(parameters['listScrollArrowScale'] || 1),
         listInnerOffsetX: Number(parameters['listInnerOffsetX'] || 0),
         listInnerOffsetY: Number(parameters['listInnerOffsetY'] || 0),
         descX:           Number(parameters['descX'] || 0),
@@ -493,18 +501,40 @@ if (!Imported.YEP_ShopMenuCore) {
         this._buyActionWindow = null;
         this._arrowAnimPhase = 0;
 
-        // Отключаем системное обновление стрелок, чтобы они не смещались автоматически
-        this._updateArrows = function() {};
+        // Прячем стандартные стрелки, если они успели создаться
+        if (this._upArrowSprite)   { this._upArrowSprite.visible = false;   this._upArrowSprite.bitmap = null; }
+        if (this._downArrowSprite) { this._downArrowSprite.visible = false; this._downArrowSprite.bitmap = null; }
 
-        // Скрываем стандартные спрайты, чтобы они не мелькали в начальной позиции
-        if (this._upArrowSprite) {
-            this._upArrowSprite.visible = false;
-            this._upArrowSprite.bitmap = null;
-        }
-        if (this._downArrowSprite) {
-            this._downArrowSprite.visible = false;
-            this._downArrowSprite.bitmap = null;
-        }
+        // Создаём собственные спрайты стрелок на базе img/battlehud/Turn.png
+        this._createCustomScrollArrows();
+    };
+
+    // Создание отдельных спрайтов-стрелок на базе Turn.png
+    Window_ShopBuyCustom.prototype._createCustomScrollArrows = function() {
+        var bmp = ImageManager.loadBitmap('img/battlehud/', 'Turn', 0, true);
+        var s = params.listScrollArrowScale;
+
+        this._customUpArrow = new Sprite(bmp);
+        this._customUpArrow.anchor.x = 0.5;
+        this._customUpArrow.anchor.y = 0.5;
+        this._customUpArrow.scale.x = s;
+        this._customUpArrow.scale.y = -s;   // отражение -> смотрит вверх
+        this._customUpArrow.visible = false;
+        this.addChild(this._customUpArrow);
+
+        this._customDownArrow = new Sprite(bmp);
+        this._customDownArrow.anchor.x = 0.5;
+        this._customDownArrow.anchor.y = 0.5;
+        this._customDownArrow.scale.x = s;
+        this._customDownArrow.scale.y = s;  // как в файле -> смотрит вниз
+        this._customDownArrow.visible = false;
+        this.addChild(this._customDownArrow);
+    };
+
+    // Полностью отключаем стандартные системные стрелки
+    Window_ShopBuyCustom.prototype.updateArrows = function() {
+        if (this._upArrowSprite)   this._upArrowSprite.visible = false;
+        if (this._downArrowSprite) this._downArrowSprite.visible = false;
     };
 
     // Нейтрализация SDJB_MouseHover
@@ -756,26 +786,26 @@ if (!Imported.YEP_ShopMenuCore) {
             }
         }
 
-        // --- Анимация стандартных стрелок прокрутки ---
+        // --- Анимация кастомных стрелок прокрутки ---
         var canScrollUp = this.topRow() > 0;
         var canScrollDown = this.topRow() < this.maxTopRow();
         var phase = this._arrowAnimPhase;
 
-        if (this._upArrowSprite) {
-            this._upArrowSprite.visible = canScrollUp;
+        if (this._customUpArrow) {
+            this._customUpArrow.visible = canScrollUp;
             if (canScrollUp) {
-                this._upArrowSprite.x = params.listScrollArrowX;
-                this._upArrowSprite.y = params.listScrollArrowY + Math.sin(phase * 2) * 2 - 352;
-                this._upArrowSprite.opacity = 128 + Math.sin(phase) * 127;
+                this._customUpArrow.x = params.listScrollArrowX - 1;
+                this._customUpArrow.y = params.listScrollArrowY + Math.sin(phase * 2) * 2 - 358;
+                this._customUpArrow.opacity = 128 + Math.sin(phase) * 127;
             }
         }
 
-        if (this._downArrowSprite) {
-            this._downArrowSprite.visible = canScrollDown;
+        if (this._customDownArrow) {
+            this._customDownArrow.visible = canScrollDown;
             if (canScrollDown) {
-                this._downArrowSprite.x = params.listScrollArrowX;
-                this._downArrowSprite.y = params.listScrollArrowY + 36 + Math.sin(phase * 2) * 2;
-                this._downArrowSprite.opacity = 128 + Math.sin(phase) * 127;
+                this._customDownArrow.x = params.listScrollArrowX - 1;
+                this._customDownArrow.y = params.listScrollArrowY + 36 + Math.sin(phase * 2) * 2;
+                this._customDownArrow.opacity = 128 + Math.sin(phase) * 127;
             }
         }
 
@@ -941,9 +971,6 @@ if (!Imported.YEP_ShopMenuCore) {
             this._buyWindow._refreshBack();
             this._buyWindow.createContents();
             this._buyWindow.refresh();
-
-            // Координаты стрелок теперь задаются в update() самого окна,
-            // поэтому здесь никакие _scrollArrowUpSprite и т.п. не трогаем.
         }
 
         // Полная деактивация командного окна
