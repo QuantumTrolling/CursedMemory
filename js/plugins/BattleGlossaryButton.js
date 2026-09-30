@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v2.7.10 Глоссарий поверх боя (кнопка скрыта при выборе цели)
+ * @plugindesc v2.7.11 Глоссарий поверх боя (кнопка скрыта при выборе цели + close-кнопка)
  * @author ВашеИмя
  *
  * @param Button Image
@@ -17,6 +17,27 @@
  * @type number
  * @default 0
  *
+ * @param Close Button Image
+ * @text Файл кнопки закрытия
+ * @desc Имя файла из img/pictures/ (без расширения).
+ * @default close
+ *
+ * @param Close Button Margin Right
+ * @text Отступ кнопки закрытия справа
+ * @type number
+ * @default 20
+ *
+ * @param Close Button Margin Top
+ * @text Отступ кнопки закрытия сверху
+ * @type number
+ * @default 20
+ *
+ * @param Close Button Scale
+ * @text Масштаб кнопки закрытия
+ * @type number
+ * @decimals 2
+ * @default 1
+ *
  * @help
  * Поместите ПОСЛЕ SceneGlossary.js и всех боевых плагинов.
  * Кнопка в бою открывает глоссарий как оверлей.
@@ -25,7 +46,12 @@
  * Если активно окно выбора цели (врага или союзника), кнопка
  * глоссария автоматически скрывается.
  *
- * v2.7.10 – кнопка не показывается при выборе цели.
+ * В правом верхнем углу оверлея глоссария отображается кнопка закрытия
+ * (img/pictures/close.png). ЛКМ по ней = нажатие ESC в оверлее:
+ * если активно окно подтверждения — отменяет его, если список — возвращает
+ * к категориям (или закрывает), если категории — закрывает оверлей.
+ *
+ * v2.7.11 – добавлена close-кнопка в правом верхнем углу оверлея.
  */
 (function() {
     'use strict';
@@ -34,6 +60,12 @@
     var btnImage = String(parameters['Button Image'] || '');
     var btnX = Number(parameters['Button X'] || 0);
     var btnY = Number(parameters['Button Y'] || 0);
+
+    // === Параметры close-кнопки ===
+    var closeBtnImage       = String(parameters['Close Button Image'] || 'close');
+    var closeBtnMarginRight = Number(parameters['Close Button Margin Right'] || 1195);
+    var closeBtnMarginTop   = Number(parameters['Close Button Margin Top'] || 635);
+    var closeBtnScale       = Number(parameters['Close Button Scale'] || 1);
 
     if (!btnImage) return;
 
@@ -62,6 +94,7 @@
         this._scene._glossaryActive = true;
         this.hideAllBattleWindows();
         this.createWindows();
+        this.createCloseButton();   // <-- добавлено
         this._active = true;
         if ($gameParty.isUseGlossaryCategory()) {
             this.activateCategoryWindow(true);
@@ -75,6 +108,7 @@
         if (!this._active) return;
         this._active = false;
         this._scene._glossaryActive = false;
+        this.removeCloseButton();   // <-- добавлено
         this.removeGlossaryWindows();
         this.restoreAllBattleWindows();
 
@@ -91,7 +125,6 @@
         if (typeof scene.updateLayoutWindow === 'function') {
             scene.updateLayoutWindow();
         }
-
         if (typeof scene.updateBattleHud === 'function') {
             scene.updateBattleHud();
         }
@@ -116,10 +149,9 @@
         } else if (scene._actorWindow && scene._actorWindow.active && scene._actorWindow.visible) {
             this._savedActiveWindow = scene._actorWindow;
             this._savedActiveWindowType = 'target';
-		} else if (scene._enemyWindow && scene._enemyWindow.active && scene._enemyWindow.visible) {
-			this._savedActiveWindow = scene._enemyWindow;
-			this._savedActiveWindowType = 'enemyTarget';
-
+        } else if (scene._enemyWindow && scene._enemyWindow.active && scene._enemyWindow.visible) {
+            this._savedActiveWindow = scene._enemyWindow;
+            this._savedActiveWindowType = 'enemyTarget';
         } else {
             var windows = scene._windows || [];
             for (var i = 0; i < windows.length; i++) {
@@ -166,38 +198,34 @@
                 }
             }
         }
-		//==================================================
-		// Скрыть MOG HUD и оверлеи, НЕ трогать поле боя
-		//==================================================
 
-		this._hiddenSprites = [];
+        //==================================================
+        // Скрыть MOG HUD и оверлеи, НЕ трогать поле боя
+        //==================================================
+        this._hiddenSprites = [];
 
-		var keep = [
-			scene._spriteset,
-			scene._windowLayer,
-			scene._glossaryBtn
-		];
+        var keep = [
+            scene._spriteset,
+            scene._windowLayer,
+            scene._glossaryBtn
+        ];
 
-		(scene.children || []).forEach(function(child){
+        (scene.children || []).forEach(function(child){
+            if (!child) return;
+            if (keep.indexOf(child) >= 0) {
+                return;
+            }
+            if (child.visible) {
+                this._hiddenSprites.push(child);
+                child.visible = false;
+            }
+        }, this);
 
-			if (!child) return;
-
-			if (keep.indexOf(child) >= 0) {
-				return;
-			}
-
-			if (child.visible) {
-				this._hiddenSprites.push(child);
-				child.visible = false;
-			}
-
-		}, this);
-
-		// отдельно скрыть layout MOG
-		if (scene._layoutField && scene._layoutField.visible) {
-			this._hiddenSprites.push(scene._layoutField);
-			scene._layoutField.visible = false;
-		}
+        // отдельно скрыть layout MOG
+        if (scene._layoutField && scene._layoutField.visible) {
+            this._hiddenSprites.push(scene._layoutField);
+            scene._layoutField.visible = false;
+        }
     };
 
     GlossaryOverlay.prototype.restoreAllBattleWindows = function() {
@@ -206,19 +234,14 @@
             win.visible = true;
         });
         this._hiddenWindows = [];
-		if (this._hiddenSprites) {
-
-			this._hiddenSprites.forEach(function(sprite){
-
-				if (sprite) {
-					sprite.visible = true;
-				}
-
-			});
-
-			this._hiddenSprites = [];
-
-		}
+        if (this._hiddenSprites) {
+            this._hiddenSprites.forEach(function(sprite){
+                if (sprite) {
+                    sprite.visible = true;
+                }
+            });
+            this._hiddenSprites = [];
+        }
 
         if ($gameTemp._bhud_position_active !== undefined) {
             $gameTemp._bhud_position_active = null;
@@ -233,32 +256,30 @@
 
         if (this._savedActiveWindow && this._savedActiveWindowType) {
             switch (this._savedActiveWindowType) {
-				case 'skill':
-					if (scene._actorCommandWindow) {
-						scene._actorCommandWindow.show();
-						scene._actorCommandWindow.open();
-						scene._actorCommandWindow.deactivate();
-					}
-
-					if (scene._skillWindow) {
-						scene._skillWindow.show();
-						scene._skillWindow.open();
-						scene._skillWindow.activate();
-					}
-					break;
-				case 'item':
-					if (scene._actorCommandWindow) {
-						scene._actorCommandWindow.show();
-						scene._actorCommandWindow.open();
-						scene._actorCommandWindow.deactivate();
-					}
-
-					if (scene._itemWindow) {
-						scene._itemWindow.show();
-						scene._itemWindow.open();
-						scene._itemWindow.activate();
-					}
-					break;
+                case 'skill':
+                    if (scene._actorCommandWindow) {
+                        scene._actorCommandWindow.show();
+                        scene._actorCommandWindow.open();
+                        scene._actorCommandWindow.deactivate();
+                    }
+                    if (scene._skillWindow) {
+                        scene._skillWindow.show();
+                        scene._skillWindow.open();
+                        scene._skillWindow.activate();
+                    }
+                    break;
+                case 'item':
+                    if (scene._actorCommandWindow) {
+                        scene._actorCommandWindow.show();
+                        scene._actorCommandWindow.open();
+                        scene._actorCommandWindow.deactivate();
+                    }
+                    if (scene._itemWindow) {
+                        scene._itemWindow.show();
+                        scene._itemWindow.open();
+                        scene._itemWindow.activate();
+                    }
+                    break;
                 case 'target':
                     if (scene._actorCommandWindow) scene._actorCommandWindow.visible = false;
                     if (scene._skillWindow) scene._skillWindow.visible = false;
@@ -282,16 +303,15 @@
                         this._savedActiveWindow.activate();
                     }
                     break;
-				case 'enemyTarget':
-					if (scene._actorCommandWindow) scene._actorCommandWindow.visible = false;
-					if (scene._skillWindow) scene._skillWindow.visible = false;
-					if (scene._itemWindow) scene._itemWindow.visible = false;
-
-					if (scene._enemyWindow) {
-						scene._enemyWindow.visible = true;
-						scene._enemyWindow.activate();
-					}
-					break;
+                case 'enemyTarget':
+                    if (scene._actorCommandWindow) scene._actorCommandWindow.visible = false;
+                    if (scene._skillWindow) scene._skillWindow.visible = false;
+                    if (scene._itemWindow) scene._itemWindow.visible = false;
+                    if (scene._enemyWindow) {
+                        scene._enemyWindow.visible = true;
+                        scene._enemyWindow.activate();
+                    }
+                    break;
             }
         } else {
             if (BattleManager.isInputting()) {
@@ -378,6 +398,86 @@
         }.bind(this));
     };
 
+    //=====================================================================
+    // Close-кнопка (аналог ESC) для оверлея
+    //=====================================================================
+
+    GlossaryOverlay.prototype.createCloseButton = function() {
+        var bmp = ImageManager.loadPicture(closeBtnImage);
+        this._closeButton = new Sprite(bmp);
+        this._closeButton.scale.x = closeBtnScale;
+        this._closeButton.scale.y = closeBtnScale;
+        this._closeButton.opacity = 255;
+        this._closeBtnHovered = false;
+        // Позиция в правом верхнем углу выставляется в updateCloseButton()
+        // (картинка на момент создания ещё не готова).
+        this._scene.addChild(this._closeButton);
+    };
+
+    GlossaryOverlay.prototype.isCloseButtonTouched = function() {
+        var s = this._closeButton;
+        if (!s || !s.visible || !s.bitmap || !s.bitmap.isReady()) return false;
+        var local = s.worldTransform.applyInverse({ x: TouchInput.x, y: TouchInput.y });
+        return local.x >= 0 && local.y >= 0 &&
+               local.x < s.width && local.y < s.height;
+    };
+
+    // Возвращает true, если клик в этом кадре был поглощён кнопкой.
+    GlossaryOverlay.prototype.updateCloseButton = function() {
+        var s = this._closeButton;
+        if (!s || !s.bitmap) return false;
+
+        // Держим кнопку в правом верхнем углу, пока картинка грузится
+        // и при смене разрешения.
+        if (s.bitmap.isReady()) {
+            var w = s.bitmap.width * closeBtnScale;
+            var h = s.bitmap.height * closeBtnScale;
+            s.x = Graphics.boxWidth - w - closeBtnMarginRight;
+            s.y = closeBtnMarginTop;
+        }
+
+        var hovered = this.isCloseButtonTouched();
+        if (hovered !== this._closeBtnHovered) {
+            this._closeBtnHovered = hovered;
+            s.opacity = hovered ? 200 : 255;
+        }
+
+        if (TouchInput.isTriggered() && hovered) {
+            this.onCloseButtonClick();
+            return true;
+        }
+        return false;
+    };
+
+    // Повторяет поведение ESC в оверлее (см. Scene_Battle.commandCancel)
+    GlossaryOverlay.prototype.onCloseButtonClick = function() {
+        SoundManager.playCancel();
+        var list = this._windows.list;
+        var category = this._windows.category;
+        var confirm = this._windows.confirm;
+        if (confirm && confirm.active) {
+            this.onConfirmCancel();
+        } else if (list && list.active) {
+            this.onCancelList();
+        } else if (category && category.active) {
+            this.onCancelCategory();
+        } else {
+            this.hide();
+        }
+    };
+
+    GlossaryOverlay.prototype.removeCloseButton = function() {
+        if (this._closeButton) {
+            if (this._closeButton.parent) {
+                this._closeButton.parent.removeChild(this._closeButton);
+            }
+            this._closeButton = null;
+        }
+    };
+
+    //=====================================================================
+    // Управление окнами оверлея
+    //=====================================================================
     GlossaryOverlay.prototype.activateCategoryWindow = function(resetIndex) {
         this._windows.category.activateAndShow();
         if (resetIndex) this._windows.category.select(0);
@@ -510,6 +610,10 @@
         if (this._glossaryActive) {
             this.hideCTBWindows();
             this.hideAllOverlaySprites();
+            // Обновление close-кнопки оверлея
+            if (this._glossaryOverlay && this._glossaryOverlay._active) {
+                this._glossaryOverlay.updateCloseButton();
+            }
         }
     };
 
@@ -526,7 +630,6 @@
         }
     };
 
-    // Единственное существенное изменение – здесь
     Scene_Battle.prototype.updateGlossaryButton = function() {
         if (!this._glossaryBtn || !$gameParty.inBattle()) return;
         if (!this._glossaryBtn.bitmap.isReady()) return;
@@ -542,16 +645,16 @@
             targetWindowActive = true;
         }
 
-		var inputWindowActive =
-			(this._actorCommandWindow && this._actorCommandWindow.active) ||
-			(this._skillWindow && this._skillWindow.active) ||
-			(this._itemWindow && this._itemWindow.active);
+        var inputWindowActive =
+            (this._actorCommandWindow && this._actorCommandWindow.active) ||
+            (this._skillWindow && this._skillWindow.active) ||
+            (this._itemWindow && this._itemWindow.active);
 
-		var canUse =
-			inputWindowActive &&
-			!$gameMessage.isBusy() &&
-			!overlayActive &&
-			!targetWindowActive;
+        var canUse =
+            inputWindowActive &&
+            !$gameMessage.isBusy() &&
+            !overlayActive &&
+            !targetWindowActive;
 
         this._glossaryBtn.visible = canUse;
         if (!canUse) return;
@@ -595,9 +698,8 @@
     Window_Selectable.prototype.processOk = function() {
         var battle = SceneManager._scene;
         if (battle instanceof Scene_Battle && battle._glossaryOverlay && battle._glossaryOverlay._active) {
-            // Разрешаем OK только для окон самого глоссария
             if (!this._glossaryOverlayWindow) {
-                return; // Блокируем подтверждение в боевых окнах
+                return;
             }
         }
         _Window_Selectable_processOk.call(this);

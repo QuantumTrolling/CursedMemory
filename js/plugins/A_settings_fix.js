@@ -74,8 +74,8 @@ Imported.VolSliderOptions = true;
     var closeBtnImage = String(parameters['closeBtnImage'] || 'close');
     var closeBtnX = Number(parameters['closeBtnX'] || 0);
     var closeBtnY = Number(parameters['closeBtnY'] || 0);
-    var closeBtnMarginRight = Number(parameters['closeBtnMarginRight'] || 20);
-    var closeBtnMarginTop = Number(parameters['closeBtnMarginTop'] || 20);
+    var closeBtnMarginRight = Number(parameters['closeBtnMarginRight'] || 10);
+    var closeBtnMarginTop = Number(parameters['closeBtnMarginTop'] || 10);
     var closeBtnScale = Number(parameters['closeBtnScale'] || 1);
     var closeBtnHover = Number(parameters['closeBtnHover'] || 1);
 

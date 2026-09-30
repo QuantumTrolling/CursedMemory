@@ -3,12 +3,13 @@
 //=============================================================================
 
 /*:
- * @plugindesc (v1.5.4) Modifica a cena de equipamento.
+ * @plugindesc (v1.5.5) Modifica a cena de equipamento.
  * (Иконки/текст ×2, окна подогнаны, навигация восстановлена,
  *  5-й слот отображается, параметры подписаны, фокус сразу на слотах,
  *  иконка оружия зависит от типа, стандартные рамки MV,
  *  увеличенные иконки без размытия, заголовок "Equipment",
- *  настройки позиции лица и имени в статусе)
+ *  настройки позиции лица и имени в статусе,
+ *  кнопка закрытия в правом верхнем углу)
  * @author Moghunter (модифицировано)
  *
  * @param FontSize
@@ -191,9 +192,30 @@
  * @desc Смещение имени персонажа по Y.
  * @default 0
  *
+ * @param Close Button Image
+ * @text Файл кнопки закрытия
+ * @desc Имя файла из img/pictures/ (без расширения).
+ * @default close
+ *
+ * @param Close Button Margin Right
+ * @text Отступ кнопки закрытия справа
+ * @type number
+ * @default 20
+ *
+ * @param Close Button Margin Top
+ * @text Отступ кнопки закрытия сверху
+ * @type number
+ * @default 20
+ *
+ * @param Close Button Scale
+ * @text Масштаб кнопки закрытия
+ * @type number
+ * @decimals 2
+ * @default 1
+ *
  * @help
  * =============================================================================
- * +++ MOG - Scene Equip (v1.5.4) +++
+ * +++ MOG - Scene Equip (v1.5.5) +++
  * By Moghunter
  * https://mogplugins.com
  * =============================================================================
@@ -225,6 +247,8 @@
  * - В окне статуса итоговые значения сдвинуты правее.
  * - Имя персонажа в статусе увеличенным шрифтом.
  * - Имя выровнено по центру относительно координаты X.
+ * - Кнопка закрытия (img/pictures/close.png) в правом верхнем углу,
+ *   ЛКМ по ней = нажатие ESC (выход из сцены экипировки).
  */
 
 var Imported = Imported || {};
@@ -269,6 +293,12 @@ Moghunter.scEquip_FaceX = Number(Moghunter.parameters['Face X'] || 150);
 Moghunter.scEquip_FaceY = Number(Moghunter.parameters['Face Y'] || 0);
 Moghunter.scEquip_ActorNameX = Number(Moghunter.parameters['Actor Name X'] || 120);
 Moghunter.scEquip_ActorNameY = Number(Moghunter.parameters['Actor Name Y'] || 0);
+
+// === Кнопка закрытия ===
+Moghunter.scEquip_CloseImg         = String(Moghunter.parameters['Close Button Image'] || 'close');
+Moghunter.scEquip_CloseMarginRight = Number(Moghunter.parameters['Close Button Margin Right'] || 20);
+Moghunter.scEquip_CloseMarginTop   = Number(Moghunter.parameters['Close Button Margin Top'] || 20);
+Moghunter.scEquip_CloseScale       = Number(Moghunter.parameters['Close Button Scale'] || 1);
 
 ImageManager.loadMenusequip = function(filename) {
     return this.loadBitmap('img/menus/equip/', filename, 0, true);
@@ -321,6 +351,7 @@ Scene_Equip.prototype.create = function() {
     this._field.addChild(this._layout);
 
     this.createTitleSprite();
+    this.createCloseButton();
     this.resetPosition();
 };
 
@@ -340,6 +371,59 @@ Scene_Equip.prototype.createTitleSprite = function() {
     this._titleSprite.x = x;
     this._titleSprite.y = y;
     this._field.addChild(this._titleSprite);
+};
+
+// === Кнопка закрытия (аналог ESC) ===
+
+Scene_Equip.prototype.createCloseButton = function() {
+    var bmp = ImageManager.loadPicture(Moghunter.scEquip_CloseImg);
+    this._closeButton = new Sprite(bmp);
+    this._closeButton.scale.x = Moghunter.scEquip_CloseScale;
+    this._closeButton.scale.y = Moghunter.scEquip_CloseScale;
+    this._closeButton.opacity = 255;
+    this._closeBtnHovered = false;
+    // Авто-позиция в правом верхнем углу выставляется в update()
+    // (картинка на момент создания может быть ещё не загружена).
+    this.addChild(this._closeButton);
+};
+
+Scene_Equip.prototype.isCloseButtonTouched = function() {
+    var s = this._closeButton;
+    if (!s || !s.visible || !s.bitmap || !s.bitmap.isReady()) return false;
+    var local = s.worldTransform.applyInverse({ x: TouchInput.x, y: TouchInput.y });
+    return local.x >= 0 && local.y >= 0 &&
+           local.x < s.width && local.y < s.height;
+};
+
+Scene_Equip.prototype.updateCloseButton = function() {
+    var s = this._closeButton;
+    if (!s || !s.bitmap) return;
+
+    // Пересчитываем позицию, пока картинка грузится и при смене разрешения
+    if (s.bitmap.isReady()) {
+        var w = s.bitmap.width * Moghunter.scEquip_CloseScale;
+        var h = s.bitmap.height * Moghunter.scEquip_CloseScale;
+        s.x = Graphics.boxWidth - w - Moghunter.scEquip_CloseMarginRight;
+        s.y = Moghunter.scEquip_CloseMarginTop;
+    }
+
+    // Лёгкая подсветка при наведении
+    var hovered = this.isCloseButtonTouched();
+    if (hovered !== this._closeBtnHovered) {
+        this._closeBtnHovered = hovered;
+        s.opacity = hovered ? 200 : 255;
+    }
+
+    // Клик ЛКМ по кнопке = ESC
+    if (TouchInput.isTriggered() && hovered) {
+        this.onCloseButtonClick();
+    }
+};
+
+Scene_Equip.prototype.onCloseButtonClick = function() {
+    SoundManager.playCancel();
+    // Эквивалент ESC: Scene_Equip закрывается через onSlotCancel -> popScene()
+    this.popScene();
 };
 
 var _mog_scEquipM_start = Scene_Equip.prototype.start;
@@ -412,6 +496,16 @@ var _mog_scEquipM_update = Scene_Equip.prototype.update;
 Scene_Equip.prototype.update = function() {
     _mog_scEquipM_update.call(this);
     if (this._layout) this.updateSprites();
+    this.updateCloseButton();
+};
+
+var _mog_scEquipM_terminate = Scene_Equip.prototype.terminate;
+Scene_Equip.prototype.terminate = function() {
+    if (this._closeButton) {
+        this.removeChild(this._closeButton);
+        this._closeButton = null;
+    }
+    _mog_scEquipM_terminate.call(this);
 };
 
 //=============================================================================

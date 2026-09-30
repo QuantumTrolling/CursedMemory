@@ -1,7 +1,42 @@
 //=============================================================================
-// A_fix_glossary_hover.js (GlossaryUXFix v5.1 DEBUG)
+// A_fix_glossary_hover.js (GlossaryUXFix v5.2 DEBUG)
 // Добавлен перехват onCancelList для боевого оверлея.
+// Добавлена кнопка закрытия (img/pictures/close.png) в правом верхнем углу.
 //=============================================================================
+
+/*:
+ * @plugindesc GlossaryUXFix — исправление UX для Scene_Glossary (Triacontane) + кнопка закрытия.
+ * @author
+ *
+ * @param closeBtnImage
+ * @text Файл кнопки закрытия
+ * @desc Имя файла из img/pictures/ (без расширения).
+ * @default close
+ *
+ * @param closeBtnMarginRight
+ * @text Отступ кнопки закрытия справа
+ * @type number
+ * @default 20
+ *
+ * @param closeBtnMarginTop
+ * @text Отступ кнопки закрытия сверху
+ * @type number
+ * @default 20
+ *
+ * @param closeBtnScale
+ * @text Масштаб кнопки закрытия
+ * @type number
+ * @decimals 2
+ * @default 1
+ *
+ * @help
+ * Плагин-патч для SceneGlossary (Triacontane).
+ * Добавляет поведение, при котором описание в правой части
+ * не подгружается при простом наведении — только по клику.
+ *
+ * В правом верхнем углу отображается кнопка закрытия (img/pictures/close.png).
+ * ЛКМ по ней = нажатие ESC (выход из сцены глоссария).
+ */
 
 var Imported = Imported || {};
 Imported.GlossaryUXFix = true;
@@ -14,9 +49,15 @@ Imported.GlossaryUXFix = true;
         return;
     }
 
+    var parameters = PluginManager.parameters('A_fix_glossary_hover');
+    var CLOSE_IMG          = String(parameters['closeBtnImage'] || 'close');
+    var CLOSE_MARGIN_RIGHT = Number(parameters['closeBtnMarginRight'] || 1195);
+    var CLOSE_MARGIN_TOP   = Number(parameters['closeBtnMarginTop'] || 635);
+    var CLOSE_SCALE        = Number(parameters['closeBtnScale'] || 1);
+
     var DEBUG = true;
     function log() { if (DEBUG) console.log.apply(console, arguments); }
-    log('[UXFix v5.1] Старт диагностики...');
+    log('[UXFix v5.2] Старт диагностики...');
 
     //=========================================================================
     // Расширение прототипа GlossaryOverlay
@@ -344,5 +385,87 @@ Imported.GlossaryUXFix = true;
         }
     };
 
-    log('[UXFix v5.1] Инициализация завершена.');
+    //=========================================================================
+    // Кнопка закрытия (аналог ESC) в правом верхнем углу — Scene_Glossary
+    //=========================================================================
+
+    var _Scene_Glossary_create_uxfix = Scene_Glossary.prototype.create;
+    Scene_Glossary.prototype.create = function() {
+        _Scene_Glossary_create_uxfix.call(this);
+        this.createCloseButton();
+    };
+
+    Scene_Glossary.prototype.createCloseButton = function() {
+        var bmp = ImageManager.loadPicture(CLOSE_IMG);
+        this._closeButton = new Sprite(bmp);
+        this._closeButton.scale.x = CLOSE_SCALE;
+        this._closeButton.scale.y = CLOSE_SCALE;
+        this._closeButton.opacity = 255;
+        this._closeBtnHovered = false;
+        // Авто-позиция в правом верхнем углу — пересчитывается в update(),
+        // пока картинка не загружена.
+        this.addChild(this._closeButton);
+    };
+
+    Scene_Glossary.prototype.isCloseButtonTouched = function() {
+        var s = this._closeButton;
+        if (!s || !s.visible || !s.bitmap || !s.bitmap.isReady()) return false;
+        var local = s.worldTransform.applyInverse({ x: TouchInput.x, y: TouchInput.y });
+        return local.x >= 0 && local.y >= 0 &&
+               local.x < s.width && local.y < s.height;
+    };
+
+    Scene_Glossary.prototype.updateCloseButton = function() {
+        var s = this._closeButton;
+        if (!s || !s.bitmap) return false;
+
+        // Пересчёт позиции в правом верхнем углу
+        if (s.bitmap.isReady()) {
+            var w = s.bitmap.width * CLOSE_SCALE;
+            var h = s.bitmap.height * CLOSE_SCALE;
+            s.x = Graphics.boxWidth - w - CLOSE_MARGIN_RIGHT;
+            s.y = CLOSE_MARGIN_TOP;
+        }
+
+        // Лёгкая подсветка при наведении
+        var hovered = this.isCloseButtonTouched();
+        if (hovered !== this._closeBtnHovered) {
+            this._closeBtnHovered = hovered;
+            s.opacity = hovered ? 200 : 255;
+        }
+
+        // Клик = ESC
+        if (TouchInput.isTriggered() && hovered) {
+            this.onCloseButtonClick();
+            return true;
+        }
+        return false;
+    };
+
+    Scene_Glossary.prototype.onCloseButtonClick = function() {
+        SoundManager.playCancel();
+        // Эквивалент ESC на верхнем уровне сцены: выходим из неё.
+        // Если хочется повторять поведение ESC «на один уровень назад»
+        // (например, из списка в категории) — замените на:
+        // if (this._glossaryCategoryWindow && this._glossaryCategoryWindow.active) this.escapeScene();
+        // else this.onCancelGlossaryList();
+        this.popScene();
+    };
+
+    var _Scene_Glossary_update_uxfix = Scene_Glossary.prototype.update;
+    Scene_Glossary.prototype.update = function() {
+        _Scene_Glossary_update_uxfix.call(this);
+        this.updateCloseButton();
+    };
+
+    var _Scene_Glossary_terminate_uxfix = Scene_Glossary.prototype.terminate;
+    Scene_Glossary.prototype.terminate = function() {
+        if (this._closeButton) {
+            this.removeChild(this._closeButton);
+            this._closeButton = null;
+        }
+        _Scene_Glossary_terminate_uxfix.call(this);
+    };
+
+    log('[UXFix v5.2] Инициализация завершена.');
 })();

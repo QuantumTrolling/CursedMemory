@@ -236,8 +236,8 @@
 
     // === Параметры кнопки закрытия ===
     var CLOSE_IMG          = String(parameters['Close Button Image'] || 'close');
-    var CLOSE_MARGIN_RIGHT = Number(parameters['Close Button Margin Right'] || 20);
-    var CLOSE_MARGIN_TOP   = Number(parameters['Close Button Margin Top'] || 20);
+    var CLOSE_MARGIN_RIGHT = Number(parameters['Close Button Margin Right'] || 10);
+    var CLOSE_MARGIN_TOP   = Number(parameters['Close Button Margin Top'] || 10);
     var CLOSE_SCALE        = Number(parameters['Close Button Scale'] || 1);
 
     DataManager.maxSavefiles = function() { return 3; };

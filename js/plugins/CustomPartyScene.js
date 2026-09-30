@@ -1,6 +1,6 @@
 /*:
  * @target MV
- * @plugindesc Custom Party Scene v57 (reserve swap selection)
+ * @plugindesc Custom Party Scene v58 (reserve swap selection + close button)
  * @author ChatGPT (improved)
  *
  * @help
@@ -12,6 +12,8 @@
  * - Портреты членов отряда при наведении поднимаются вверх (вместо увеличения).
  * - Иконки резерва (лица) при наведении только подсвечиваются, не увеличиваются.
  * - Персонаж добавляется на крайнее правое пустое место.
+ * - Кнопка закрытия (img/pictures/close.png) в правом верхнем углу,
+ *   ЛКМ по ней = нажатие ESC (сброс выделения / выход из сцены).
  *
  * **Новое:**
  * - При заполненном отряде клик по лицу в резерве заставляет его мигать.
@@ -131,6 +133,27 @@
  * @param hoverNameOffsetY
  * @desc Y-координата, на которой останавливается окно с именем
  * @default 10
+ *
+ * @param closeBtnImage
+ * @text Файл кнопки закрытия
+ * @desc Имя файла из img/pictures/ (без расширения).
+ * @default close
+ *
+ * @param closeBtnMarginRight
+ * @text Отступ кнопки закрытия справа
+ * @type number
+ * @default 20
+ *
+ * @param closeBtnMarginTop
+ * @text Отступ кнопки закрытия сверху
+ * @type number
+ * @default 20
+ *
+ * @param closeBtnScale
+ * @text Масштаб кнопки закрытия
+ * @type number
+ * @decimals 2
+ * @default 1
  */
 
 (function() {
@@ -191,6 +214,12 @@ var seArrowPan    = Number(parameters['seArrowPan'] || 0);
 
 var hoverNameOffsetX = Number(parameters['hoverNameOffsetX'] || 0);
 var hoverNameOffsetY = Number(parameters['hoverNameOffsetY'] || 10);
+
+// === Кнопка закрытия ===
+var closeBtnImage       = String(parameters['closeBtnImage'] || 'close');
+var closeBtnMarginRight = Number(parameters['closeBtnMarginRight'] || 20);
+var closeBtnMarginTop   = Number(parameters['closeBtnMarginTop'] || 20);
+var closeBtnScale       = Number(parameters['closeBtnScale'] || 1);
 
 var ARROW_WIDTH  = 22;
 var ARROW_HEIGHT = 20;
@@ -468,6 +497,9 @@ Scene_PartyCustom.prototype.create = function() {
     if (this._windowLayer) {
         this.setChildIndex(this._windowLayer, this.children.length - 1);
     }
+
+    // Кнопка закрытия — создаётся последней, значит рисуется поверх всего
+    this.createCloseButton();
 };
 
 Scene_PartyCustom.prototype.preloadReserveFaces = function() {
@@ -508,6 +540,69 @@ Scene_PartyCustom.prototype.areStatusBitmapsReady = function() {
            this._iconSet && this._iconSet.isReady();
 };
 
+// === Кнопка закрытия (аналог ESC) ===
+
+Scene_PartyCustom.prototype.createCloseButton = function() {
+    var bmp = ImageManager.loadPicture(closeBtnImage);
+    this._closeButton = new Sprite(bmp);
+    this._closeButton.scale.x = closeBtnScale;
+    this._closeButton.scale.y = closeBtnScale;
+    this._closeButton.opacity = 255;
+    this._closeBtnHovered = false;
+    this.addChild(this._closeButton);
+};
+
+Scene_PartyCustom.prototype.isCloseButtonTouched = function() {
+    var s = this._closeButton;
+    if (!s || !s.visible || !s.bitmap || !s.bitmap.isReady()) return false;
+    var local = s.worldTransform.applyInverse({ x: TouchInput.x, y: TouchInput.y });
+    return local.x >= 0 && local.y >= 0 &&
+           local.x < s.width && local.y < s.height;
+};
+
+// Возвращает true, если в этом кадре клик ушёл в кнопку закрытия
+Scene_PartyCustom.prototype.updateCloseButton = function() {
+    var s = this._closeButton;
+    if (!s || !s.bitmap) return false;
+
+    // Пересчитываем позицию, пока картинка грузится и при смене разрешения
+    if (s.bitmap.isReady()) {
+        var w = s.bitmap.width * closeBtnScale;
+        var h = s.bitmap.height * closeBtnScale;
+        s.x = Graphics.boxWidth - w - closeBtnMarginRight;
+        s.y = closeBtnMarginTop;
+    }
+
+    // Лёгкая подсветка при наведении
+    var hovered = this.isCloseButtonTouched();
+    if (hovered !== this._closeBtnHovered) {
+        this._closeBtnHovered = hovered;
+        s.opacity = hovered ? 200 : 255;
+    }
+
+    if (TouchInput.isTriggered() && hovered) {
+        this.onCloseButtonClick();
+        return true;
+    }
+    return false;
+};
+
+// Клик по кнопке полностью повторяет поведение ESC в этой сцене:
+// если есть выделение — снимаем; если есть мигающий резерв — снимаем; иначе выходим.
+Scene_PartyCustom.prototype.onCloseButtonClick = function() {
+    if (this._swapReserveActor) {
+        SoundManager.playCancel();
+        this.clearSwapReserveSelection();
+    } else if (this._selectedActor) {
+        SoundManager.playCancel();
+        this.clearSelection();
+    } else {
+        SoundManager.playCancel();
+        this.terminate();
+        SceneManager.pop();
+    }
+};
+
 Scene_PartyCustom.prototype.update = function() {
     Scene_MenuBase.prototype.update.call(this);
 
@@ -519,6 +614,10 @@ Scene_PartyCustom.prototype.update = function() {
         this._statusBitmapsReady = true;
         this.refreshParty();
     }
+
+    // Сначала обрабатываем клик по кнопке закрытия — если он был,
+    // обычная логика кликов в этот кадр не срабатывает.
+    var closeClicked = this.updateCloseButton();
 
     if (Input.isTriggered('cancel') || TouchInput.isCancelled()) {
         if (this._swapReserveActor) {
@@ -533,7 +632,7 @@ Scene_PartyCustom.prototype.update = function() {
             SceneManager.pop();
         }
     }
-    if (TouchInput.isTriggered()) {
+    if (TouchInput.isTriggered() && !closeClicked) {
         this.handleClick();
     }
     if (this._statusSprites) {
@@ -630,6 +729,12 @@ Scene_PartyCustom.prototype.updateRemoveButtonPosition = function() {
 
 Scene_PartyCustom.prototype.terminate = function() {
     $gameSystem._customPartyChanged = true;
+
+    if (this._closeButton) {
+        this.removeChild(this._closeButton);
+        this._closeButton = null;
+    }
+
     Scene_MenuBase.prototype.terminate.call(this);
 };
 
