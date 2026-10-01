@@ -500,7 +500,7 @@ if (!Imported.YEP_ShopMenuCore) {
             this.contents.fillRect(rect.x, rect.y, rect.width, rect.height,
                 'rgba(255, 255, 255, ' + alpha + ')');
         }
-        this.drawText("Купить", rect.x, rect.y, rect.width, 'center');
+        this.drawText("Buy", rect.x, rect.y, rect.width, 'center');
     };
 
     Window_ShopBuyAction.prototype.update = function() {
