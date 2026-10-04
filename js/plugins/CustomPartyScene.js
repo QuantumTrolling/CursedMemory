@@ -20,6 +20,8 @@
  *   После этого клик по портрету члена отряда меняет их местами.
  * - Клик по другому лицу в резерве переносит мигание на него.
  * - Повторный клик по мигающему лицу или Cancel снимает выделение.
+ * - Заголовок "PARTY" переводится на "Отряд" при активном языке "Russian"
+ *   (совместимо с SRD_TranslationEngine). При других языках — оригинал.
  *
  * Команда плагина:
  *   OpenPartyMenu
@@ -220,6 +222,29 @@ var closeBtnImage       = String(parameters['closeBtnImage'] || 'close');
 var closeBtnMarginRight = Number(parameters['closeBtnMarginRight'] || 20);
 var closeBtnMarginTop   = Number(parameters['closeBtnMarginTop'] || 20);
 var closeBtnScale       = Number(parameters['closeBtnScale'] || 1);
+
+// === Перевод текстов сцены ===
+// Работает ТОЛЬКО при активном языке "Russian" (SRD_TranslationEngine).
+// При любом другом языке (в т.ч. "English", "Chinese", либо если
+// SRD_TranslationEngine не подключён) — возвращается оригинал.
+var CustomPartyScene_Translations = {
+    "Russian": {
+        "Party": "Отряд"
+    }
+};
+
+function CustomPartyScene_translateText(name) {
+    if (!name) return name;
+    if (typeof ConfigManager === 'undefined' ||
+        typeof ConfigManager.getLanguage !== 'function') {
+        return name;
+    }
+    var lang = ConfigManager.getLanguage();
+    if (!lang) return name;
+    var map = CustomPartyScene_Translations[lang];
+    if (map && map[name] !== undefined) return map[name];
+    return name;
+}
 
 var ARROW_WIDTH  = 22;
 var ARROW_HEIGHT = 20;
@@ -740,7 +765,10 @@ Scene_PartyCustom.prototype.terminate = function() {
 
 Scene_PartyCustom.prototype.createTitle = function() {
     this._titleWindow = new Window_Base(0, 0, 240, 72);
-    this._titleWindow.drawText("PARTY", 0, 0, 200, 'center');
+    // ▼ Перевод заголовка применяется только когда язык = "Russian"
+    //   (при других языках и без SRD_TranslationEngine — оригинал)
+    var titleText = CustomPartyScene_translateText("Party");
+    this._titleWindow.drawText(titleText, 0, 0, 200, 'center');
     this.addWindow(this._titleWindow);
 };
 

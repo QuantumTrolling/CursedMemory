@@ -249,6 +249,9 @@
  * - Имя выровнено по центру относительно координаты X.
  * - Кнопка закрытия (img/pictures/close.png) в правом верхнем углу,
  *   ЛКМ по ней = нажатие ESC (выход из сцены экипировки).
+ * - Перевод названий параметров и заголовка "Equipment" -> "Снаряжение"
+ *   на русский при активном языке "Russian" (совместимо с
+ *   SRD_TranslationEngine). При других языках — оригинал.
  */
 
 var Imported = Imported || {};
@@ -299,6 +302,46 @@ Moghunter.scEquip_CloseImg         = String(Moghunter.parameters['Close Button I
 Moghunter.scEquip_CloseMarginRight = Number(Moghunter.parameters['Close Button Margin Right'] || 20);
 Moghunter.scEquip_CloseMarginTop   = Number(Moghunter.parameters['Close Button Margin Top'] || 20);
 Moghunter.scEquip_CloseScale       = Number(Moghunter.parameters['Close Button Scale'] || 1);
+
+// === Перевод названий параметров и заголовка (окно статуса) ===
+// Работает ТОЛЬКО при активном языке "Russian" (SRD_TranslationEngine).
+// При любом другом языке (в т.ч. "English", "Chinese", либо если
+// SRD_TranslationEngine не подключён) — возвращается оригинал.
+Moghunter.scEquip_ParamTranslations = {
+    "Russian": {
+        // Заголовок окна экипировки
+        "Equipment":     "Снаряжение",
+        // HP / MP / AP
+        "Max. HP":        "Макс. HP",
+        "Max MP":        "Макс MP",
+        "Max. AP":        "Макс. AP",
+        // Основные характеристики
+        "Attack":        "Атака",
+        "Defense":       "Защита",
+        "Magic":         "Магия",
+        "Magic Attack":  "Магия",
+        "Magic Defense": "Маг. защита",
+        "Penetration":   "Пробитие",
+        "Agility":       "Скорость",
+        "Speed":         "Скорость",
+        "Luck":          "Удача"
+    }
+};
+
+Moghunter.scEquip_translateParam = function(name) {
+    if (!name) return name;
+    // SRD_TranslationEngine ещё не подключён — ничего не переводим
+    if (typeof ConfigManager === 'undefined' ||
+        typeof ConfigManager.getLanguage !== 'function') {
+        return name;
+    }
+    var lang = ConfigManager.getLanguage();
+    if (!lang) return name;
+    // Встроенный словарь
+    var map = Moghunter.scEquip_ParamTranslations[lang];
+    if (map && map[name] !== undefined) return map[name];
+    return name;
+};
 
 ImageManager.loadMenusequip = function(filename) {
     return this.loadBitmap('img/menus/equip/', filename, 0, true);
@@ -357,7 +400,9 @@ Scene_Equip.prototype.create = function() {
 
 Scene_Equip.prototype.createTitleSprite = function() {
     this._titleSprite = new Sprite();
-    var text = Moghunter.scEquip_TitleText;
+    // ▼ Перевод заголовка применяется только когда язык = "Russian"
+    //   (при других языках и без SRD_TranslationEngine — оригинал)
+    var text = Moghunter.scEquip_translateParam(Moghunter.scEquip_TitleText);
     var fontSize = Moghunter.scEquip_TitleFontSize;
     var x = Moghunter.scEquip_TitleX;
     var y = Moghunter.scEquip_TitleY;
@@ -661,6 +706,9 @@ Window_EquipStatus.prototype.windowHeight = function() {
 Window_EquipStatus.prototype.drawParamName = function(x, y, paramId) {
     if ($dataSystem && $dataSystem.terms && $dataSystem.terms.params[paramId]) {
         var name = $dataSystem.terms.params[paramId];
+        // ▼ Перевод применяется только когда язык = "Russian"
+        //   (при других языках и без SRD_TranslationEngine — оригинал)
+        name = Moghunter.scEquip_translateParam(name);
         this.changeTextColor(this.systemColor());
         this.drawText(name, x, y, 120);
         this.resetTextColor();

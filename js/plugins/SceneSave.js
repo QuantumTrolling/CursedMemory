@@ -2,6 +2,7 @@
 // CustomSaveLayout.js
 //=============================================================================
 // v3.54 – добавлена кнопка закрытия (как ESC) в правом верхнем углу
+// + перевод текстов при активном языке "Russian" (SRD_TranslationEngine)
 //=============================================================================
 
 /*:
@@ -163,6 +164,17 @@
  * При изменении размеров шрифтов может потребоваться вручную подобрать
  * размеры окон через соответствующие параметры.
  *
+ * Перевод при активном языке "Russian" (совместимо с SRD_TranslationEngine):
+ *   Saves      -> Сохранения
+ *   Autosave   -> Автосохранение
+ *   Save1      -> Сохранение 1
+ *   Save2      -> Сохранение 2
+ *   Save       -> Сохранить
+ *   Load       -> Загрузить
+ *   Overwrite  -> Перезаписать
+ * При других языках (включая язык-источник) или без SRD_TranslationEngine
+ * отображаются оригинальные значения.
+ *
  * @default
  */
 
@@ -207,21 +219,21 @@
     var BTN_CFG = {
         save: {
             x: Number(parameters['Save Button X'] || 0),
-            y: Number(parameters['Save Button Y'] || -15),
+            y: Number(parameters['Save Button Y'] || -18),
             w: Number(parameters['Save Button Width'] || 160),
-            h: Number(parameters['Save Button Height'] || 60)
+            h: Number(parameters['Save Button Height'] || 74)
         },
         load: {
             x: Number(parameters['Load Button X'] || 0),
-            y: Number(parameters['Load Button Y'] || -15),
+            y: Number(parameters['Load Button Y'] || -18),
             w: Number(parameters['Load Button Width'] || 170),
-            h: Number(parameters['Load Button Height'] || 60)
+            h: Number(parameters['Load Button Height'] || 74)
         },
         overwrite: {
             x: Number(parameters['Overwrite Button X'] || 20),
-            y: Number(parameters['Overwrite Button Y'] || -15),
+            y: Number(parameters['Overwrite Button Y'] || -18),
             w: Number(parameters['Overwrite Button Width'] || 230),
-            h: Number(parameters['Overwrite Button Height'] || 60)
+            h: Number(parameters['Overwrite Button Height'] || 74)
         }
     };
     var BTN_SPACING = Number(parameters['Button Spacing'] || 4);
@@ -231,14 +243,43 @@
 
     var TITLE_TEXT = String(parameters['Title Text'] || 'Saves');
     var TITLE_FONT_SIZE = Number(parameters['Title Font Size'] || 32);
-    var TITLE_WIDTH = Number(parameters['Title Width'] || 140);
-    var TITLE_HEIGHT = Number(parameters['Title Height'] || 60);
+    var TITLE_WIDTH = Number(parameters['Title Width'] || 200);
+    var TITLE_HEIGHT = Number(parameters['Title Height'] || 70);
 
     // === Параметры кнопки закрытия ===
     var CLOSE_IMG          = String(parameters['Close Button Image'] || 'close');
-    var CLOSE_MARGIN_RIGHT = Number(parameters['Close Button Margin Right'] || 1060);
-    var CLOSE_MARGIN_TOP   = Number(parameters['Close Button Margin Top'] || 5);
+    var CLOSE_MARGIN_RIGHT = Number(parameters['Close Button Margin Right'] || 1000);
+    var CLOSE_MARGIN_TOP   = Number(parameters['Close Button Margin Top'] || 10);
     var CLOSE_SCALE        = Number(parameters['Close Button Scale'] || 1);
+
+    // === Перевод текстов сцены ===
+    // Работает ТОЛЬКО при активном языке "Russian" (SRD_TranslationEngine).
+    // При любом другом языке (в т.ч. "English", "Chinese", либо если
+    // SRD_TranslationEngine не подключён) — возвращается оригинал.
+    var SceneSave_Translations = {
+        "Russian": {
+            "Saves":      "Сохранения",
+            "Save":       "Сохранить",
+            "Load":       "Загрузить",
+            "Overwrite":  "Перезаписать",
+            "Autosave":   "Автосохранение",
+            "Save 1":      "Сохранение 1",
+            "Save 2":      "Сохранение 2"
+        }
+    };
+
+    function SceneSave_translateText(name) {
+        if (!name) return name;
+        if (typeof ConfigManager === 'undefined' ||
+            typeof ConfigManager.getLanguage !== 'function') {
+            return name;
+        }
+        var lang = ConfigManager.getLanguage();
+        if (!lang) return name;
+        var map = SceneSave_Translations[lang];
+        if (map && map[name] !== undefined) return map[name];
+        return name;
+    }
 
     DataManager.maxSavefiles = function() { return 3; };
 
@@ -327,19 +368,19 @@
         var saveDisabled = isChoiceActive();
         if (savefileId === 1) {
             if (hasSave) {
-                btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
+                btns.push({ text: SceneSave_translateText(LOAD_TEXT), action: 'load', enabled: true });
             }
             return btns;
         }
         if (mode === 'save') {
             if (hasSave) {
-                btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
-                btns.push({ text: OVERWRITE_TEXT, action: 'overwrite', enabled: !saveDisabled });
+                btns.push({ text: SceneSave_translateText(LOAD_TEXT), action: 'load', enabled: true });
+                btns.push({ text: SceneSave_translateText(OVERWRITE_TEXT), action: 'overwrite', enabled: !saveDisabled });
             } else {
-                btns.push({ text: SAVE_TEXT, action: 'save', enabled: !saveDisabled });
+                btns.push({ text: SceneSave_translateText(SAVE_TEXT), action: 'save', enabled: !saveDisabled });
             }
         } else if (mode === 'load') {
-            if (hasSave) btns.push({ text: LOAD_TEXT, action: 'load', enabled: true });
+            if (hasSave) btns.push({ text: SceneSave_translateText(LOAD_TEXT), action: 'load', enabled: true });
         }
         return btns;
     }
@@ -439,7 +480,8 @@
 
     Window_SaveTitle.prototype.initialize = function() {
         Window_Base.prototype.initialize.call(this, 0, 0, 0, 0);
-        this._text = TITLE_TEXT;
+        // ▼ Перевод заголовка применяется только когда язык = "Russian"
+        this._text = SceneSave_translateText(TITLE_TEXT);
         var originalFontSize = this.contents.fontSize;
         if (TITLE_FONT_SIZE > 0) {
             this.contents.fontSize = TITLE_FONT_SIZE;
@@ -517,7 +559,10 @@
         var faceAreaWidth = 210;
         var faceAreaX = this.contents.width - 10 - faceAreaWidth;
         var textWidth = faceAreaX - textX - 10;
-        var label = (id === 1) ? 'Autosave' : 'Save' + (id - 1);
+        // ▼ Перевод метки слота применяется только когда язык = "Russian"
+        //   "Autosave" -> "Автосохранение", "Save1" -> "Сохранение 1", "Save2" -> "Сохранение 2"
+        var labelRaw = (id === 1) ? 'Autosave' : 'Save ' + (id - 1);
+        var label = SceneSave_translateText(labelRaw);
         var labelY = 2;
         if (hasSave) {
             this.drawText(label, textX, labelY, textWidth, 'left');

@@ -1,6 +1,7 @@
 //=============================================================================
 // MOG_SceneMenu.js (модифицированная версия для совместимости с YEP_PartySystem)
 // + кнопка закрытия (img/pictures/close.png) в правом верхнем углу
+// + перевод заголовка "Menu" -> "Меню" при активном языке "Russian"
 //=============================================================================
 
 /*:
@@ -32,6 +33,9 @@
  * @help
  * В правом верхнем углу меню отображается кнопка закрытия (img/pictures/close.png).
  * ЛКМ по ней = нажатие ESC (выход из меню на карту).
+ *
+ * Заголовок "Menu" переводится на "Меню" при активном языке "Russian"
+ * (совместимо с SRD_TranslationEngine). При других языках — оригинал.
  */
 
 var Imported = Imported || {};
@@ -100,6 +104,29 @@ Moghunter.scMenu_CloseBtnImage       = String(Moghunter.parameters['Close Button
 Moghunter.scMenu_CloseBtnMarginRight = Number(Moghunter.parameters['Close Button Margin Right'] || 970);
 Moghunter.scMenu_CloseBtnMarginTop   = Number(Moghunter.parameters['Close Button Margin Top'] || 0);
 Moghunter.scMenu_CloseBtnScale       = Number(Moghunter.parameters['Close Button Scale'] || 1);
+
+// === Перевод текстов меню ===
+// Работает ТОЛЬКО при активном языке "Russian" (SRD_TranslationEngine).
+// При любом другом языке (в т.ч. "English", "Chinese", либо если
+// SRD_TranslationEngine не подключён) — возвращается оригинал.
+Moghunter.scMenu_Translations = {
+    "Russian": {
+        "Menu": "Меню"
+    }
+};
+
+Moghunter.scMenu_translateText = function(name) {
+    if (!name) return name;
+    if (typeof ConfigManager === 'undefined' ||
+        typeof ConfigManager.getLanguage !== 'function') {
+        return name;
+    }
+    var lang = ConfigManager.getLanguage();
+    if (!lang) return name;
+    var map = Moghunter.scMenu_Translations[lang];
+    if (map && map[name] !== undefined) return map[name];
+    return name;
+};
 
 //=============================================================================
 // ** ImageManager
@@ -257,7 +284,10 @@ Scene_Menu.prototype.createMenuLabel = function() {
     this._menuLabel.x = Moghunter.scMenu_menuLabelX;
     this._menuLabel.y = Moghunter.scMenu_menuLabelY;
     this._menuLabel.bitmap.fontSize = Moghunter.scMenu_menuLabelFontSize;
-    this._menuLabel.bitmap.drawText(Moghunter.scMenu_menuLabel, 0, 0, 200, 50, "left");
+    // ▼ Перевод заголовка применяется только когда язык = "Russian"
+    //   (при других языках и без SRD_TranslationEngine — оригинал)
+    var labelText = Moghunter.scMenu_translateText(Moghunter.scMenu_menuLabel);
+    this._menuLabel.bitmap.drawText(labelText, 0, 0, 200, 50, "left");
     this._field.addChild(this._menuLabel);
 };
 
