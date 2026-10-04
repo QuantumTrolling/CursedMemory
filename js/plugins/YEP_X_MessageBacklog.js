@@ -307,6 +307,40 @@ Yanfly.MsgBacklog.version = 1.01;
  * the screen, stretch it to fit the screen?
  * @default true
  *
+ * @param ---Close Button---
+ * @default
+ *
+ * @param CloseButtonImage
+ * @text Close Button Image
+ * @parent ---Close Button---
+ * @type file
+ * @dir img/pictures/
+ * @require 1
+ * @desc File name from img/pictures/ (without extension).
+ * @default close
+ *
+ * @param CloseButtonMarginRight
+ * @text Close Button Margin Right
+ * @parent ---Close Button---
+ * @type number
+ * @desc Margin from the right edge of the screen (in pixels).
+ * @default 20
+ *
+ * @param CloseButtonMarginTop
+ * @text Close Button Margin Top
+ * @parent ---Close Button---
+ * @type number
+ * @desc Margin from the top edge of the screen (in pixels).
+ * @default 20
+ *
+ * @param CloseButtonScale
+ * @text Close Button Scale
+ * @parent ---Close Button---
+ * @type number
+ * @decimals 2
+ * @desc Scale of the close button image (1.0 = original size).
+ * @default 1
+ *
  */
 //=============================================================================
 
@@ -346,6 +380,16 @@ Yanfly.Param.MsgBacklogPicture = String(Yanfly.Parameters['Picture']);
 Yanfly.Param.MsgBacklogPicOpacity = Number(Yanfly.Parameters['PictureOpacity']);
 Yanfly.Param.MsgBacklogPicStretch = String(Yanfly.Parameters['PictureStretch']);
 Yanfly.Param.MsgBacklogPicStretch = eval(Yanfly.Param.MsgBacklogPicStretch);
+
+// Close button parameters
+Yanfly.Param.MsgBacklogCloseBtnImage =
+  String(Yanfly.Parameters['CloseButtonImage'] || 'close');
+Yanfly.Param.MsgBacklogCloseBtnMarginRight =
+  Number(Yanfly.Parameters['CloseButtonMarginRight'] || 20);
+Yanfly.Param.MsgBacklogCloseBtnMarginTop =
+  Number(Yanfly.Parameters['CloseButtonMarginTop'] || 20);
+Yanfly.Param.MsgBacklogCloseBtnScale =
+  Number(Yanfly.Parameters['CloseButtonScale'] || 1);
 
 //=============================================================================
 // Game_Temp
@@ -658,7 +702,7 @@ Window_EventItem.prototype.backlogAddSelectedChoice = function() {
 };
 
 //=============================================================================
-// Sprite_BacklogScroll
+// Sprite_BacklogScroll (fixed: min height, correct position, drag support)
 //=============================================================================
 
 function Sprite_BacklogScroll() {
@@ -682,35 +726,154 @@ Sprite_BacklogScroll.prototype.initMembers = function() {
   this.x = Graphics.boxWidth;
   this.y = 0;
   this._increment = 1;
+  this._dragging = false;
+  this._barHeight = Graphics.boxHeight;
+  this._barWidth = 4;
 };
 
 Sprite_BacklogScroll.prototype.createBitmap = function() {
-  var scrollBarColor = Yanfly.Param.MsgBacklogScrBarCol;
-  var backlogWindow = this._target;
-  this._increment = 1;
-  eval(Yanfly.Param.MsgBacklogScrBarSpriteCode);
+  // Не используем пользовательский ScrollBarSpriteCode — он источник
+  // некорректной высоты. Рисуем простую полосу.
+  var padding = this._target.standardPadding();
+  var width = Math.max(4, Math.floor(padding / 2));
+  this._barWidth = width;
+  this._barHeight = Graphics.boxHeight;
+
+  var bmp = new Bitmap(width, Graphics.boxHeight);
+  bmp.fillAll(this._target.textColor(Yanfly.Param.MsgBacklogScrBarCol));
+  this.bitmap = bmp;
+};
+
+// Пересчёт высоты и позиции каждый кадр.
+Sprite_BacklogScroll.prototype.refreshGeometry = function() {
+  var win = this._target;
+  if (!win || !this.bitmap) return;
+
+  var totalRows = win.maxRows();
+  var visibleRows = win.maxPageRows();
+  if (totalRows <= 0) totalRows = 1;
+  if (visibleRows <= 0) visibleRows = 1;
+
+  var screenH = Graphics.boxHeight;
+
+  if (totalRows <= visibleRows) {
+    // Прокручивать нечего — полоса на всю высоту, стоит сверху.
+    this._barHeight = screenH;
+    this._increment = 0;
+    this.y = 0;
+    return;
+  }
+
+  // Минимальная высота, чтобы полосу всегда было видно и удобно хватать.
+  var MIN_BAR_H = 28;
+  var ratio = visibleRows / totalRows;
+  var barH = Math.max(MIN_BAR_H, Math.floor(screenH * ratio));
+  if (barH > screenH) barH = screenH;
+  this._barHeight = barH;
+
+  var range = screenH - barH;
+  var maxTop = totalRows - visibleRows;
+  this._increment = maxTop > 0 ? range / maxTop : 0;
+
+  var topRow = win.topRow();
+  if (topRow < 0) topRow = 0;
+  if (topRow > maxTop) topRow = maxTop;
+  this.y = maxTop > 0 ? Math.floor(range * (topRow / maxTop)) : 0;
 };
 
 Sprite_BacklogScroll.prototype.resize = function() {
-  this.bitmap.clear();
-  this.createBitmap();
+  // Пересоздаём bitmap, если размеры изменились (при смене разрешения).
+  var padding = this._target.standardPadding();
+  var width = Math.max(4, Math.floor(padding / 2));
+  this._barWidth = width;
+  if (!this.bitmap ||
+      this.bitmap.width !== width ||
+      this.bitmap.height !== Graphics.boxHeight) {
+    this.bitmap = new Bitmap(width, Graphics.boxHeight);
+    this.bitmap.fillAll(this._target.textColor(Yanfly.Param.MsgBacklogScrBarCol));
+  }
+  this.refreshGeometry();
 };
 
 Sprite_BacklogScroll.prototype.update = function() {
   Sprite.prototype.update.call(this);
   if (!this._target) return;
   this.updateOpacity();
-  //this.updatePosition();
+  if (this._target.isOpen()) this.refreshGeometry();
 };
 
 Sprite_BacklogScroll.prototype.updateOpacity = function() {
   this.opacity = this._target.isOpen() ? 255 : 0;
 };
 
+// Вызывается окном после смены курсора.
 Sprite_BacklogScroll.prototype.updatePosition = function() {
-  var target = this._target;
-  if (!target.isOpen()) return;
-  this.y = target.topRow() * this._increment;
+  if (this._target.isOpen()) this.refreshGeometry();
+};
+
+// ---- Взаимодействие ----
+
+Sprite_BacklogScroll.prototype.barRect = function() {
+  var w = this._barWidth;
+  var h = this._barHeight;
+  return { x: this.x - w, y: this.y, w: w, h: h };
+};
+
+// Зона попадания чуть шире самой полосы, чтобы было удобнее.
+Sprite_BacklogScroll.prototype.isHit = function(tx, ty) {
+  if (!this.visible || this.opacity <= 0) return false;
+  var r = this.barRect();
+  var pad = 10;
+  return tx >= r.x - pad && tx <= r.x + r.w + pad &&
+         ty >= r.y - pad && ty <= r.y + r.h + pad;
+};
+
+Sprite_BacklogScroll.prototype.onPress = function(ty) {
+  this._dragging = true;
+  var r = this.barRect();
+  // Если клик пришёлся на «дорожку» (не на саму полосу) — сразу прыгаем.
+  if (ty < r.y || ty > r.y + r.h) {
+    this.scrollToY(ty);
+  }
+};
+
+Sprite_BacklogScroll.prototype.onMove = function(ty) {
+  if (!this._dragging) return;
+  this.scrollToY(ty);
+};
+
+Sprite_BacklogScroll.prototype.onRelease = function() {
+  this._dragging = false;
+};
+
+Sprite_BacklogScroll.prototype.scrollToY = function(ty) {
+  var win = this._target;
+  var totalRows = win.maxRows();
+  var visibleRows = win.maxPageRows();
+  var maxTop = Math.max(0, totalRows - visibleRows);
+  if (maxTop <= 0) return;
+
+  var range = Graphics.boxHeight - this._barHeight;
+  if (range <= 0) return;
+
+  // Хотим, чтобы центр полосы оказался на позиции ty.
+  var barTop = ty - this._barHeight / 2;
+  if (barTop < 0) barTop = 0;
+  if (barTop > range) barTop = range;
+  var ratio = barTop / range;
+
+  var targetTop = Math.round(ratio * maxTop);
+  if (targetTop === win.topRow()) return;
+
+  // topRow() = clamp(_index - maxPageRows/2, 0, maxRows - maxPageRows)
+  // => _index = targetTop + maxPageRows/2
+  var half = Math.floor(win.maxPageRows() / 2);
+  var newIndex = targetTop + half;
+  if (newIndex < 0) newIndex = 0;
+  if (newIndex > win.maxItems() - 1) newIndex = win.maxItems() - 1;
+
+  win.moveSelect(newIndex);
+  SoundManager.playCursor();
 };
 
 //=============================================================================
@@ -923,6 +1086,32 @@ Window_MessageBacklog.prototype.cursorPageup = function() {
 
 Window_MessageBacklog.prototype.processTouch = function() {
   if (!this.isOpenAndActive()) return;
+
+  // --- Сначала проверяем скроллбар ---
+  var scroll = this._scrollSprite;
+  if (scroll && scroll.visible && scroll.opacity > 0) {
+    // Нажатие на полосу — начинаем перетаскивание
+    if (TouchInput.isTriggered() && scroll.isHit(TouchInput.x, TouchInput.y)) {
+      scroll.onPress(TouchInput.y);
+      this._touchHold = 8;
+      return;
+    }
+    // Продолжение перетаскивания
+    if (scroll._dragging) {
+      if (TouchInput.isPressed()) {
+        scroll.onMove(TouchInput.y);
+      } else {
+        scroll.onRelease();
+      }
+      this._touchHold = 8;
+      return;
+    }
+    if (TouchInput.isReleased()) {
+      scroll.onRelease();
+    }
+  }
+
+  // --- Стандартное поведение (клик по фону) ---
   this._touchHold -= 1;
   if (TouchInput.isPressed() && this._touchHold <= 0) {
     if (TouchInput.y < Graphics.boxHeight / 4) {
@@ -1136,6 +1325,96 @@ Window_MessageBacklog.prototype.addWordWrapBuffer = function(text) {
   for (var i = 1; i <= bufferTimes; ++i) {
     this.addCommand('', 'buffer', true, i);
   }
+};
+
+//=============================================================================
+// Close Button for Message Backlog
+//=============================================================================
+
+Yanfly.MsgBacklog.Window_MessageBacklog_initialize =
+  Window_MessageBacklog.prototype.initialize;
+Window_MessageBacklog.prototype.initialize = function() {
+  Yanfly.MsgBacklog.Window_MessageBacklog_initialize.call(this);
+  this.createCloseButton();
+};
+
+Window_MessageBacklog.prototype.createCloseButton = function() {
+  var bmp = ImageManager.loadPicture(Yanfly.Param.MsgBacklogCloseBtnImage);
+  this._closeBtn = new Sprite(bmp);
+  this._closeBtn.scale.x = Yanfly.Param.MsgBacklogCloseBtnScale;
+  this._closeBtn.scale.y = Yanfly.Param.MsgBacklogCloseBtnScale;
+  this._closeBtn.opacity = 255;
+  this._closeBtn.visible = false;
+  this._closeBtnHovered = false;
+  // Спрайт добавляется как дочерний к окну бэклога,
+  // значит рисуется поверх содержимого и полосы прокрутки.
+  this.addChild(this._closeBtn);
+};
+
+Window_MessageBacklog.prototype.isCloseBtnTouched = function() {
+  var s = this._closeBtn;
+  if (!s || !s.visible || !s.bitmap || !s.bitmap.isReady()) return false;
+  var local = s.worldTransform.applyInverse({
+    x: TouchInput.x, y: TouchInput.y
+  });
+  return local.x >= 0 && local.y >= 0 &&
+         local.x < s.width && local.y < s.height;
+};
+
+// Возвращает true, если клик в этом кадре поглощён кнопкой.
+Window_MessageBacklog.prototype.updateCloseButton = function() {
+  var s = this._closeBtn;
+  if (!s) return false;
+
+  // Кнопка видна только когда окно открыто
+  if (!this.isOpen()) {
+    s.visible = false;
+    return false;
+  }
+  s.visible = true;
+
+  // Держим кнопку в правом верхнем углу, пока картинка грузится
+  if (s.bitmap.isReady()) {
+    var w = s.bitmap.width * Yanfly.Param.MsgBacklogCloseBtnScale;
+    var h = s.bitmap.height * Yanfly.Param.MsgBacklogCloseBtnScale;
+    s.x = this.width - w - Yanfly.Param.MsgBacklogCloseBtnMarginRight;
+    s.y = Yanfly.Param.MsgBacklogCloseBtnMarginTop;
+  }
+
+  // Лёгкая подсветка при наведении
+  var hovered = this.isCloseBtnTouched();
+  if (hovered !== this._closeBtnHovered) {
+    this._closeBtnHovered = hovered;
+    s.opacity = hovered ? 200 : 255;
+  }
+  return hovered;
+};
+
+// Единый update: закрывающая кнопка + скроллбар.
+// Сцена сама НЕ вызывает update детей-спрайтов окна,
+// поэтому обновляем скроллбар вручную.
+Yanfly.MsgBacklog.Window_MessageBacklog_update =
+  Window_MessageBacklog.prototype.update;
+Window_MessageBacklog.prototype.update = function() {
+  Yanfly.MsgBacklog.Window_MessageBacklog_update.call(this);
+  this.updateCloseButton();
+  if (this._scrollSprite) this._scrollSprite.update();
+};
+
+// Перехватываем клик по кнопке ДО обычной обработки processTouch,
+// чтобы клик в верхней четверти экрана не срабатывал как scrollUp.
+Yanfly.MsgBacklog.Window_MessageBacklog_processTouch =
+  Window_MessageBacklog.prototype.processTouch;
+Window_MessageBacklog.prototype.processTouch = function() {
+  if (this.isOpenAndActive() &&
+      TouchInput.isTriggered() &&
+      this.isCloseBtnTouched()) {
+    // Поведение полностью совпадает с ESC/Cancel:
+    // звук отмены + fullDeactivate() + возврат окна-источника.
+    this.processCancel();
+    return;
+  }
+  Yanfly.MsgBacklog.Window_MessageBacklog_processTouch.call(this);
 };
 
 //=============================================================================
