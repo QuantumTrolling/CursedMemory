@@ -98,20 +98,45 @@ Game_Battler.prototype.processAfterActionStateEffects = function(subject) {
 
 var AAE_BattleManager_endAction = BattleManager.endAction;
 BattleManager.endAction = function() {
-    // Remember targets and subject before they are cleared
-    var allTargets = this._allTargets ? this._allTargets.slice() : [];
+    // Remember subject before it is cleared by the original method.
     var subject = this._subject;
+
+    // Fallback list: if _allTargets is populated, keep old behaviour; but
+    // for the general case we'll iterate over ALL battlers below.
+    var allTargets = this._allTargets ? this._allTargets.slice() : [];
     
     // Call original (this cleans up action and moves battlers back, etc.)
     AAE_BattleManager_endAction.call(this);
     
-    // Now run the custom after-action effects on every target
-    if (allTargets.length > 0 && subject) {
-        for (var i = 0; i < allTargets.length; i++) {
-            var target = allTargets[i];
-            if (target && target.processAfterActionStateEffects) {
-                target.processAfterActionStateEffects(subject);
-            }
+    if (!subject) return;
+    
+    // Build a set of battlers to process.
+    // The old code only used _allTargets, which is unreliable when an action
+    // sequence hits several targets one after another (e.g. via multiple
+    // "action effect: target" calls, especially under CTB).
+    var targets = [];
+    if (allTargets.length > 0) {
+        targets = targets.concat(allTargets);
+    }
+    
+    // Add every actor and enemy in the battle to guarantee that any battler
+    // hit earlier in the action is also processed.
+    var party = $gameParty && $gameParty.battleMembers ? $gameParty.battleMembers() : [];
+    var troop = $gameTroop && $gameTroop.members ? $gameTroop.members() : [];
+    for (var i = 0; i < party.length; i++) {
+        if (targets.indexOf(party[i]) === -1) targets.push(party[i]);
+    }
+    for (var i = 0; i < troop.length; i++) {
+        if (targets.indexOf(troop[i]) === -1) targets.push(troop[i]);
+    }
+    
+    // Now run the custom after-action effects on every battler.
+    // Each state's own code is responsible for checking whether it should do
+    // anything (e.g. via its own per-battler flags).
+    for (var i = 0; i < targets.length; i++) {
+        var target = targets[i];
+        if (target && target.processAfterActionStateEffects) {
+            target.processAfterActionStateEffects(subject);
         }
     }
 };
