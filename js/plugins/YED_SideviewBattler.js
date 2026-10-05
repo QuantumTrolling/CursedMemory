@@ -1,7 +1,7 @@
 /*:
  * Yami Engine Delta - Sideview Battler Enhancement
  *
- * @plugindesc v1.2.0 This plugin allows user to use any kind of sideview battler, with state overrides.
+ * @plugindesc v1.2.1 This plugin allows user to use any kind of sideview battler, with state overrides.
  * @author Yami Engine Delta [Dr.Yami] + state override mod
  *
  * @param [Default Setting]
@@ -73,6 +73,9 @@
  *
  * You can override sideview battler properties while a state is active.
  * The last active state with overrides takes priority.
+ * Overrides from multiple active states are MERGED together: a later state's
+ * property replaces an earlier state's property of the same kind, but
+ * properties not touched by the later state are kept from the earlier one.
  *
  * <Sideview Battler State: FILENAME>
  * Override the sprite filename.
@@ -127,7 +130,7 @@
  * ============================================================================
  * Action Sequences - Action List (For YEP - Battle Engine Core)
  *
- * CUSTOM MOTION type: target, (no weapon)
+ * CUSTOM MOTION type, (no weapon)
  *- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  * Forces the target to perform a custom motion defined by this plugin. Anything
  * besides above listed default motions should be called with this action instead.
@@ -497,21 +500,48 @@ Imported.YED_SideviewBattler = true;
         return battler ? battler.isSideviewBattler() : false;
     };
 
+    // Merges overrides from ALL active states. Later states override earlier
+    // ones for the same property. Motions are merged by name.
     Game_Battler.prototype.getActiveStateOverride = function() {
         if (!this._states) return null;
-        var override = null;
+        var merged = null;
         for (var i = 0; i < this._states.length; i++) {
             var stateId = this._states[i];
             var state = $dataStates[stateId];
-            if (state && state._sideviewBattlerOverride) {
-                var o = state._sideviewBattlerOverride;
-                if (o.filename !== null || o.frames !== null || o.speed !== null ||
-                    o.weapon !== null || o.sizes !== null || Object.keys(o.motions).length > 0) {
-                    override = o;
+            if (!state || !state._sideviewBattlerOverride) continue;
+
+            var o = state._sideviewBattlerOverride;
+            var hasAny = o.filename !== null || o.frames !== null || o.speed !== null ||
+                         o.weapon !== null || o.sizes !== null ||
+                         (o.motions && Object.keys(o.motions).length > 0);
+            if (!hasAny) continue;
+
+            if (!merged) {
+                merged = {
+                    filename: null,
+                    frames: null,
+                    speed: null,
+                    weapon: null,
+                    sizes: null,
+                    motions: {}
+                };
+            }
+
+            if (o.filename !== null) merged.filename = o.filename;
+            if (o.frames   !== null) merged.frames   = o.frames;
+            if (o.speed    !== null) merged.speed    = o.speed;
+            if (o.weapon   !== null) merged.weapon   = o.weapon;
+            if (o.sizes    !== null) merged.sizes    = o.sizes;
+
+            if (o.motions) {
+                for (var key in o.motions) {
+                    if (o.motions.hasOwnProperty(key)) {
+                        merged.motions[key] = o.motions[key];
+                    }
                 }
             }
         }
-        return override;
+        return merged;
     };
 
     Game_Battler.prototype.isUseWeapon = function() {
