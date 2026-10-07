@@ -1818,20 +1818,14 @@ VWSprite = class VWSprite extends Sprite {
 
 //Plugin PKD_VPlayer automatic build by PKD PluginBuilder 1.9.2 01.11.2021
 
-
 //=============================================================================
-// Модуль восстановления и защиты от зависаний (Midnight Crew)
+// Модуль восстановления и защиты от зависаний (Midnight Crew) — v2
 //=============================================================================
-/*:
- * @plugindesc Объединённый PKD_VPlayer (modificated + AnimFix) с защитой от зависаний.
- * @author Midnight Crew
- * @target MV
- */
 (function () {
 
-    //=============================================================================
-    // Общий кэш и инициализация (объединённая версия)
-    //=============================================================================
+    //-------------------------------------------------------------------------
+    // Кэш восстановления + реестр отложенных замен
+    //-------------------------------------------------------------------------
 
     const _GameSystem_initialize = Game_System.prototype.initialize;
     Game_System.prototype.initialize = function () {
@@ -1846,210 +1840,260 @@ VWSprite = class VWSprite extends Sprite {
         return $gameSystem._VAnimRestoreCache;
     }
 
-    //=============================================================================
-    // Сохранение в кэш при уходе с карты (меню / кнопки)
-    //=============================================================================
+    // oldId -> { tempId, newName, x, y, isLoop, scene }
+    window._PendingVAnimReplaces = window._PendingVAnimReplaces || {};
 
-    function saveCurrentAnimationsToCache(prefix = '') {
+    // Безопасное удаление VM через публичный API сцены
+    function safeRemoveVM(id) {
         const scene = SceneManager._scene;
-        if (scene && scene._vwStorage) {
-            const cache = VAnimRestoreCache();
-            for (const id in scene._vwStorage) {
-                const vm = scene._vwStorage[id];
-                if (vm && vm.isLoaded() && !vm.isDestroyed()) {
-                    cache[id] = {
-                        id: id,
-                        name: vm.filename,
-                        x: vm.x,
-                        y: vm.y,
-                        isLoop: vm._loop
-                    };
-                    console.log(`🔄 ${prefix}Saved animation: [${id}] ${vm.filename}`);
-                }
+        if (scene && scene._getVM && scene._getVM(id)) {
+            try { scene._removeVM(id); } catch (e) {
+                console.warn('[VAnimFix] safeRemoveVM error:', e);
             }
         }
     }
 
-    // Перехват создания меню (на случай, если сцена меню создаётся не через callMenu)
+    //-------------------------------------------------------------------------
+    // Сохранение в кэш перед уходом с карты
+    //-------------------------------------------------------------------------
+
+    function saveCurrentAnimationsToCache(prefix = '') {
+        const scene = SceneManager._scene;
+        if (!scene || !scene._vwStorage) return;
+        const cache = VAnimRestoreCache();
+        for (const id in scene._vwStorage) {
+            const vm = scene._vwStorage[id];
+            if (vm && vm.isLoaded && vm.isLoaded() && !vm.isDestroyed()) {
+                cache[id] = {
+                    id: id,
+                    name: vm.filename,
+                    x: vm.x,
+                    y: vm.y,
+                    isLoop: vm._loop
+                };
+                console.log(`🔄 ${prefix} Saved anim [${id}] ${vm.filename}`);
+            }
+        }
+    }
+
     const _Scene_Menu_create = Scene_Menu.prototype.create;
     Scene_Menu.prototype.create = function () {
-        saveCurrentAnimationsToCache('[Menu create] ');
+        saveCurrentAnimationsToCache('[Menu]');
         _Scene_Menu_create.call(this);
     };
 
-    // Перехват вызова меню с карты
     const _Scene_Map_callMenu = Scene_Map.prototype.callMenu;
     Scene_Map.prototype.callMenu = function () {
-        saveCurrentAnimationsToCache('[callMenu] ');
+        saveCurrentAnimationsToCache('[callMenu]');
         _Scene_Map_callMenu.call(this);
     };
 
-    // Поддержка Galv_ScreenButtons, если они вызывают меню через eval
     if (Scene_Base.prototype.gButtonScript) {
         const _gButtonScript = Scene_Base.prototype.gButtonScript;
-        Scene_Base.prototype.gButtonScript = function(script) {
-            if (script.includes("SceneManager.push(Scene_Menu") ||
-                script.includes("SceneManager.goto(Scene_Menu")) {
-                saveCurrentAnimationsToCache('[GalvBtn] ');
+        Scene_Base.prototype.gButtonScript = function (script) {
+            if (script && (script.includes("SceneManager.push(Scene_Menu") ||
+                            script.includes("SceneManager.goto(Scene_Menu"))) {
+                saveCurrentAnimationsToCache('[GalvBtn]');
             }
             _gButtonScript.call(this, script);
         };
     }
 
-    //=============================================================================
-    // Улучшенный ReplaceVAnimSmooth с минимальной защитой от повторных вызовов
-    //=============================================================================
-
-    // Флаг блокировки, чтобы избежать наложения замен для одного ID
-    if (!window._ReplaceVAnimLock) {
-        window._ReplaceVAnimLock = {};
-    }
+    //-------------------------------------------------------------------------
+    // ReplaceVAnimSmooth — на onLoaded вместо rAF-поллинга
+    //-------------------------------------------------------------------------
 
     window.ReplaceVAnimSmooth = function (oldId, tempId, newName, x = 0, y = 0, isLoop = true) {
-        // Защита от повторного вызова для того же oldId
-        if (window._ReplaceVAnimLock[oldId]) {
-            console.warn(`[ReplaceVAnimSmooth] Замена для ${oldId} уже выполняется, повторный вызов проигнорирован.`);
+
+        // 1) Отменяем предыдущую pending-замену для этого oldId (не блокируем, а вытесняем)
+        const prev = window._PendingVAnimReplaces[oldId];
+        if (prev) {
+            delete window._PendingVAnimReplaces[oldId];
+            safeRemoveVM(prev.tempId);
+            const c = VAnimRestoreCache();
+            if (c[prev.tempId]) delete c[prev.tempId];
+            console.log(`[ReplaceVAnimSmooth] Superseded pending for [${oldId}]`);
+        }
+
+        // 2) Не даём tempId конфликтовать с существующей анимацией
+        const scene = SceneManager._scene;
+        if (!scene) {
+            console.error('[ReplaceVAnimSmooth] No active scene');
             return;
         }
-        window._ReplaceVAnimLock[oldId] = true;
+        if (scene._getVM(tempId)) {
+            safeRemoveVM(tempId);
+        }
 
-        ShowVAnimOnSpriteset(tempId, newName, x, y, isLoop);
+        // 3) Создаём временную анимацию и прячем её до загрузки
+        try {
+            ShowVAnimOnSpriteset(tempId, newName, x, y, isLoop);
+        } catch (e) {
+            console.error('[ReplaceVAnimSmooth] ShowVAnimOnSpriteset failed:', e);
+            return;
+        }
 
-        let frame = 0;
-        const MAX_FRAMES = 600; // 10 секунд при 60 fps
+        const newVM = scene._getVM(tempId);
+        if (!newVM) {
+            console.error('[ReplaceVAnimSmooth] VM not created for tempId:', tempId);
+            return;
+        }
+        newVM.visible = false;
 
-        const checkReady = () => {
-            frame++;
-
-            // 1. Проверяем, существует ли сцена
-            const scene = SceneManager._scene;
-            if (!scene) {
-                console.error(`[ReplaceVAnimSmooth] Scene lost while waiting for VM: ${tempId}`);
-                delete window._ReplaceVAnimLock[oldId];
-                return;
-            }
-
-            // 2. Пробуем получить временную VM
-            const newVM = scene._getVM(tempId);
-
-            // Если VM ещё не создалась, ждём, но с выводом диагностики
-            if (!newVM) {
-                if (frame % 60 === 0) {
-                    console.warn(`[ReplaceVAnimSmooth] Waiting for VM to exist: ${tempId} (frame ${frame})`);
-                }
-                if (frame < MAX_FRAMES) {
-                    requestAnimationFrame(checkReady);
-                } else {
-                    console.error(`[ReplaceVAnimSmooth] Timeout waiting for VM to exist: ${tempId}`);
-                    delete window._ReplaceVAnimLock[oldId];
-                }
-                return;
-            }
-
-            // 3. Если VM уничтожена, завершаем
-            if (newVM.isDestroyed()) {
-                console.error(`[ReplaceVAnimSmooth] VM ${tempId} was destroyed before loading`);
-                delete window._ReplaceVAnimLock[oldId];
-                return;
-            }
-
-            // 4. Если загрузилась — выполняем замену
-            if (newVM.isLoaded()) {
-                console.log(`[ReplaceVAnimSmooth] VM loaded after ${frame} frames`);
-
-                if (scene._getVM(oldId)) {
-                    DeleteVAnim(oldId);
-                }
-
-                // Переносим ссылку
-                scene._vwStorage[oldId] = newVM;
-                delete scene._vwStorage[tempId];
-
-                // Сохраняем в кэш
-                VAnimRestoreCache()[oldId] = {
-                    id: oldId,
-                    name: newName,
-                    x: x,
-                    y: y,
-                    isLoop: isLoop
-                };
-
-                // Оповещаем PKD_VPlayer о новом состоянии (если есть такой метод)
-                if ($gameMap && $gameMap._saveVW) {
-                    $gameMap._saveVW(oldId, newName, x, y, isLoop, 1);
-                }
-
-                console.log(`✅ Replaced animation: [${oldId}] -> ${newName}`);
-                delete window._ReplaceVAnimLock[oldId];
-                return;
-            }
-
-            // 5. Видео ещё загружается — продолжаем ожидание
-            if (frame % 60 === 0) {
-                console.log(`[ReplaceVAnimSmooth] Loading VM ${tempId}... (frame ${frame})`);
-            }
-
-            if (frame < MAX_FRAMES) {
-                requestAnimationFrame(checkReady);
-            } else {
-                console.error(`[ReplaceVAnimSmooth] Timeout waiting for VM to load: ${tempId}`);
-                // Можно принудительно удалить временную VM, чтобы не оставлять мусор
-                try { DeleteVAnim(tempId); } catch (e) {}
-                delete window._ReplaceVAnimLock[oldId];
-            }
+        // 4) Регистрируем pending
+        window._PendingVAnimReplaces[oldId] = {
+            tempId: tempId, newName: newName,
+            x: x, y: y, isLoop: isLoop, scene: scene
         };
 
-        requestAnimationFrame(checkReady);
+        const finalize = function () {
+            const pending = window._PendingVAnimReplaces[oldId];
+
+            // Нас вытеснили более новым вызовом
+            if (!pending || pending.tempId !== tempId) {
+                safeRemoveVM(tempId);
+                return;
+            }
+
+            // Сцена поменялась, пока грузилось — не трогаем, восстановит кэш/Scene_Map.start
+            if (SceneManager._scene !== scene) {
+                delete window._PendingVAnimReplaces[oldId];
+                safeRemoveVM(tempId);
+                return;
+            }
+
+            // Своп
+            if (scene._getVM(oldId)) safeRemoveVM(oldId);
+
+            scene._vwStorage[oldId] = newVM;
+            delete scene._vwStorage[tempId];
+            newVM.visible = true;
+
+            // Кэш + map-storage PKD
+            VAnimRestoreCache()[oldId] = {
+                id: oldId, name: newName, x: x, y: y, isLoop: isLoop
+            };
+            if ($gameMap && $gameMap._vwStorage && $gameMap._vwStorage[tempId]) {
+                delete $gameMap._vwStorage[tempId];
+            }
+            if ($gameMap && $gameMap._saveVW) {
+                try { $gameMap._saveVW(oldId, newName, x, y, isLoop, 1); } catch (e) {}
+            }
+
+            delete window._PendingVAnimReplaces[oldId];
+            console.log(`✅ ReplaceVAnimSmooth [${oldId}] -> ${newName}`);
+        };
+
+        // 5) Если уже загружено — финализируем сразу, иначе подписываемся на onLoaded
+        if (newVM.isLoaded && newVM.isLoaded()) {
+            finalize();
+        } else if (typeof newVM.setOnLoaded === 'function') {
+            newVM.setOnLoaded(finalize);
+        } else {
+            // Fallback (старые версии PKD)
+            console.warn('[ReplaceVAnimSmooth] setOnLoaded unavailable, using timer');
+            const t0 = performance.now();
+            const poll = () => {
+                if (newVM.isDestroyed && newVM.isDestroyed()) return;
+                if (newVM.isLoaded && newVM.isLoaded()) return finalize();
+                if (performance.now() - t0 > 10000) {
+                    console.error('[ReplaceVAnimSmooth] Timeout for', tempId);
+                    safeRemoveVM(tempId);
+                    delete window._PendingVAnimReplaces[oldId];
+                    return;
+                }
+                setTimeout(poll, 16);
+            };
+            setTimeout(poll, 16);
+        }
     };
 
-    //=============================================================================
-    // Удаление анимации с очисткой кэша
-    //=============================================================================
+    //-------------------------------------------------------------------------
+    // DeleteVAnim — отменяет pending-замену для этого ID
+    //-------------------------------------------------------------------------
 
     const _DeleteVAnim = window.DeleteVAnim;
     window.DeleteVAnim = function (id) {
+        const pending = window._PendingVAnimReplaces[id];
+        if (pending) {
+            delete window._PendingVAnimReplaces[id];
+            safeRemoveVM(pending.tempId);
+            const c = VAnimRestoreCache();
+            if (c && c[pending.tempId]) delete c[pending.tempId];
+            console.log(`[DeleteVAnim] Canceled pending replace for [${id}]`);
+        }
+
         _DeleteVAnim.call(this, id);
+
         const cache = VAnimRestoreCache();
-        if (cache && cache[id]) {
-            delete cache[id];
-        }
-        // Снимаем блокировку, если удаляется анимация, для которой шла замена
-        if (window._ReplaceVAnimLock && window._ReplaceVAnimLock[id]) {
-            delete window._ReplaceVAnimLock[id];
-        }
+        if (cache && cache[id]) delete cache[id];
     };
 
-    //=============================================================================
-    // Восстановление анимаций (объединённая логика из modificated и AnimFix)
-    //=============================================================================
+    //-------------------------------------------------------------------------
+    // Сброс pending и кэширование при выходе с карты
+    //-------------------------------------------------------------------------
 
-    // 1. Восстановление при загрузке карты (из сохранения) — переопределение PKD
+    const _Scene_Map_stop = Scene_Map.prototype.stop;
+    Scene_Map.prototype.stop = function () {
+        // 1) Сохраняем «живые» анимации в кэш ДО того, как оригинал их убьёт
+        saveCurrentAnimationsToCache('[Map.stop]');
+
+        // 2) Сбрасываем все pending и подчищаем их tempId
+        for (const oldId in window._PendingVAnimReplaces) {
+            const p = window._PendingVAnimReplaces[oldId];
+            safeRemoveVM(p.tempId);
+        }
+        window._PendingVAnimReplaces = {};
+
+        _Scene_Map_stop.call(this);
+    };
+
+    //-------------------------------------------------------------------------
+    // Восстановление — НЕ заменяем оригинал, а дополняем его
+    //-------------------------------------------------------------------------
+
+    const _GameMap_reloadVWStorage = Game_Map.prototype._reloadVWStorage;
     Game_Map.prototype._reloadVWStorage = function () {
+        // Сначала пусть отработает штатная логика PKD (восстановление из $gameMap._vwStorage)
+        if (_GameMap_reloadVWStorage) {
+            try { _GameMap_reloadVWStorage.call(this); }
+            catch (e) { console.warn('[VAnimFix] original _reloadVWStorage:', e); }
+        }
+
+        // Затем — то, чего нет в штатной логике: восстановление из нашего кэша
+        const scene = SceneManager._scene;
+        if (!scene) return;
         const cache = VAnimRestoreCache();
         for (const id in cache) {
             const data = cache[id];
-            if (data) {
-                ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
-                console.log(`♻️ [Fix] Re-applied from cache: [${id}] ${data.name}`);
+            if (data && !scene._getVM(id)) {
+                try {
+                    ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
+                    console.log(`♻️ Restored from cache [${id}] ${data.name}`);
+                } catch (e) {
+                    console.warn('[VAnimFix] restore error:', e);
+                }
             }
         }
     };
 
-    // 2. Восстановление при старте Scene_Map (возврат из меню)
     const _Scene_Map_start = Scene_Map.prototype.start;
     Scene_Map.prototype.start = function () {
         _Scene_Map_start.call(this);
         const cache = VAnimRestoreCache();
         for (const id in cache) {
             const data = cache[id];
-            if (!SceneManager._scene._getVM(id)) {
-                ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
-                console.log(`♻️ Restored after menu: [${id}] ${data.name}`);
+            if (data && !this._getVM(id)) {
+                try {
+                    ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
+                    console.log(`♻️ Restored after menu [${id}] ${data.name}`);
+                } catch (e) {
+                    console.warn('[VAnimFix] Scene_Map.start restore:', e);
+                }
             }
         }
     };
 
-    // 3. Восстановление при старте любой сцены (дополнительная подстраховка)
     const _SceneManager_onSceneStart = SceneManager.onSceneStart;
     SceneManager.onSceneStart = function () {
         _SceneManager_onSceneStart.call(this);
@@ -2057,9 +2101,11 @@ VWSprite = class VWSprite extends Sprite {
             const cache = VAnimRestoreCache();
             for (const id in cache) {
                 const data = cache[id];
-                if (!SceneManager._scene._getVM(id)) {
-                    ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
-                    console.log(`🗂 Scene start restore: [${id}] ${data.name}`);
+                if (data && !SceneManager._scene._getVM(id)) {
+                    try {
+                        ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
+                        console.log(`🗂 Scene start restore [${id}] ${data.name}`);
+                    } catch (e) {}
                 }
             }
         }
