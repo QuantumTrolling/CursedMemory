@@ -6,6 +6,7 @@
  *
  * Объединённая версия PKD_VPlayer v1.3 + мод восстановления и защиты от зависаний (Midnight Crew)
  * Минимальный фикс: блокировка повторного ReplaceVAnimSmooth для одного ID.
+ * + Android APK fix: playsinline / muted / autoplay retry / lifecycle
  */
 
 // * CHANGELOG (оригинальный) ===================
@@ -32,8 +33,8 @@
 // ===============================
 
 /*:
- * @plugindesc (v.1.3)[BASIC] Extended WEBM Video Player + восстановление и защита
- * @author Pheonix KageDesu (base), Midnight Crew (mod)
+ * @plugindesc (v.1.31)[BASIC] Extended WEBM Video Player + восстановление и защита + Android Fix
+ * @author Pheonix KageDesu (base), Midnight Crew (mod), Android Fix
  * @url http://kdworkshop.net/plugins/vplayer/
  * @target MZ MV
  *
@@ -125,7 +126,7 @@
  * - SetClickScriptToVAnim(ID, SCRIPT, IS_DELETE) - set script call when you clicked by mouse on animation
  * - SetClickCommonEventToVAnim(ID, COMMON_EVENT_ID, IS_DELETE) - set common event call when you clicked by mouse on animation
  *
- * 
+ *
  * - SetVAnimBattleBack(FILE_NAME, OFFSET_X, OFFSET_Y) - Add .webm anmation to the battleback in battle
  *      FILE_NAME - file name without extension in quotes (.webm file from movies folder)
  *
@@ -156,7 +157,7 @@
  *    - Not allowed Script call (plugin command) ShowVAnimScreenBelowPictures
  *    - Not allowed Script call (plugin command) SetVAnimPause
  *    - Not allowed Script call (plugin command) MirrorVAnim
- * 
+ *
  *  PRO version of plugin don't have this restrictions!
  * ==================================================================
  *
@@ -170,10 +171,10 @@
  * ==================================================================
  *
  * Visit plugin web page for more information, also you can find Demo project.
- * 
+ *
  * If you like my Plugins, want more and offten updates,
  * please support me on Patreon!
- * 
+ *
  * Patreon Page:
  *      https://www.patreon.com/KageDesu
  * YouTube Channel:
@@ -187,22 +188,22 @@
  *
  * ==================================================================
  * License: Creative Commons 4.0 Attribution, Share Alike, Non-Commercial
-
- * 
  *
- * 
+ *
+ *
+ *
 
 
  * @command ShowVAnim
  * @text Show Animation
  * @desc Show Gif animation
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc .webm file name in movies folder. Uses as Unique ID for this animation for delete, move and other actions
  * @type text
  * @default 1
- * 
+ *
  * @arg order
  * @text Order
  * @desc If Map - animation will be linked to map, event level, don't moving with camera
@@ -213,19 +214,19 @@
  * @option Map, above Events
  * @option Map, below Events
  * @default Screen, above windows
- * 
+ *
  * @arg x
  * @text X
  * @desc X position on screen. In pixels or map cells if order is Map
  * @type number
  * @default 0
- * 
+ *
  * @arg y
  * @text Y
  * @desc Y position on screen. In pixels or map cells if order is Map
  * @type number
  * @default 0
- * 
+ *
  * @arg isLoop
  * @text Is Looping?
  * @desc Should animation looping or play once?
@@ -233,40 +234,40 @@
  * @on Looping
  * @off Play Once
  * @default true
- * 
- * 
+ *
+ *
  * @command DeleteVAnim
  * @text Delete Animation
  * @desc Delete added Gif animation
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that should be deleted
  * @type text
  * @default 1
- * 
+ *
  * @command SetEndCallToAnim
  * @text Set End Action
  * @desc Add script or common event call when animation is end. Don't work with looping animations
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that the end action for
  * @type text
  * @default 1
- * 
+ *
  * @arg script
  * @text Script
  * @desc Call this script call when animation is end
  * @type text
  * @default
- * 
+ *
  * @arg commonEvent
  * @text Common Event
  * @desc Call common event when animation is end
  * @type common_event
  * @default 0
- * 
+ *
  * @arg isDelete
  * @text Last action?
  * @desc Delete animation when action is done (animation end) or repeat action (loop animation)
@@ -274,29 +275,29 @@
  * @on Delete
  * @off Repeat
  * @default false
- * 
+ *
  * @command SetClickToAnim
  * @text Set Click Action
  * @desc Add script or common event call when animation is clicked by mouse (touch)
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that the click action for
  * @type text
  * @default 1
- * 
+ *
  * @arg script
  * @text Script
  * @desc Call this script call when animation is clicked
  * @type text
  * @default
- * 
+ *
  * @arg commonEvent
  * @text Common Event
  * @desc Call common event when animation is clicked
  * @type common_event
  * @default 0
- * 
+ *
  * @arg isDelete
  * @text Delete?
  * @desc Delete animation after click?
@@ -304,77 +305,77 @@
  * @on Delete
  * @off Keep
  * @default false
- * 
+ *
  * @command MoveVAnim
  * @text Move Animation
  * @desc Move exists animation to new position over time
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that should be moved
  * @type text
  * @default 1
- * 
+ *
  * @arg x
  * @text X
  * @desc New X position on screen. In pixels or map cells if order is Map
  * @type number
  * @default 0
- * 
+ *
  * @arg y
  * @text Y
  * @desc New Y position on screen. In pixels or map cells if order is Map
  * @type number
  * @default 0
- * 
+ *
  * @arg duration
  * @text Duration
  * @desc Moving duration in frames, 60 = 1 sec, 0 - instant
  * @type number
  * @min 0
  * @default 60
- * 
+ *
  * @command ScaleVAnim
  * @text Scale Animation
  * @desc Scale exists animation to new size over time
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that should be scaled
  * @type text
  * @default 1
- * 
+ *
  * @arg x
  * @text Width
  * @desc New scale value for Width, 1 - 100%, 0.5 - 50%, etc...
  * @type number
  * @decimals 2
  * @default 1.0
- * 
+ *
  * @arg y
  * @text Height
  * @desc New scale value for Height, 1 - 100%, 0.5 - 50%, etc...
  * @type number
  * @decimals 2
  * @default 1.0
- * 
+ *
  * @arg duration
  * @text Duration
  * @desc Scale change duration in frames, 60 = 1 sec, 0 - instant
  * @type number
  * @min 0
  * @default 60
- * 
+ *
  * @command ChangeOpacity
  * @text Change Anim. Opacity
  * @desc Change exists animation opacity over time
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that opacity should be changed
  * @type text
  * @default 1
- * 
+ *
  * @arg opacity
  * @text Opacity level
  * @desc 0 - invisible, 255 - fully opaque
@@ -382,46 +383,46 @@
  * @min 0
  * @max 255
  * @default 255
- * 
+ *
  * @arg duration
  * @text Duration
  * @desc Change duration in frames, 60 = 1 sec, 0 - instant
  * @type number
  * @min 0
  * @default 60
- * 
+ *
  * @command SetVAnimBattleBack
  * @text Set Animated BattleBack
  * @desc Add .webm anmation to the battleback in battle
- * 
+ *
  * @arg id
  * @text File name
  * @desc .webm file name in movies folder. Keep empty for clear animated battleback
  * @type text
  * @default
- * 
+ *
  * @arg x
  * @text X
  * @desc Offset by X (in pixels)
  * @type number
  * @default 0
- * 
+ *
  * @arg y
  * @text Y
  * @desc Offset by Y (in pixels)
  * @type number
  * @default 0
- * 
+ *
  * @command MirrorVAnim
  * @text Mirror Animation
  * @desc Mirror (flip) exists animation horizontally or vertically
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that should be flipped
  * @type text
  * @default 1
- * 
+ *
  * @arg mirrorType
  * @text Mirror
  * @desc Select how mirror (flip) animation
@@ -429,17 +430,17 @@
  * @option Vertical
  * @option Horizontal
  * @default Horizontal
- * 
+ *
  * @command AnchorVAnim
  * @text Change Anchor
  * @desc Change exist animation anchor point
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that should be scaled
  * @type text
  * @default 1
- * 
+ *
  * @arg x
  * @text X
  * @desc Anchor Point X
@@ -448,7 +449,7 @@
  * @min 0
  * @max 1
  * @default 0
- * 
+ *
  * @arg y
  * @text Y
  * @desc Anchor Point Y
@@ -457,17 +458,17 @@
  * @min 0
  * @max 1
  * @default 0
- * 
+ *
  * @command StateVAnim
  * @text Change State
  * @desc Set pause or resume animation
- * 
+ *
  * @arg id
  * @text ID (File name)
  * @desc ID of animation that should be scaled
  * @type text
  * @default 1
- * 
+ *
  * @arg state
  * @text State
  * @desc Select what you want do with animation. Switch - if paused then resume and otherwise
@@ -476,10 +477,8 @@
  * @option Resume
  * @option Switch
  * @default Pause
- * 
- * 
-
-
+ *
+ *
  */
 
 var Imported = Imported || {};
@@ -490,7 +489,7 @@ var VPLAYER = {};
 //@[GLOBAL]
 window.VPLAYER = VPLAYER;
 
-VPLAYER.Version = 1.3;
+VPLAYER.Version = 1.31;
 
 VPLAYER.printError = function (error, message) {
     if (message)
@@ -507,6 +506,67 @@ VPLAYER.GetVMByID = function(id) {
     }
     return null;
 };
+
+/* ===================================================================== *
+ *                    ANDROID / WEBVIEW VIDEO HELPERS
+ * ===================================================================== */
+
+// Подготавливает нативный <video> к автозапуску в Android WebView / Cordova.
+// ВАЖНО: не выставляем autoplay (PIXI сам вызывает play()), не прячем видео
+// полностью offscreen/opacity:0 — иначе Chrome перестаёт декодировать кадры.
+VPLAYER.prepareVideoElement = function (video) {
+    if (!video || !video.tagName || video.tagName.toLowerCase() !== 'video') return;
+    try {
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('x5-playsinline', '');                 // X5 / UC / QQ WebView
+        video.setAttribute('x5-video-player-type', 'h5');
+        video.setAttribute('x5-video-player-fullscreen', 'false');
+        video.setAttribute('disableRemotePlayback', '');
+        video.playsInline = true;
+        video.muted = true;                                        // без muted autoplay блокируется
+        video.defaultMuted = true;
+        video.volume = 0;
+        video.preload = 'auto';
+        // НЕ выставляем autoplay: PIXI сам вызывает play()
+
+        video.style.position = 'fixed';
+        video.style.left = '0';
+        video.style.top = '0';
+        video.style.width = '1px';
+        video.style.height = '1px';
+        // opacity: 0.01 (а не 0) — Chrome продолжает декодировать кадры
+        video.style.opacity = '0.01';
+        video.style.zIndex = '-1';
+        video.style.pointerEvents = 'none';
+    } catch (e) {
+        console.warn('[PKD_VPlayer][AndroidFix] prepareVideoElement error:', e);
+    }
+};
+
+// Повторные попытки play() — Android может отклонить первый вызов.
+VPLAYER.safePlay = function (video, attempt) {
+    if (!video || !video.play) return;
+    attempt = attempt || 0;
+    var p;
+    try {
+        p = video.play();
+    } catch (e) {
+        console.warn('[PKD_VPlayer][AndroidFix] play() threw:', e);
+        if (attempt < 8) setTimeout(function () { VPLAYER.safePlay(video, attempt + 1); }, 300);
+        return;
+    }
+    if (p && p.catch) {
+        p.catch(function (err) {
+            if (attempt < 8) {
+                setTimeout(function () { VPLAYER.safePlay(video, attempt + 1); }, 300);
+            } else {
+                console.warn('[PKD_VPlayer][AndroidFix] play() rejected after retries:', err);
+            }
+        });
+    }
+};
+
 // Generated by CoffeeScript 2.5.1
 var KDCore;
 
@@ -774,8 +834,6 @@ KDCore = window.KDCore || {};
 
 
 
-
-
 // Generated by CoffeeScript 2.5.1
 //╒═════════════════════════════════════════════════════════════════════════╛
 // ■ DataManager.coffee
@@ -988,6 +1046,7 @@ VWSprite = class VWSprite extends Sprite {
     this._sDurationX = 0;
     this._oDuration = 0;
     this._onMapCreated = false;
+    this._videoEl = null;
     return;
   }
 
@@ -999,12 +1058,33 @@ VWSprite = class VWSprite extends Sprite {
     this.onLoaded = onLoaded;
   }
 
+  /* ------- ANDROID FIX: извлекаем video из текстуры ------- */
+  _getVideoElement() {
+    try {
+      var bt = this.vidTexture && this.vidTexture.baseTexture;
+      if (!bt) return null;
+      // PIXI v4: source лежит напрямую в baseTexture
+      if (bt.source && bt.source.tagName && bt.source.tagName.toLowerCase() === 'video')
+        return bt.source;
+      // PIXI v5+: baseTexture.resource.source
+      if (bt.resource && bt.resource.source && bt.resource.source.tagName &&
+          bt.resource.source.tagName.toLowerCase() === 'video')
+        return bt.resource.source;
+      // PIXI v4 VideoBaseTexture имеет ._video
+      if (bt._video) return bt._video;
+    } catch (e) {
+      console.warn('[PKD_VPlayer][AndroidFix] _getVideoElement:', e);
+    }
+    return null;
+  }
+
   create() {
     if (KDCore.isMV()) {
       this.vidTexture = PIXI.Texture.fromVideo('movies/' + this.filename + '.webm');
     } else {
       this.vidTexture = PIXI.Texture.from('movies/' + this.filename + '.webm');
     }
+
     this.surface = new PIXI.Sprite(this.vidTexture);
     this.source = null;
     if (KDCore.isMZ() && this.surface._texture.valid === true) {
@@ -1013,26 +1093,36 @@ VWSprite = class VWSprite extends Sprite {
     this.surface._texture.baseTexture.on('loaded', () => {
       return this._workWithTexture(this.source);
     });
-    this._textureSource(this.surface._texture).addEventListener('ended', () => {
-      return this._onEnd();
-    });
+
+    var srcEl = this._textureSource(this.surface._texture);
+    if (srcEl && srcEl.addEventListener) {
+      srcEl.addEventListener('ended', () => {
+        return this._onEnd();
+      });
+    }
   }
 
   _workWithTexture(source) {
     var playPromise;
-    //"TEXTURE LOADED".p()
     source = this._textureSource(this.vidTexture);
+    if (!source) return;
+
+    /* ---- ANDROID FIX: настраиваем <video> перед play() ---- */
+    VPLAYER.prepareVideoElement(source);
+    this._videoEl = source;
+
+    // Исправлена опечатка heigth -> height
     this.surface.width = source.videoWidth;
-    this.surface.heigth = source.videoHeight;
+    this.surface.height = source.videoHeight;
+
     this.addChild(this.surface);
     this._loaded = true;
     this.source = source;
     this.source.loop = this._loop;
-    //@source.play()
-    playPromise = this.source.play();
-    if (playPromise != null) {
-      playPromise.then(function() {}).catch(function() {});
-    }
+
+    /* ---- ANDROID FIX: play() с ретраями ---- */
+    VPLAYER.safePlay(source, 0);
+
     if (this.onLoaded != null) {
       return this.onLoaded();
     }
@@ -1102,16 +1192,29 @@ VWSprite = class VWSprite extends Sprite {
     this.visible = false;
     source = this._textureSource(this.vidTexture);
     if (source != null) {
-      source.pause();
-      this.surface._texture.baseTexture.destroy();
-      this._texture.destroy();
-      this.surface.destroy();
+      try { source.pause(); } catch (e) {}
+      // Отвязываем от DOM (важно для Android — иначе остаётся висеть decoder)
+      try {
+        if (source.parentNode) source.parentNode.removeChild(source);
+      } catch (e) {}
+      try { source.src = ''; source.load(); } catch (e) {}
+    }
+    if (this.surface && this.surface._texture) {
+      try { this.surface._texture.baseTexture.destroy(); } catch (e) {}
+      try { this.surface._texture.destroy(); } catch (e) {}
+      try { this.surface.destroy(); } catch (e) {}
+    }
+    if (this._texture && this._texture !== this.vidTexture) {
+      try { this._texture.destroy(); } catch (e) {}
+    }
+    try {
       if (KDCore.isMV()) {
         PIXI.loader.reset();
       } else {
         PIXI.Loader.shared.reset();
       }
-    }
+    } catch (e) {}
+    this._videoEl = null;
     return this._destroyed = true;
   }
 
@@ -1151,7 +1254,8 @@ VWSprite = class VWSprite extends Sprite {
       x = KDCore.SDK.canvasToLocalX(this, TouchInput.x);
       y = KDCore.SDK.canvasToLocalY(this, TouchInput.y);
     }
-    return x >= 0 && y >= 0 && x < (this.surface.width * this.scale.x) && y < (this.surface.heigth * this.scale.y);
+    // heigth -> height
+    return x >= 0 && y >= 0 && x < (this.surface.width * this.scale.x) && y < (this.surface.height * this.scale.y);
   }
 
   isHasAction() {
@@ -1209,9 +1313,9 @@ VWSprite = class VWSprite extends Sprite {
   flipVer() {
     this.scale.y *= -1;
     if (this.scale.y < 0) {
-      this.y += this.surface.heigth * Math.abs(this.scale.y);
+      this.y += this.surface.height * Math.abs(this.scale.y);
     } else {
-      this.y -= this.surface.heigth * Math.abs(this.scale.y);
+      this.y -= this.surface.height * Math.abs(this.scale.y);
     }
   }
 
@@ -1219,7 +1323,7 @@ VWSprite = class VWSprite extends Sprite {
     var e, source;
     try {
       source = this._textureSource(this.vidTexture);
-      source.pause();
+      if (source) source.pause();
       this._isPaused = true;
     } catch (error) {
       e = error;
@@ -1230,7 +1334,9 @@ VWSprite = class VWSprite extends Sprite {
 
   resume() {
     if (this._isPaused === true) {
-      return this._isPaused = false;
+      this._isPaused = false;
+      var v = this._videoEl || this._textureSource(this.vidTexture);
+      if (v) VPLAYER.safePlay(v, 0);
     }
   }
 
@@ -1241,14 +1347,20 @@ VWSprite = class VWSprite extends Sprite {
       return;
     }
     this.source.loop = this._loop;
-    //@source.play()
+
     if (this._isPaused !== true) {
-      playPromise = this.source.play();
-      if (playPromise != null) {
-        playPromise.then(function() {}).catch(function() {});
-      }
+      /* ---- ANDROID FIX: play() с защитой от реджекта ---- */
+      try {
+        playPromise = this.source.play();
+        if (playPromise != null && playPromise.catch) {
+          playPromise.catch(function () {});
+        }
+      } catch (e) {}
     }
-    this.vidTexture.baseTexture.update();
+
+    if (this.vidTexture && this.vidTexture.baseTexture) {
+      this.vidTexture.baseTexture.update();
+    }
     return this._updateOther();
   }
 
@@ -1318,6 +1430,42 @@ VWSprite = class VWSprite extends Sprite {
   }
 
 };
+
+/* =====================================================================
+ *  ANDROID LIFECYCLE: сворачивание/разворачивание APK
+ *  Оставляем только надёжное событие visibilitychange.
+ *  window.blur/focus и Cordova pause/resume на Android срабатывают
+ *  непарно — из-за этого видео «залипает» на паузе и спрайт исчезает.
+ * =================================================================== */
+(function () {
+  function forEachVM(callback) {
+    var scene = SceneManager._scene;
+    if (!scene || !scene._vwStorage) return;
+    for (var id in scene._vwStorage) {
+      var vm = scene._vwStorage[id];
+      if (!vm || vm.isDestroyed()) continue;
+      try { callback(vm, id); } catch (e) {}
+    }
+  }
+
+  function pauseAll() {
+    forEachVM(function (vm) {
+      var v = vm._videoEl || (vm._textureSource ? vm._textureSource(vm.vidTexture) : null);
+      if (v && v.pause) try { v.pause(); } catch (e) {}
+    });
+  }
+
+  function resumeAll() {
+    forEachVM(function (vm) {
+      var v = vm._videoEl || (vm._textureSource ? vm._textureSource(vm.vidTexture) : null);
+      if (v) VPLAYER.safePlay(v, 0);
+    });
+  }
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) pauseAll(); else resumeAll();
+  }, false);
+})();
 
 // Generated by CoffeeScript 2.5.1
 //╒═════════════════════════════════════════════════════════════════════════╛
@@ -1389,7 +1537,7 @@ VWSprite = class VWSprite extends Sprite {
       item = tempStorage[id];
       try {
         vm = VPLAYER.GetVMByID(id);
-        if (item[5] != null) {
+        if (item[5] != null && vm) {
           vm.loadSD(item[5]);
         }
       } catch (error) {
@@ -1412,7 +1560,7 @@ VWSprite = class VWSprite extends Sprite {
   };
   //?VERSION
   _.storeVWOnMapOwn2 = function() {}; // * EMPTY
-  
+
   //?VERSION
   _.storeVWOnScreenBelowPictures = function() {}; // * EMPTY
 })();
@@ -1562,7 +1710,7 @@ VWSprite = class VWSprite extends Sprite {
   _ = Scene_Battle.prototype;
   //?VERSION
   _._createVWBattleBackAnimation = function() {}; // * EMPTY
-  
+
   //@[ALIAS]
   ALIAS__stop = _.stop;
   _.stop = function() {
@@ -1606,7 +1754,7 @@ VWSprite = class VWSprite extends Sprite {
     ALIAS__onMapLoaded.call(this);
     return $gameMap._reloadVWStorage();
   };
-  
+
   //@[ALIAS]
   ALIAS__stop = _.stop;
   _.stop = function() {
@@ -1793,7 +1941,7 @@ VWSprite = class VWSprite extends Sprite {
     ALIAS__createCharacters.call(this);
     return this._tilemap.addChild(this.__animLayerMap2);
   };
-  
+
   //@[ALIAS]
   ALIAS__updateTilemap = _.updateTilemap;
   _.updateTilemap = function() {

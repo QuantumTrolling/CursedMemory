@@ -418,7 +418,11 @@ function TranslationManager() {
 // Fix the flag check for 1.6 editor and 1.5 or below project
 //-----------------------------------------------------------------------------
 
-if(process.versions['node-webkit'] >= "0.13.0" && Utils.RPGMAKER_VERSION < "1.6.0") {
+if(typeof process !== 'undefined'
+   && process.versions
+   && process.versions['node-webkit']
+   && process.versions['node-webkit'] >= "0.13.0"
+   && Utils.RPGMAKER_VERSION < "1.6.0") {
 
 Utils.isOptionValid = function(name) {
 	if (location.search.slice(1).split('&').contains(name)) {return 1;};
@@ -449,7 +453,9 @@ Utils.isOptionValid = function(name) {
 
 $.params = PluginManager.parameters('SRD_TranslationEngine');
 
-$.isNewNWjs = process.versions['node-webkit'] >= "0.13.0";
+$.isNewNwjs = (typeof process !== 'undefined' && process.versions && process.versions['node-webkit']) 
+    ? process.versions['node-webkit'] >= "0.13.0" 
+    : false;
 
 try {
 	$.languages = JSON.parse($.params['Languages']);
@@ -473,7 +479,7 @@ $.dataFileName = "Translations.json";
 $.defaultData = '{"msg": {}, "cmd": {}, "terms": {}, "custom": {}}';
 $.isPlaytest = Utils.isOptionValid('test') && Utils.isNwjs();
 
-if($.isPlaytest && $.isNewNWjs) {
+if($.isPlaytest && $.isNewNwjs) {
 	if(!require('fs').existsSync("translationengine.html")) require('fs').writeFileSync("translationengine.html", "<!DOCTYPE html><html><head><title></title></head><body>\n<!--\n\tThis is required for the Translation Engine to open on NWjs versions above 0.13.0\n\tFeel free to delete upon exporting the game.\n-->\n</body></html>");
 }
 
@@ -1767,8 +1773,16 @@ if($.allowOption) {
 
 $.Window_Options_addGeneralOptions = Window_Options.prototype.addGeneralOptions;
 Window_Options.prototype.addGeneralOptions = function() {
-	$.Window_Options_addGeneralOptions.apply(this, arguments);
-	this.addCommand($.optionName, 'language');
+    $.Window_Options_addGeneralOptions.apply(this, arguments);
+
+    // Не добавляем строку, если команда 'language' уже присутствует
+    // (защита от двойной загрузки плагина или другого локализатора).
+    var alreadyHasLanguage = this._list.some(function(cmd) {
+        return cmd && cmd.symbol === 'language';
+    });
+    if (!alreadyHasLanguage) {
+        this.addCommand($.optionName, 'language');
+    }
 };
 
 $.Window_Options_statusText = Window_Options.prototype.statusText;
