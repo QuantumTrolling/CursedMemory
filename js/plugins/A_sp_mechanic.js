@@ -105,7 +105,7 @@
     var spFontSize = Number(parameters['SP Font Size'] || 28);
     var costXOffset = Number(parameters['Cost X Offset'] || 0);
     var spCostXOffset = Number(parameters['SP Cost X Offset'] || 2);
-    var requiredActorIdsStr = parameters['Required Actor IDs'] || '8,12,13,16';
+    var requiredActorIdsStr = parameters['Required Actor IDs'] || '8,12,13,16,17,18,19';
     var requiredActorIds = requiredActorIdsStr.split(',').map(function(id) {
         return parseInt(id.trim());
     }).filter(function(id) {
