@@ -59,6 +59,13 @@
  *    <MDF Bonus from Actors Current HP% with state 292: 30%>
  *    // +30% от суммарного % текущего HP союзников с состоянием 292 (0..100)
  *
+ * 11. ПРОЦЕНТ ОТ БАЗЫ за HP союзников с состоянием (per-версия):
+ *    <ATK Bonus per Actors Current HP% with state 310: 1%>
+ *    // +1% базовой атаки за каждый 1% текущего HP живых союзников с состоянием 310
+ *    // Пример: 1 союзник с состоянием 310 на полном HP → +100% базы ATK
+ *    //         1 союзник на 50% HP               → +50% базы ATK
+ *    //         два союзника на полном HP        → +200% базы ATK (сумма)
+ *
  * ============================================================================
  * Источники:
  * ATK, DEF, MAT, MDF, AGI, LUK, Current HP, Missing HP, Current MP, Current Shield, Shield,
@@ -120,7 +127,7 @@
                 bonusFlat += Math.floor(sum * percent);
             }
 
-            // НОВЫЙ ТЕГ: <STAT Bonus from Actors Missing HP with state ID: X%>
+            // <STAT Bonus from Actors Missing HP with state ID: X%>
             const regexActorsMissingHPWithState =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+MISSING\s+HP\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
             let matchActorsMissingHPWithState;
@@ -142,7 +149,7 @@
                 bonusFlat += Math.floor(sum * percent);
             }
 
-            // НОВЫЙ ТЕГ: <STAT Bonus from Actors Current HP with state ID: X%>
+            // <STAT Bonus from Actors Current HP with state ID: X%>
             const regexActorsCurrentHPWithState =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+CURRENT\s+HP\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
             let matchActorsCurrentHPWithState;
@@ -164,7 +171,7 @@
                 bonusFlat += Math.floor(sum * percent);
             }
 
-            // НОВЫЙ ТЕГ: <STAT Bonus from Actors Missing HP% with state ID: X%>
+            // <STAT Bonus from Actors Missing HP% with state ID: X%>
             const regexActorsMissingHPPercentWithState =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+MISSING\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
             let matchActorsMissingHPPercent;
@@ -187,7 +194,7 @@
                 bonusFlat += Math.floor(sum * percent);
             }
 
-            // НОВЫЙ ТЕГ: <STAT Bonus from Actors Current HP% with state ID: X%>
+            // <STAT Bonus from Actors Current HP% with state ID: X%>
             const regexActorsCurrentHPPercentWithState =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+CURRENT\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
             let matchActorsCurrentHPPercent;
@@ -210,6 +217,33 @@
                 bonusFlat += Math.floor(sum * percent);
             }
 
+            // ===== НОВЫЙ ТЕГ: <STAT Bonus per Actors Current HP% with state ID: X%> =====
+            // Процент от базы (bonusPercent), а не флэт.
+            // +X% базовой ATK/DEF/... за каждый 1% текущего HP живых союзников с состоянием stateId.
+            // Формула: bonusPercent += (Σ HP% носителей) × X/100
+            const regexPerActorsCurrentHPPercentWithState =
+                /<(\w+)\s+BONUS\s+PER\s+ACTORS\s+CURRENT\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+            let matchPerActorsCurrentHPPercentWithState;
+            while ((matchPerActorsCurrentHPPercentWithState = regexPerActorsCurrentHPPercentWithState.exec(note)) !== null) {
+                const target  = matchPerActorsCurrentHPPercentWithState[1].toUpperCase();
+                const stateId = Number(matchPerActorsCurrentHPPercentWithState[2]);
+                const percent = Number(matchPerActorsCurrentHPPercentWithState[3]) / 100;
+
+                if (PARAM_MAP[target] !== paramId) continue;
+                if (!this.friendsUnit) continue;
+
+                const unit = this.friendsUnit();
+                let sum = 0;
+                for (const member of unit.members()) {
+                    if (member.hp > 0 && member.isStateAffected(stateId)) {
+                        const mhp = member.mhp || 1;
+                        sum += member.hp / mhp * 100;
+                    }
+                }
+                bonusPercent += sum * percent;
+            }
+            // ==========================================================================
+
             // <STAT Bonus from Actors PARAM Full HP: X%>
             const regexActorsFullHP =
                 /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+FULL\s+HP\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
@@ -226,7 +260,6 @@
                 const unit = this.friendsUnit();
                 let sum = 0;
                 for (const member of unit.members()) {
-                    // Живой союзник с полным HP (hp >= mhp)
                     if (member.hp > 0 && member.hp >= member.mhp) {
                         sum += _Game_BattlerBase_param.call(member, PARAM_MAP[sourceParam]);
                     }
@@ -255,7 +288,7 @@
                 bonusFlat += Math.floor(totalMissing * percent);
             }
 
-            // <PARAM Bonus from SOURCE: X%>  (поддерживает % у источника)
+            // <PARAM Bonus from SOURCE: X%>
             const regexFlat =
                 /<(\w+)[ _]?BONUS[ _]?FROM[ _]?([\w ]+?)(\s*%)?\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchFlat;
@@ -273,7 +306,6 @@
                     continue;
                 }
 
-                // EDIT: Бонусы, основанные на щите, не применяются, если цель поражена состоянием 157
                 if ((source === "SHIELD" || source === "CURRENT SHIELD") && this.isStateAffected(157)) {
                     continue;
                 }
@@ -283,7 +315,7 @@
                 );
             }
 
-            // <PARAM Bonus per SOURCE: X%>  (поддерживает % у источника)
+            // <PARAM Bonus per SOURCE: X%>
             const regexPer =
                 /<(\w+)[ _]?BONUS[ _]?PER[ _]?([\w ]+?)(\s*%)?\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchPer;
@@ -301,7 +333,6 @@
                     continue;
                 }
 
-                // EDIT: Бонусы, основанные на щите, не применяются, если цель поражена состоянием 157
                 if ((source === "SHIELD" || source === "CURRENT SHIELD") && this.isStateAffected(157)) {
                     continue;
                 }
@@ -373,14 +404,13 @@
 
                 if (PARAM_MAP[target] !== paramId) continue;
                 if (PARAM_MAP[source] === undefined) continue;
-                if (this.hp < this.mhp) continue;   // только при полном HP
+                if (this.hp < this.mhp) continue;
 
                 const sourceValue = _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
                 bonusFlat += Math.floor(sourceValue * percent);
             }
 
-            // ===== <ALLSTAT Bonus from Actor: ID, X%> =====
-            // Применяет процент от каждого параметра актёра ID к такому же параметру цели
+            // <ALLSTAT Bonus from Actor: ID, X%>
             const regexAllstatActor =
                 /<ALLSTAT\s+BONUS\s+FROM\s+ACTOR\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)%\s*(?:,\s*ALLSTAT\s*)?>/gi;
             let matchAllstat;
@@ -391,11 +421,9 @@
                 const actor = $gameActors.actor(actorId);
                 if (!actor) continue;
 
-                // Берём значение того же параметра (paramId) у актёра
                 const sourceValue = _Game_BattlerBase_param.call(actor, paramId);
                 bonusFlat += Math.floor(sourceValue * percent);
             }
-            // =====================================================
         }
 
         return (
@@ -406,42 +434,35 @@
     };
 
     Game_BattlerBase.prototype.getSourceValue = function(source, isPercent) {
-        // Параметры
         if (PARAM_MAP[source] !== undefined) {
             return _Game_BattlerBase_param.call(this, PARAM_MAP[source]);
         }
 
-        // Current HP
         if (source === "CURRENT HP") {
             if (isPercent) {
                 const mhp = this.mhp || 1;
-                return (this.hp || 0) / mhp * 100;   // 0..100
+                return (this.hp || 0) / mhp * 100;
             }
             return this.hp || 0;
         }
 
-        // Missing HP
         if (source === "MISSING HP") {
             if (isPercent) {
                 const mhp = this.mhp || 1;
-                return ((this.mhp || 0) - (this.hp || 0)) / mhp * 100;   // 0..100
+                return ((this.mhp || 0) - (this.hp || 0)) / mhp * 100;
             }
             return (this.mhp || 0) - (this.hp || 0);
         }
 
-        // Current MP
         if (source === "CURRENT MP") {
             if (isPercent) {
                 const mmp = this.mmp || 1;
-                return (this.mp || 0) / mmp * 100;   // 0..100
+                return (this.mp || 0) / mmp * 100;
             }
             return this.mp || 0;
         }
 
-        // Shield / Current Shield
         if (source === "CURRENT SHIELD" || source === "SHIELD") {
-            // Olivia Octo Battle:
-            // во время Break считаем щиты равными 0
             if (typeof this.isStateAffected === "function") {
                 const breakStateId =
                     Olivia &&
