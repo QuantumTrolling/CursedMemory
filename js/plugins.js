@@ -70,7 +70,7 @@ var $plugins =
 {"name":"YEP_ShopMenuCore","status":true,"description":"v1.05 Revamps the shop menu appearance and provides the\nframework for many new shop options.","parameters":{"---General---":"","Command Order":"Buy Cancel","Shop List Width":"Graphics.boxWidth / 2 + Graphics.boxWidth / 10","Command Alignment":"center","---Status Window---":"","Default Mode":"actor","Stat Switching":"true","Cannot Equip":"Can't Equip","Stat Font Size":"20","Cannot Equip Font Size":"20","---Info Window---":"","Show Icon":"true","Icon Size":"128","Font Size":"20","Recovery Format":"%1 Heal","Add State":"+State","Add Buff":"+Buff","Remove State":"-State","Remove Buff":"-Buff","Maximum Icons":"4"}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
 {"name":"text_box_v2","status":true,"description":"","parameters":{}},
-{"name":"text_box_v2Addon","status":true,"description":"Расширение окна помощи: колонки (\\col[N]) и выравнивание текста.","parameters":{"textAlign":"left"}},
+{"name":"text_box_v2Addon","status":true,"description":"Колонки (\\col[N]) для всех окон + выравнивание в помощи.","parameters":{"textAlign":"left"}},
 {"name":"-------------------------------------","status":false,"description":"","parameters":{}},
 {"name":"Cv2_DeathCommonEvent","status":true,"description":"[v1.2.0] Calls a Common Event on character death.","parameters":{"DCE Fallthrough":"false","All Ally Dead DCE":"0","All Enemy Dead DCE":"0","Any Ally DCE":"79","Any Enemy DCE":"0"}},
 {"name":"PKD_VPlayer","status":true,"description":"(v.1.3)[BASIC] Extended WEBM Video Player","parameters":{}},
