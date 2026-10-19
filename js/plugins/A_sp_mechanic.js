@@ -295,10 +295,19 @@
     //=========================================================================
     // BattleManager – начальное SP в начале битвы
     //=========================================================================
-    var _mogSP_BattleManager_startBattle = BattleManager.startBattle;
-    BattleManager.startBattle = function() {
-        _mogSP_BattleManager_startBattle.call(this);
+var _mogSP_BattleManager_startBattle = BattleManager.startBattle;
+BattleManager.startBattle = function() {
+    _mogSP_BattleManager_startBattle.call(this);
+
+    // Не сбрасываем SP при переходе на новую волну последовательных битв.
+    // Сбрасываем только при старте нового боя:
+    // - _consBat отсутствует (плагин волн не установлен)  -> новый бой
+    // - _consBat.index === 0                              -> первый бой в серии
+    // При переходе на волну prepareConBat уже сделал index++,
+    // поэтому здесь index > 0 и SP не трогаем.
+    if (!$gameSystem._consBat || $gameSystem._consBat.index === 0) {
         $gameParty.setSp(initSP);
-    };
+    }
+};
 
 })();
