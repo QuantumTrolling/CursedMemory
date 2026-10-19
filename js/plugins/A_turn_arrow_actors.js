@@ -192,6 +192,26 @@
  * @type number
  * @desc Смещение по Y для актора 17
  * @default -80
+ *
+ * @param Actor18Y
+ * @type number
+ * @desc Смещение по Y для актора 17
+ * @default -80
+ *
+ * @param Actor18X
+ * @type number
+ * @desc Смещение по X для актора 17
+ * @default 0
+ *
+ * @param Actor19Y
+ * @type number
+ * @desc Смещение по Y для актора 17
+ * @default -80
+ *
+ * @param Actor19X
+ * @type number
+ * @desc Смещение по X для актора 17
+ * @default 0
  */
 
 (function() {

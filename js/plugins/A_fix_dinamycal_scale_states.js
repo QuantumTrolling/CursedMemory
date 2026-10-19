@@ -105,7 +105,7 @@
 
             // <STAT Bonus from Actors PARAM with state ID: X%>
             const regexActorsWithState =
-                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchActorsWithState;
             while ((matchActorsWithState = regexActorsWithState.exec(note)) !== null) {
                 const target = matchActorsWithState[1].toUpperCase();
@@ -129,7 +129,7 @@
 
             // <STAT Bonus from Actors Missing HP with state ID: X%>
             const regexActorsMissingHPWithState =
-                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+MISSING\s+HP\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+MISSING\s+HP\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchActorsMissingHPWithState;
             while ((matchActorsMissingHPWithState = regexActorsMissingHPWithState.exec(note)) !== null) {
                 const target  = matchActorsMissingHPWithState[1].toUpperCase();
@@ -151,7 +151,7 @@
 
             // <STAT Bonus from Actors Current HP with state ID: X%>
             const regexActorsCurrentHPWithState =
-                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+CURRENT\s+HP\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+CURRENT\s+HP\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchActorsCurrentHPWithState;
             while ((matchActorsCurrentHPWithState = regexActorsCurrentHPWithState.exec(note)) !== null) {
                 const target  = matchActorsCurrentHPWithState[1].toUpperCase();
@@ -173,7 +173,7 @@
 
             // <STAT Bonus from Actors Missing HP% with state ID: X%>
             const regexActorsMissingHPPercentWithState =
-                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+MISSING\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+MISSING\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchActorsMissingHPPercent;
             while ((matchActorsMissingHPPercent = regexActorsMissingHPPercentWithState.exec(note)) !== null) {
                 const target  = matchActorsMissingHPPercent[1].toUpperCase();
@@ -196,7 +196,7 @@
 
             // <STAT Bonus from Actors Current HP% with state ID: X%>
             const regexActorsCurrentHPPercentWithState =
-                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+CURRENT\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+CURRENT\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchActorsCurrentHPPercent;
             while ((matchActorsCurrentHPPercent = regexActorsCurrentHPPercentWithState.exec(note)) !== null) {
                 const target  = matchActorsCurrentHPPercent[1].toUpperCase();
@@ -222,7 +222,7 @@
             // +X% базовой ATK/DEF/... за каждый 1% текущего HP живых союзников с состоянием stateId.
             // Формула: bonusPercent += (Σ HP% носителей) × X/100
             const regexPerActorsCurrentHPPercentWithState =
-                /<(\w+)\s+BONUS\s+PER\s+ACTORS\s+CURRENT\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+                /<(\w+)\s+BONUS\s+PER\s+ACTORS\s+CURRENT\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchPerActorsCurrentHPPercentWithState;
             while ((matchPerActorsCurrentHPPercentWithState = regexPerActorsCurrentHPPercentWithState.exec(note)) !== null) {
                 const target  = matchPerActorsCurrentHPPercentWithState[1].toUpperCase();
@@ -246,7 +246,7 @@
 
             // <STAT Bonus from Actors PARAM Full HP: X%>
             const regexActorsFullHP =
-                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+FULL\s+HP\s*:\s*(-?\d+\.?\d+)\s*%?>/gi;
+                /<(\w+)\s+BONUS\s+FROM\s+ACTORS\s+(\w+)\s+FULL\s+HP\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchActorsFullHP;
             while ((matchActorsFullHP = regexActorsFullHP.exec(note)) !== null) {
                 const target = matchActorsFullHP[1].toUpperCase();
