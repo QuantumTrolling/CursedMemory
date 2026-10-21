@@ -50,8 +50,8 @@
     // === Параметры кнопки закрытия ===
     var parameters = PluginManager.parameters('A_reatreat_fix');
     var closeBtnImage       = String(parameters['closeBtnImage'] || 'close');
-    var closeBtnMarginRight = Number(parameters['closeBtnMarginRight'] || 140);
-    var closeBtnMarginTop   = Number(parameters['closeBtnMarginTop'] || 24);
+    var closeBtnMarginRight = Number(parameters['closeBtnMarginRight'] || 5);
+    var closeBtnMarginTop   = Number(parameters['closeBtnMarginTop'] || 160);
     var closeBtnScale       = Number(parameters['closeBtnScale'] || 1);
 
     // 1. Отключаем анимацию побега у спрайта (движение вправо)
