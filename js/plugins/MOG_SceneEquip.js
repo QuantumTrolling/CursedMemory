@@ -3,13 +3,14 @@
 //=============================================================================
 
 /*:
- * @plugindesc (v1.5.5) Modifica a cena de equipamento.
+ * @plugindesc (v1.5.6) Modifica a cena de equipamento.
  * (Иконки/текст ×2, окна подогнаны, навигация восстановлена,
  *  5-й слот отображается, параметры подписаны, фокус сразу на слотах,
  *  иконка оружия зависит от типа, стандартные рамки MV,
  *  увеличенные иконки без размытия, заголовок "Equipment",
  *  настройки позиции лица и имени в статусе,
- *  кнопка закрытия в правом верхнем углу)
+ *  кнопка закрытия в правом верхнем углу,
+ *  переключение слотов кликом в любом месте окна)
  * @author Moghunter (модифицировано)
  *
  * @param FontSize
@@ -215,7 +216,7 @@
  *
  * @help
  * =============================================================================
- * +++ MOG - Scene Equip (v1.5.5) +++
+ * +++ MOG - Scene Equip (v1.5.6) +++
  * By Moghunter
  * https://mogplugins.com
  * =============================================================================
@@ -252,6 +253,8 @@
  * - Перевод названий параметров и заголовка "Equipment" -> "Снаряжение"
  *   на русский при активном языке "Russian" (совместимо с
  *   SRD_TranslationEngine). При других языках — оригинал.
+ * - Переключение слотов экипировки кликом мыши напрямую в любом месте
+ *   слота (не только по иконке).
  */
 
 var Imported = Imported || {};
@@ -304,18 +307,12 @@ Moghunter.scEquip_CloseMarginTop   = Number(Moghunter.parameters['Close Button M
 Moghunter.scEquip_CloseScale       = Number(Moghunter.parameters['Close Button Scale'] || 1);
 
 // === Перевод названий параметров и заголовка (окно статуса) ===
-// Работает ТОЛЬКО при активном языке "Russian" (SRD_TranslationEngine).
-// При любом другом языке (в т.ч. "English", "Chinese", либо если
-// SRD_TranslationEngine не подключён) — возвращается оригинал.
 Moghunter.scEquip_ParamTranslations = {
     "Russian": {
-        // Заголовок окна экипировки
         "Equipment":     "Снаряжение",
-        // HP / MP / AP
         "Max. HP":        "Макс. HP",
         "Max MP":        "Макс MP",
         "Max. AP":        "Макс. AP",
-        // Основные характеристики
         "Attack":        "Атака",
         "Defense":       "Защита",
         "Magic":         "Магия",
@@ -330,14 +327,11 @@ Moghunter.scEquip_ParamTranslations = {
 
 Moghunter.scEquip_translateParam = function(name) {
     if (!name) return name;
-    // SRD_TranslationEngine ещё не подключён — ничего не переводим
-    if (typeof ConfigManager === 'undefined' ||
-        typeof ConfigManager.getLanguage !== 'function') {
+    if (typeof ConfigManager === 'undefined' || typeof ConfigManager.getLanguage !== 'function') {
         return name;
     }
     var lang = ConfigManager.getLanguage();
     if (!lang) return name;
-    // Встроенный словарь
     var map = Moghunter.scEquip_ParamTranslations[lang];
     if (map && map[name] !== undefined) return map[name];
     return name;
@@ -400,8 +394,6 @@ Scene_Equip.prototype.create = function() {
 
 Scene_Equip.prototype.createTitleSprite = function() {
     this._titleSprite = new Sprite();
-    // ▼ Перевод заголовка применяется только когда язык = "Russian"
-    //   (при других языках и без SRD_TranslationEngine — оригинал)
     var text = Moghunter.scEquip_translateParam(Moghunter.scEquip_TitleText);
     var fontSize = Moghunter.scEquip_TitleFontSize;
     var x = Moghunter.scEquip_TitleX;
@@ -427,8 +419,6 @@ Scene_Equip.prototype.createCloseButton = function() {
     this._closeButton.scale.y = Moghunter.scEquip_CloseScale;
     this._closeButton.opacity = 255;
     this._closeBtnHovered = false;
-    // Авто-позиция в правом верхнем углу выставляется в update()
-    // (картинка на момент создания может быть ещё не загружена).
     this.addChild(this._closeButton);
 };
 
@@ -444,7 +434,6 @@ Scene_Equip.prototype.updateCloseButton = function() {
     var s = this._closeButton;
     if (!s || !s.bitmap) return;
 
-    // Пересчитываем позицию, пока картинка грузится и при смене разрешения
     if (s.bitmap.isReady()) {
         var w = s.bitmap.width * Moghunter.scEquip_CloseScale;
         var h = s.bitmap.height * Moghunter.scEquip_CloseScale;
@@ -452,14 +441,12 @@ Scene_Equip.prototype.updateCloseButton = function() {
         s.y = Moghunter.scEquip_CloseMarginTop;
     }
 
-    // Лёгкая подсветка при наведении
     var hovered = this.isCloseButtonTouched();
     if (hovered !== this._closeBtnHovered) {
         this._closeBtnHovered = hovered;
         s.opacity = hovered ? 200 : 255;
     }
 
-    // Клик ЛКМ по кнопке = ESC
     if (TouchInput.isTriggered() && hovered) {
         this.onCloseButtonClick();
     }
@@ -467,7 +454,6 @@ Scene_Equip.prototype.updateCloseButton = function() {
 
 Scene_Equip.prototype.onCloseButtonClick = function() {
     SoundManager.playCancel();
-    // Эквивалент ESC: Scene_Equip закрывается через onSlotCancel -> popScene()
     this.popScene();
 };
 
@@ -613,7 +599,6 @@ Window_EquipSlot.prototype.slotIconId = function(index) {
     }
 };
 
-// Без количества
 Window_EquipSlot.prototype.drawItemName = function(item, x, y, width) {
     if (item) {
         var iconIndex = item.iconIndex;
@@ -669,7 +654,6 @@ Window_EquipStatus.prototype.createFaceSprite = function() {
 
 Window_EquipStatus.prototype.refresh = function() {
     this.contents.clear();
-    // Увеличенный шрифт для параметров
     this.contents.fontSize = 22;
     if (this._actor) {
         this._parData[0] = this._parImg.width / 3;
@@ -679,15 +663,14 @@ Window_EquipStatus.prototype.refresh = function() {
         var nameX = this.textPadding() + Moghunter.scEquip_ActorNameX;
         var nameY = Moghunter.scEquip_ActorNameY;
 
-        // ИМЯ: временно увеличиваем шрифт и центрируем по координате X
         var oldFontSize = this.contents.fontSize;
-        this.contents.fontSize = 26;  // крупнее
+        this.contents.fontSize = 26;
         var name = this._actor.name();
         var nameWidth = this.textWidth(name);
         this.changeTextColor(this.hpColor(this._actor));
         this.drawText(name, nameX - nameWidth / 2, nameY, nameWidth, 'center');
         this.resetTextColor();
-        this.contents.fontSize = oldFontSize; // возвращаем обратно для параметров
+        this.contents.fontSize = oldFontSize;
 
         for (var i = 0; i < 8; i++) {
             this.drawItem(0, 53 + this.lineHeight() * i, i);
@@ -706,8 +689,6 @@ Window_EquipStatus.prototype.windowHeight = function() {
 Window_EquipStatus.prototype.drawParamName = function(x, y, paramId) {
     if ($dataSystem && $dataSystem.terms && $dataSystem.terms.params[paramId]) {
         var name = $dataSystem.terms.params[paramId];
-        // ▼ Перевод применяется только когда язык = "Russian"
-        //   (при других языках и без SRD_TranslationEngine — оригинал)
         name = Moghunter.scEquip_translateParam(name);
         this.changeTextColor(this.systemColor());
         this.drawText(name, x, y, 120);
@@ -743,7 +724,6 @@ Window_EquipStatus.prototype.drawItem = function(x, y, paramId) {
         }
     }
     if (this._tempActor) {
-        // СДВИГ ИТОГОВОГО ЗНАЧЕНИЯ НА 20 ПИКСЕЛЕЙ ВПРАВО
         this.drawNewParam(x + 222, y, paramId);
     }
 };
@@ -765,7 +745,6 @@ Window_EquipItem.prototype.itemHeight = function() {
     return this.lineHeight();
 };
 
-// Количество предметов в списке (если >1)
 Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
     this.contents.fontSize = Moghunter.scEquip_FontSize * 2;
     if (item) {
@@ -796,11 +775,10 @@ Window_EquipItem.prototype.drawItemName = function(item, x, y, width) {
     }
 };
 
-// Отображение надписи "Снять" — слева, шрифт как у предметов
 Window_EquipItem.prototype.drawItem = function(index) {
     if (this._actor) {
         var rect = this.itemRectForText(index);
-        this.contents.fontSize = Moghunter.scEquip_FontSize * 2; // Одинаковый размер
+        this.contents.fontSize = Moghunter.scEquip_FontSize * 2;
         this.resetTextColor();
         this.changePaintOpacity(this.isEnabled(index));
         var item = this._data && this._data[index] ? this._data[index] : null;
@@ -808,7 +786,6 @@ Window_EquipItem.prototype.drawItem = function(index) {
             this.drawItemName(item, rect.x, rect.y, rect.width);
         } else {
             this.changeTextColor(this.normalColor());
-            // Отступ как у иконки, чтобы текст был на одной линии с названиями
             var iconWidth = Window_Base._iconWidth * 2;
             var textX = rect.x + iconWidth + 8;
             var textWidth = rect.width - iconWidth - 8;
@@ -818,19 +795,15 @@ Window_EquipItem.prototype.drawItem = function(index) {
     }
 };
 
-// "Снять" теперь всегда первая строка (для слотов, где можно снимать)
 var _mog_WindowEquipItem_makeItemList = Window_EquipItem.prototype.makeItemList;
 Window_EquipItem.prototype.makeItemList = function() {
     _mog_WindowEquipItem_makeItemList.call(this);
     if (this._slotId === 0) {
-        // Оружие снять нельзя — убираем null
         this._data = this._data.filter(function(item) { return item !== null; });
     } else {
         if (!this._actor.equips()[this._slotId]) {
-            // Слот пуст — убираем null (нечего снимать)
             this._data = this._data.filter(function(item) { return item !== null; });
         } else {
-            // Слот занят — перемещаем "Снять" (null) в начало массива
             var nullIndex = this._data.indexOf(null);
             if (nullIndex > 0) {
                 this._data.splice(nullIndex, 1);
@@ -842,4 +815,65 @@ Window_EquipItem.prototype.makeItemList = function() {
 
 Window_EquipItem.prototype.maxCols = function() {
     return 1;
+};
+
+//=============================================================================
+// ** Slot Switching via Click (Переключение слотов без выхода из окна предметов)
+//=============================================================================
+
+// Позволяет кликать по неактивному окну слотов, пока открыто окно предметов
+var _mog_Window_EquipSlot_processTouch = Window_EquipSlot.prototype.processTouch;
+Window_EquipSlot.prototype.processTouch = function() {
+    var scene = SceneManager._scene;
+    
+    // Если сцена экипировки открыта, окно слотов неактивно (заблокировано),
+    // но окно предметов активно (идёт выбор экипировки)
+    if (this.isOpen() && !this.isOpenAndActive() && 
+        scene instanceof Scene_Equip && 
+        scene._itemWindow && scene._itemWindow.active) {
+        
+        if (TouchInput.isTriggered()) {
+            var x = this.canvasToLocalX(TouchInput.x);
+            var y = this.canvasToLocalY(TouchInput.y);
+            
+            // Проверяем, что клик находится внутри окна (по всей его ширине)
+            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+                // Определяем индекс строки по координате Y (обход проблем с hitTest)
+                var topIndex = this.topIndex();
+                var contentY = y - this.padding;
+                var row = Math.floor(contentY / this.itemHeight());
+                var index = topIndex + row;
+                
+                if (index >= 0 && index < this.maxItems()) {
+                    if (index !== this.index()) {
+                        // Переключаем слот
+                        this.select(index);
+                        SoundManager.playCursor();
+                        
+                        // Сбрасываем курсор в окне предметов на первый пункт
+                        // и обновляем окна (аналогично стандартному commandEquip)
+                        scene._itemWindow.select(0);
+                        scene._itemWindow.refresh();
+                        scene._statusWindow.refresh();
+                    }
+                    // Блокируем передачу клика в окно предметов,
+                    // чтобы оно не сбросило выделение из-за клика "мимо"
+                    scene._skipItemTouch = true;
+                }
+            }
+        }
+        return;
+    }
+    _mog_Window_EquipSlot_processTouch.call(this);
+};
+
+// Игнорирует клик в окне предметов, если этот клик уже был обработан окном слотов
+var _mog_Window_EquipItem_processTouch = Window_EquipItem.prototype.processTouch;
+Window_EquipItem.prototype.processTouch = function() {
+    var scene = SceneManager._scene;
+    if (scene instanceof Scene_Equip && scene._skipItemTouch) {
+        scene._skipItemTouch = false;
+        return;
+    }
+    _mog_Window_EquipItem_processTouch.call(this);
 };
