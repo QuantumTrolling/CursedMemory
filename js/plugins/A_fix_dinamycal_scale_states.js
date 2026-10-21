@@ -90,13 +90,53 @@
     const _Game_BattlerBase_param = Game_BattlerBase.prototype.param;
 
     Game_BattlerBase.prototype.param = function(paramId) {
-        const baseValue = _Game_BattlerBase_param.call(this, paramId);
-
-        const states = this.states();
-        if (!states || states.length === 0) {
-            return baseValue;
+        // === ЗАЩИТА ОТ РЕКУРСИИ ===
+        // Если функция вызывается повторно во время вычисления параметра (например, при проверке условий пассивных состояний),
+        // возвращаем только базовое значение с учетом экипировки. Это обрывает бесконечный цикл.
+        if (this._inParamCalc) {
+            return this.paramBase(paramId);
         }
 
+        this._inParamCalc = true;
+        const baseValue = _Game_BattlerBase_param.call(this, paramId);
+
+        // === Бонус от Ауры (состояния на другом члене отряда) ===
+        let auraBonusPercent = 0;
+        
+        try {
+            if (this.friendsUnit) {
+                const unit = this.friendsUnit();
+                for (const member of unit.members()) {
+                    // Ищем живых союзников, КРОМЕ себя самого.
+                    if (member !== this && member._hp > 0) {
+                        // ИСПОЛЬЗУЕМ member.states(), чтобы видеть пассивные состояния от экипировки!
+                        const mStates = member.states(); 
+                        for (let j = 0; j < mStates.length; j++) {
+                            const state = mStates[j];
+                            if (!state) continue;
+                            
+                            const note = state.note || "";
+                            const regexAuraTP = /<(\w+)\s+BONUS\s+FROM\s+AURA\s+TP\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)\s*%?>/gi;
+                            let matchAura;
+                            while ((matchAura = regexAuraTP.exec(note)) !== null) {
+                                const target = matchAura[1].toUpperCase();
+                                const tpStep = Number(matchAura[2]);
+                                const percent = Number(matchAura[3]) / 100;
+                                
+                                if ((PARAM_MAP[target] === paramId || target === "ALLSTAT") && tpStep > 0) {
+                                    auraBonusPercent += Math.floor((member._tp || 0) / tpStep) * percent;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Ошибка при расчете ауры:", e);
+        }
+        // ========================================================
+
+        const states = this.states();
         let bonusFlat = 0;
         let bonusPercent = 0;
 
@@ -217,10 +257,7 @@
                 bonusFlat += Math.floor(sum * percent);
             }
 
-            // ===== НОВЫЙ ТЕГ: <STAT Bonus per Actors Current HP% with state ID: X%> =====
-            // Процент от базы (bonusPercent), а не флэт.
-            // +X% базовой ATK/DEF/... за каждый 1% текущего HP живых союзников с состоянием stateId.
-            // Формула: bonusPercent += (Σ HP% носителей) × X/100
+            // ===== ТЕГ: <STAT Bonus per Actors Current HP% with state ID: X%> =====
             const regexPerActorsCurrentHPPercentWithState =
                 /<(\w+)\s+BONUS\s+PER\s+ACTORS\s+CURRENT\s+HP\s*%\s+WITH\s+STATE\s+(\d+)\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
             let matchPerActorsCurrentHPPercentWithState;
@@ -426,9 +463,12 @@
             }
         }
 
+        this._inParamCalc = false;
+
         return (
             baseValue +
             Math.floor(baseValue * bonusPercent) +
+            Math.floor(baseValue * auraBonusPercent) +
             bonusFlat
         );
     };
