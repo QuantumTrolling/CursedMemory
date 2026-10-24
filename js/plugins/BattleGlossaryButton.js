@@ -794,4 +794,7 @@
         }
         _Window_Selectable_processOk.call(this);
     };
+	
+    // Экспорт для внешних плагинов
+    window.GlossaryOverlay = GlossaryOverlay;
 })();
