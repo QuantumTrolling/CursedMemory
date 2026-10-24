@@ -793,6 +793,16 @@
  * @default 0
  * @parent -> W HELP <<<<<<<<<<<<<<<<<<<<<<<
  *
+ * @param W Help Font Size
+ * @text Font Size
+ * @desc Размер шрифта в окне помощи.
+ * @type number
+ * @min 8
+ * @default 28
+ * @parent -> W HELP <<<<<<<<<<<<<<<<<<<<<<<
+ *
+ * @param Layout Help
+ *
  * @param Layout Help
  * @text Layout (Picture)
  * @desc Ativar a imagem de layout.
@@ -1413,7 +1423,8 @@
 	Moghunter.bhud_help_width = Number(Moghunter.parameters['W Help Width'] || 816);
     Moghunter.bhud_help_height = Number(Moghunter.parameters['W Help Height'] || 108);
 	Moghunter.bhud_help_slide_x = Number(Moghunter.parameters['W Help Slide X'] || 0);
-    Moghunter.bhud_help_slide_y = Number(Moghunter.parameters['W Help Slide Y'] || -150);	
+    Moghunter.bhud_help_slide_y = Number(Moghunter.parameters['W Help Slide Y'] || -150);
+	Moghunter.bhud_help_fontsize = Number(Moghunter.parameters['W Help Font Size'] || 28);	
 		
 	// SKILL WINDOW
 	Moghunter.bhud_skill_x =  Number(Moghunter.parameters['W Skill X-Axis'] || 0);
@@ -3949,6 +3960,16 @@ Battle_Hud.prototype.need_refresh_states2 = function() {
 	return false;
 };
 
+//=============================================================================
+// ■ Window_Help — Размер шрифта из параметров плагина
+//=============================================================================
+Window_Help.prototype.standardFontSize = function() {
+    if (Moghunter && Moghunter.bhud_help_fontsize !== undefined) {
+        return Math.max(8, Moghunter.bhud_help_fontsize);
+    }
+    return Window_Base.prototype.standardFontSize.call(this);
+};
+
 //==========================================
 // Center Window_Help Text Properly (MV)
 //==========================================
@@ -3958,6 +3979,7 @@ Window_Help.prototype.refresh = function() {
 
     var lines = this._text.split('\n');
     var y = 0;
+	var spacing = 8;
 
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i];
@@ -3971,7 +3993,7 @@ Window_Help.prototype.refresh = function() {
         // Рисуем строку
         this.drawTextEx(line, x, y);
 
-        y += this.lineHeight();
+        y += this.lineHeight() + 8;
     }
 };
 
@@ -4303,15 +4325,29 @@ Window_BattleEnemy.prototype.drawItem = function(index) {
     this.drawText(letter, x, y, 40, 'left'); // 40 пикселей должно хватить для одной буквы
 };
 
-// Вспомогательная функция (можно также вынести в Battle_Hud, но здесь используем Window)
-Window_BattleEnemy.prototype.getEnemyLetter = function(battler) {
-    if (!battler.isEnemy()) return '';
-    var enemies = $gameTroop.aliveMembers().filter(function(e) { 
-        return e.enemyId() === battler.enemyId(); 
-    });
-    if (enemies.length <= 1) return '';
-    var indexAmong = enemies.indexOf(battler);
-    return String.fromCharCode(65 + indexAmong); // 65 = 'A'
+//=============================================================================
+// * Скрываем Layout_Help при выборе цели
+//=============================================================================
+var _mog_bhud_updateLayoutWindow_help = Scene_Battle.prototype.updateLayoutWindow;
+Scene_Battle.prototype.updateLayoutWindow = function() {
+    _mog_bhud_updateLayoutWindow_help.call(this);
+
+    if (!this._help_layout) return;
+
+    // Окно выбора врага (для атакующих действий)
+    var enemySelecting = this._enemyWindow &&
+        this._enemyWindow.active && this._enemyWindow.visible;
+
+    // Окно выбора союзника (лечение, баффы и т.п.)
+    var actorSelecting = this._actorWindow &&
+        this._actorWindow.active && this._actorWindow.visible;
+
+    if (enemySelecting || actorSelecting) {
+        this._help_layout.visible = false;
+    } else {
+        // Возвращаем штатное поведение
+        this._help_layout.visible = this._helpWindow.visible;
+    }
 };
 
 
