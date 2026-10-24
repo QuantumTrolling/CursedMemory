@@ -253,7 +253,14 @@
         this._spText.bitmap.outlineWidth = 4;
         this._spText.bitmap.fontBold = true;
         this._spText.visible = false;
+        // >>> NEW: anchor в центр, как у MP-цифр
+        this._spText.anchor.x = 0.5;
+        this._spText.anchor.y = 0.5;
         this._spLayoutSprite.addChild(this._spText);
+
+        // >>> NEW: состояние анимации
+        this._spAnimActive = false;
+        this._spAnimFrame  = 0;
     };
 
     var _mogSP_SceneBattle_update = Scene_Battle.prototype.update;
@@ -263,34 +270,103 @@
     };
 
     Scene_Battle.prototype.updateSPLayout = function() {
-        if (!this._spLayoutSprite) return;
+    if (!this._spLayoutSprite) return;
 
-        var skillWindow = this._skillWindow;
-        var visible = false;
+    var skillWindow = this._skillWindow;
+    var visible = false;
 
-        // Плашка видна только если есть нужные актёры и окно навыков активно
-        if (skillWindow && skillWindow.visible && skillWindow.isOpenAndActive() && isSPAvailable()) {
-            visible = true;
+    if (skillWindow && skillWindow.visible && skillWindow.isOpenAndActive() && isSPAvailable()) {
+        visible = true;
+    }
+
+    this._spLayoutSprite.visible = visible;
+    this._spText.visible = visible;
+
+    if (visible) {
+        var baseX = skillWindow.org[0];
+        var baseY = skillWindow.org[1];
+
+        this._spLayoutSprite.x = baseX + spLayoutX;
+        this._spLayoutSprite.y = baseY + spLayoutY;
+
+        // >>> NEW: компенсация anchor 0.5 (сдвиг на половину размера битмапа)
+        this._spText.x = spTextX + this._spText.bitmap.width  / 2;
+        this._spText.y = spTextY + this._spText.bitmap.height / 2;
+
+        var sp = $gameParty.sp();
+        this._spText.bitmap.clear();
+        this._spText.bitmap.drawText(sp, 0, 0,
+            this._spText.bitmap.width, this._spText.bitmap.height, 'center');
+    }
+
+    // >>> NEW: анимация цифры SP
+    this.updateSPTextAnimation(skillWindow);
+};
+
+//=========================================================================
+// Анимация цифры SP (аналог update_mp_number_animation из MOG_BattleHud)
+//=========================================================================
+Scene_Battle.prototype.updateSPTextAnimation = function(skillWindow) {
+    if (!this._spText) return;
+
+    // --- Условия запуска: окно навыков активно + выбран навык со spCost ---
+    var shouldAnimate = false;
+    var skillItem = null;
+    if (skillWindow && skillWindow.visible && skillWindow.active && isSPAvailable()) {
+        var item = skillWindow.item();
+        if (item && item.spCost && item.spCost > 0) {
+            shouldAnimate = true;
+            skillItem = item;
         }
+    }
 
-        this._spLayoutSprite.visible = visible;
-        this._spText.visible = visible;
-
-        if (visible) {
-            var baseX = skillWindow.org[0];
-            var baseY = skillWindow.org[1];
-
-            this._spLayoutSprite.x = baseX + spLayoutX;
-            this._spLayoutSprite.y = baseY + spLayoutY;
-
-            this._spText.x = spTextX;
-            this._spText.y = spTextY;
-
-            var sp = $gameParty.sp();
-            this._spText.bitmap.clear();
-            this._spText.bitmap.drawText(sp, 0, 0, this._spText.bitmap.width, this._spText.bitmap.height, 'center');
+    if (shouldAnimate) {
+        if (!this._spAnimActive) {
+            this._spAnimActive = true;
+            this._spAnimFrame  = 0;
         }
-    };
+        this._spAnimFrame++;
+
+        var shimmerPhase = this._spAnimFrame * 0.12;   // частота переливания
+        var pulsePhase   = this._spAnimFrame * 0.10;   // частота пульса
+
+        // ---- Переливание: цвет <-> белый (цвет зависит от достатка SP) ----
+        var s = (Math.sin(shimmerPhase) + 1) / 2;
+
+        var r, g, b;
+        if (skillItem.spCost <= $gameParty.sp()) {
+            // ХВАТАЕТ SP: зелёный (64,255,64) <-> белый (255,255,255)
+            r = Math.floor(64 + 191 * s);
+            g = 255;
+            b = Math.floor(64 + 191 * s);
+        } else {
+            // НЕ ХВАТАЕТ SP: красный (255,64,64) <-> белый (255,255,255)
+            r = 255;
+            g = Math.floor(64 + 191 * s);
+            b = Math.floor(64 + 191 * s);
+        }
+        var tint = (r << 16) | (g << 8) | b;
+
+        // ---- Пульсация: прозрачность + размер ----
+        var p     = (Math.sin(pulsePhase) + 1) / 2;
+        var alpha = 0.70 + 0.30 * p;      // 0.70..1.00
+        var scale = 0.94 + 0.12 * p;      // 0.94..1.06
+
+        this._spText.tint    = tint;
+        this._spText.opacity = Math.floor(255 * alpha);
+        this._spText.scale.x = scale;
+        this._spText.scale.y = scale;
+
+    } else if (this._spAnimActive) {
+        // ---- Возврат к нормальному виду ----
+        this._spAnimActive = false;
+        this._spAnimFrame  = 0;
+        this._spText.tint    = 0xFFFFFF;
+        this._spText.opacity = 255;
+        this._spText.scale.x = 1;
+        this._spText.scale.y = 1;
+    }
+};
 
     //=========================================================================
     // BattleManager – начальное SP в начале битвы

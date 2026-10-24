@@ -3,8 +3,8 @@
 // Отключает визуальное движение актёров при попытке побега.
 // Теперь также гарантирует срабатывание Custom Remove Effect при успешном побеге.
 // Добавлена кнопка закрытия (ESC) в правом верхнем углу боя.
-// Кнопка скрыта и некликабельна в ход противника, при выборе цели,
-// а также при открытом оверлее глоссария (у него своя close-кнопка).
+// Кнопка видна в ход противника и при выборе цели.
+// Кнопка скрыта во время сообщений и при открытом оверлее глоссария.
 //=============================================================================
 
 /*:
@@ -19,12 +19,12 @@
  * @param closeBtnMarginRight
  * @text Отступ кнопки закрытия справа
  * @type number
- * @default 20
+ * @default 5
  *
  * @param closeBtnMarginTop
  * @text Отступ кнопки закрытия сверху
  * @type number
- * @default 20
+ * @default 160
  *
  * @param closeBtnScale
  * @text Масштаб кнопки закрытия
@@ -36,12 +36,9 @@
  * 1. Отключает визуальное движение актёров при попытке побега.
  * 2. Гарантирует срабатывание Custom Remove Effect при успешном побеге.
  * 3. Добавляет кнопку закрытия (ESC) в правом верхнем углу боя.
- *    Кнопка видна и кликабельна только в ход игрока:
+ *    Кнопка видна и кликабельна только в ход игрока (включая выбор цели):
  *    - скрыта во время сообщений;
- *    - скрыта при выборе цели;
- *    - скрыта в ход противника;
- *    - скрыта при открытом оверлее глоссария (BattleGlossaryButton),
- *      так как у оверлея есть собственная close-кнопка.
+ *    - скрыта при открытом оверлее глоссария (BattleGlossaryButton).
  */
 
 (function() {
@@ -111,7 +108,14 @@
     // Имитация нажатия ESC (вызов processCancel у активного окна)
     Scene_Battle.prototype.onCloseButtonClick = function() {
         var win = null;
-        if (this._skillWindow && this._skillWindow.active && this._skillWindow.visible) {
+        
+        // Порядок проверки важен: сначала проверяем окна, которые находятся "поверх" остальных
+        // (например, окно выбора цели перекрывает окно выбора скилла).
+        if (this._actorWindow && this._actorWindow.active && this._actorWindow.visible) {
+            win = this._actorWindow;
+        } else if (this._enemyWindow && this._enemyWindow.active && this._enemyWindow.visible) {
+            win = this._enemyWindow;
+        } else if (this._skillWindow && this._skillWindow.active && this._skillWindow.visible) {
             win = this._skillWindow;
         } else if (this._itemWindow && this._itemWindow.active && this._itemWindow.visible) {
             win = this._itemWindow;
@@ -139,21 +143,14 @@
         var s = this._closeButton;
         if (!s || !s.bitmap) return false;
 
-        // Проверка, что никакое окно выбора цели не активно
-        var targetWindowActive = false;
-        if (this._actorWindow && this._actorWindow.active && this._actorWindow.visible) {
-            targetWindowActive = true;
-        }
-        if (this._enemyWindow && this._enemyWindow.active && this._enemyWindow.visible) {
-            targetWindowActive = true;
-        }
-
-        // Активно ли окно ввода игрока (выбор действия, скилла, предмета).
+        // Активно ли окно ввода игрока (выбор действия, скилла, предмета, цели).
         // В ход противника эти окна неактивны — значит, кнопка скрыта.
         var inputWindowActive =
             (this._actorCommandWindow && this._actorCommandWindow.active) ||
             (this._skillWindow && this._skillWindow.active) ||
-            (this._itemWindow && this._itemWindow.active);
+            (this._itemWindow && this._itemWindow.active) ||
+            (this._actorWindow && this._actorWindow.active) ||
+            (this._enemyWindow && this._enemyWindow.active);
 
         // Открыт ли оверлей глоссария — если да, у него своя close-кнопка.
         var glossaryActive = this.isGlossaryOverlayActive();
@@ -163,7 +160,6 @@
         var canUse =
             inputWindowActive &&
             !$gameMessage.isBusy() &&
-            !targetWindowActive &&
             !glossaryActive;
 
         s.visible = canUse;
