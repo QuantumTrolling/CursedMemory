@@ -1,5 +1,5 @@
 /*:
- * @plugindesc v2.7.11 Глоссарий поверх боя (кнопка скрыта при выборе цели + close-кнопка)
+ * @plugindesc v2.8.0 Глоссарий поверх боя (close-кнопка + фоновое изображение)
  * @author ВашеИмя
  *
  * @param Button Image
@@ -38,6 +38,20 @@
  * @decimals 2
  * @default 1
  *
+ * @param Background Image
+ * @text Фоновое изображение
+ * @desc Имя файла из img/pictures/ (без расширения). Показывается под окнами
+ * глоссария при открытом оверлее в бою. Оставьте пустым, чтобы отключить.
+ * @default MenuBackground
+ *
+ * @param Background Fill Screen
+ * @text Растягивать фон на экран
+ * @desc Масштабировать картинку до Graphics.boxWidth/boxHeight.
+ * @type boolean
+ * @on Да
+ * @off Нет
+ * @default true
+ *
  * @help
  * Поместите ПОСЛЕ SceneGlossary.js и всех боевых плагинов.
  * Кнопка в бою открывает глоссарий как оверлей.
@@ -47,11 +61,13 @@
  * глоссария автоматически скрывается.
  *
  * В правом верхнем углу оверлея глоссария отображается кнопка закрытия
- * (img/pictures/close.png). ЛКМ по ней = нажатие ESC в оверлее:
- * если активно окно подтверждения — отменяет его, если список — возвращает
- * к категориям (или закрывает), если категории — закрывает оверлей.
+ * (img/pictures/close.png). ЛКМ по ней = нажатие ESC в оверлее.
+ *
+ * При открытии оверлея над полем боя, но под окнами глоссария,
+ * показывается фоновая картинка из img/pictures/ (Background Image).
  *
  * v2.7.11 – добавлена close-кнопка в правом верхнем углу оверлея.
+ * v2.8.0  – добавлено фоновое изображение при открытом глоссарии в бою.
  */
 (function() {
     'use strict';
@@ -67,6 +83,10 @@
     var closeBtnMarginTop   = Number(parameters['Close Button Margin Top'] || 635);
     var closeBtnScale       = Number(parameters['Close Button Scale'] || 1);
 
+    // === Параметры фона ===
+    var bgImage      = String(parameters['Background Image'] || '');
+    var bgFillScreen = String(parameters['Background Fill Screen'] || 'true') === 'true';
+
     if (!btnImage) return;
 
     //=====================================================================
@@ -81,6 +101,7 @@
         this._savedActiveWindowType = '';
         this._helpWasVisible = false;
         this._savedPhase = '';
+        this._bgSprite = null;
     }
 
     GlossaryOverlay.prototype.show = function(glossaryType) {
@@ -93,8 +114,9 @@
         this._savedPhase = BattleManager._phase;
         this._scene._glossaryActive = true;
         this.hideAllBattleWindows();
+        this.createBackground();      // <-- фон создаём ПОСЛЕ скрытия окон
         this.createWindows();
-        this.createCloseButton();   // <-- добавлено
+        this.createCloseButton();
         this._active = true;
         if ($gameParty.isUseGlossaryCategory()) {
             this.activateCategoryWindow(true);
@@ -108,7 +130,8 @@
         if (!this._active) return;
         this._active = false;
         this._scene._glossaryActive = false;
-        this.removeCloseButton();   // <-- добавлено
+        this.removeBackground();      // <-- фон убираем ДО restoreAllBattleWindows
+        this.removeCloseButton();
         this.removeGlossaryWindows();
         this.restoreAllBattleWindows();
 
@@ -128,6 +151,65 @@
         if (typeof scene.updateBattleHud === 'function') {
             scene.updateBattleHud();
         }
+    };
+
+    //---------------------------------------------------------------------
+    // Фоновое изображение (фон глоссария в бою)
+    //---------------------------------------------------------------------
+	GlossaryOverlay.prototype.createBackground = function() {
+		if (!bgImage) {
+			console.warn('[BattleGlossaryButton] Background Image не задан — фон отключён.');
+			return;
+		}
+		if (this._bgSprite) return;
+
+		var scene = this._scene;
+		var bmp = ImageManager.loadPicture(bgImage);
+		var sprite = new Sprite(bmp);
+		sprite.opacity = 255;
+
+		bmp.addLoadListener(function() {
+			if (!bmp.width || !bmp.height) {
+				console.error('[BattleGlossaryButton] Не удалось загрузить: img/pictures/' + bgImage + '.png');
+				return;
+			}
+			if (bgFillScreen) {
+				sprite.scale.x = Graphics.boxWidth  / bmp.width;
+				sprite.scale.y = Graphics.boxHeight / bmp.height;
+			}
+		});
+
+		// Ставим ПОД _windowLayer, но НАД _spriteset.
+		var windowIdx   = scene.children.indexOf(scene._windowLayer);
+		var spritesetIdx = scene._spriteset ? scene.children.indexOf(scene._spriteset) : -1;
+
+		var insertAt;
+		if (windowIdx >= 0 && spritesetIdx >= 0 && spritesetIdx < windowIdx) {
+			// Нормальный порядок: поле боя → [фон] → окна
+			insertAt = spritesetIdx + 1;
+		} else if (windowIdx >= 0) {
+			// Страховка: вставляем прямо перед окнами
+			insertAt = windowIdx;
+		} else {
+			insertAt = scene.children.length;
+		}
+		scene.addChildAt(sprite, insertAt);
+
+		// Диагностика — смотри F8 → Console
+		console.log('[BattleGlossaryButton] bg:', bgImage,
+					'| fill:', bgFillScreen,
+					'| insertAt:', insertAt,
+					'| children:', scene.children.map(function(c){ return c.constructor.name; }).join(','));
+
+		this._bgSprite = sprite;
+	};
+
+    GlossaryOverlay.prototype.removeBackground = function() {
+        if (!this._bgSprite) return;
+        if (this._bgSprite.parent) {
+            this._bgSprite.parent.removeChild(this._bgSprite);
+        }
+        this._bgSprite = null;
     };
 
     GlossaryOverlay.prototype.hideAllBattleWindows = function() {
@@ -226,6 +308,10 @@
             this._hiddenSprites.push(scene._layoutField);
             scene._layoutField.visible = false;
         }
+		// === NEW: явно прячем стрелку хода, если она есть ===
+		if (scene._turnIndicator) {
+			scene._turnIndicator.visible = false;
+		}
     };
 
     GlossaryOverlay.prototype.restoreAllBattleWindows = function() {
@@ -600,22 +686,26 @@
         }
     };
 
-    var _Scene_Battle_update = Scene_Battle.prototype.update;
-    Scene_Battle.prototype.update = function() {
-        _Scene_Battle_update.call(this);
-        if (this._glossaryCancelBlock > 0) {
-            this._glossaryCancelBlock--;
-        }
-        this.updateGlossaryButton();
-        if (this._glossaryActive) {
-            this.hideCTBWindows();
-            this.hideAllOverlaySprites();
-            // Обновление close-кнопки оверлея
-            if (this._glossaryOverlay && this._glossaryOverlay._active) {
-                this._glossaryOverlay.updateCloseButton();
-            }
-        }
-    };
+	var _Scene_Battle_update = Scene_Battle.prototype.update;
+	Scene_Battle.prototype.update = function() {
+		_Scene_Battle_update.call(this);
+		if (this._glossaryCancelBlock > 0) {
+			this._glossaryCancelBlock--;
+		}
+		this.updateGlossaryButton();
+		if (this._glossaryActive) {
+			this.hideCTBWindows();
+			this.hideAllOverlaySprites();
+
+			// === NEW: держим стрелку хода скрытой, пока открыт глоссарий ===
+			if (this._turnIndicator) this._turnIndicator.visible = false;
+
+			// Обновление close-кнопки оверлея
+			if (this._glossaryOverlay && this._glossaryOverlay._active) {
+				this._glossaryOverlay.updateCloseButton();
+			}
+		}
+	};
 
     Scene_Battle.prototype.hideCTBWindows = function() {
         var children = this.children || [];
