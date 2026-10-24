@@ -1,7 +1,26 @@
 /*:
- * @plugindesc v1.5 - Клик по иконке состояния → глоссарий (с условной логикой по актёру)
+ * @plugindesc v1.7 - Клик по иконке состояния → глоссарий (с условной логикой по актёру, исправлено позиционирование, работает для врагов Olivia_OctoBattle)
  * @author
  *
+ * @param ClickOffsetX
+ * @desc Смещение области клика по X в пикселях (может быть отрицательным).
+ * @default 0
+ * @type number
+ * @min -200
+ * @max 200
+ *
+ * @param ClickOffsetY
+ * @desc Смещение области клика по Y в пикселях (может быть отрицательным).
+ * @default 0
+ * @type number
+ * @min -200
+ * @max 200
+ *
+ * @param EnableForEnemies
+ * @desc Разрешить клик по иконкам состояний над врагами (не только актёрами).
+ * Для врагов берётся fallback-запись <glossary:0|...>.
+ * @default false
+ * @type boolean
  * @help
  * Порядок плагинов:
  *   SceneGlossary.js
@@ -18,33 +37,35 @@
  *   <glossaryType:N>          (опционально, по умолч. 1)
  *   <glossaryCategory:Name>   (опционально)
  *
- * Пример:
- *   <glossaryItem:68>
- *   <glossaryDesc:3>
- *
  * ============================================================
  * НОВЫЙ ФОРМАТ (условия по ID актёра):
  * ============================================================
  *   <glossary:actorId|itemId|descNum|glossaryType|category>
  *
- * Все поля кроме actorId и itemId опциональны.
- * actorId = 0 → fallback для всех актёров без своей записи.
- *
- * Примеры:
- *   <glossary:8|68|3>             // актёр 8 → предмет 68, страница 3
- *   <glossary:9|67|2>             // актёр 9 → предмет 67, страница 2
- *   <glossary:8|68|3|2|Персонажи> // с типом 2 и категорией
- *   <glossary:0|65|1>             // fallback для остальных
+ * actorId = 0 → fallback (используется в т.ч. для врагов).
  *
  * ============================================================
  * ПРИОРИТЕТ ПРИ КЛИКЕ:
  * ============================================================
  *   1. <glossary:actorId|...> с точным actorId
- *   2. <glossary:0|...>            (fallback нового формата)
+ *   2. <glossary:0|...>            (fallback)
  *   3. старые теги <glossaryItem:...>
+ *
+ * ============================================================
+ * ДЛЯ ВРАГОВ (Olivia_OctoBattle):
+ * ============================================================
+ * Патч ниже перехватывает клик по _stateIconSprite в Window_WeaknessDisplay
+ * для врагов. Работает даже если EnableForEnemies = false — независимая ветка.
+ * Требуется тег <glossary:0|itemId|desc|type|category> на состоянии.
  */
 (function() {
     'use strict';
+    window._sgcDebug = true;
+
+    var parameters = PluginManager.parameters('StateGlossaryClick');
+    var CLICK_OFFSET_X     = Number(parameters['ClickOffsetX'] || 0);
+    var CLICK_OFFSET_Y     = Number(parameters['ClickOffsetY'] || 0);
+    var ENABLE_FOR_ENEMIES = (parameters['EnableForEnemies'] === 'true');
 
     if (typeof Battle_Hud === 'undefined') {
         console.warn('[SGC] MOG_BattleHud.js не загружен.');
@@ -60,7 +81,6 @@
         var matches = note.match(/<glossary:[^>]+>/gi) || [];
         var entries = [];
         for (var i = 0; i < matches.length; i++) {
-            // отрезаем "<glossary:" (10 символов) и ">" (1 символ)
             var content = matches[i].slice(10, -1);
             var parts = content.split('|').map(function(s) { return s.trim(); });
             var actorId = parseInt(parts[0]);
@@ -78,32 +98,26 @@
     }
 
     //=====================================================================
-    // Получение данных глоссария для состояния + актёра
+    // Получение данных глоссария для состояния + актёра (0 = fallback/враг)
     //=====================================================================
     function getStateGlossaryData(stateId, actorId) {
         var state = $dataStates[stateId];
         if (!state || !state.note) return null;
 
-        // --- 1. Новый формат ---
         var entries = parseNewGlossaryEntries(state.note);
         if (entries.length > 0) {
-            // точное совпадение actorId
             for (var i = 0; i < entries.length; i++) {
                 if (entries[i].actorId === actorId) {
                     return makeData(stateId, entries[i]);
                 }
             }
-            // fallback: actorId === 0
-            for (var i = 0; i < entries.length; i++) {
-                if (entries[i].actorId === 0) {
-                    return makeData(stateId, entries[i]);
+            for (var j = 0; j < entries.length; j++) {
+                if (entries[j].actorId === 0) {
+                    return makeData(stateId, entries[j]);
                 }
             }
-            // своя запись есть, но не для этого актёра и без fallback →
-            // пробуем старый формат ниже (если он есть), иначе null
         }
 
-        // --- 2. Старый формат ---
         var mItem = state.note.match(/<glossaryItem:\s*(\d+)>/i);
         if (!mItem) return null;
         var mDesc = state.note.match(/<glossaryDesc:\s*(\d+)>/i);
@@ -135,17 +149,76 @@
         return battler.states().filter(function(s) { return s.iconIndex > 0; });
     }
 
+    //---------------------------------------------------------------------
+    // ТОЧНАЯ мировая позиция + масштаб спрайта (учитывает scale/anchor всех родителей)
+    //---------------------------------------------------------------------
     function absolutePos(sprite) {
+        if (!sprite) return { x: 0, y: 0, scaleX: 1, scaleY: 1 };
+
+        if (typeof PIXI !== 'undefined' && sprite.toGlobal) {
+            try {
+                var p0 = sprite.toGlobal(new PIXI.Point(0, 0));
+                var px = sprite.toGlobal(new PIXI.Point(1, 0));
+                var py = sprite.toGlobal(new PIXI.Point(0, 1));
+
+                var dx = px.x - p0.x, dy = px.y - p0.y;
+                var ex = py.x - p0.x, ey = py.y - p0.y;
+                var scaleX = Math.sqrt(dx * dx + dy * dy);
+                var scaleY = Math.sqrt(ex * ex + ey * ey);
+
+                var anchorX = (sprite.anchor && sprite.anchor.x) || 0;
+                var anchorY = (sprite.anchor && sprite.anchor.y) || 0;
+                var w = (sprite.width  || 0) * scaleX;
+                var h = (sprite.height || 0) * scaleY;
+
+                return {
+                    x: p0.x - anchorX * w,
+                    y: p0.y - anchorY * h,
+                    scaleX: scaleX,
+                    scaleY: scaleY
+                };
+            } catch (e) {
+                console.warn('[SGC] toGlobal failed, используем fallback:', e);
+            }
+        }
+
         var x = 0, y = 0, s = sprite;
         while (s) { x += s.x || 0; y += s.y || 0; s = s.parent; }
-        return { x: x, y: y };
+        return { x: x, y: y, scaleX: 1, scaleY: 1 };
     }
 
     function isHit(sprite, tx, ty) {
         if (!sprite || !sprite.visible) return false;
+
         var p = absolutePos(sprite);
-        return tx >= p.x && tx < p.x + ICON_SIZE &&
-               ty >= p.y && ty < p.y + ICON_SIZE;
+        var w = ICON_SIZE * p.scaleX;
+        var h = ICON_SIZE * p.scaleY;
+        var left = p.x + CLICK_OFFSET_X;
+        var top  = p.y + CLICK_OFFSET_Y;
+        var hit = tx >= left && tx < left + w &&
+                  ty >= top  && ty < top  + h;
+
+        // === SGC DEBUG ===
+        if (window._sgcDebug) {
+            var tl  = sprite.toGlobal(new PIXI.Point(0, 0));
+            var br  = sprite.toGlobal(new PIXI.Point(sprite.width || 0, sprite.height || 0));
+            var gb  = sprite.getBounds ? sprite.getBounds() : null;
+            console.log('[SGC] isHit', {
+                click: { x: tx, y: ty },
+                hitArea: { left: left, top: top, w: w, h: h,
+                           right: left + w, bottom: top + h },
+                getBounds: gb ? { x: gb.x, y: gb.y, w: gb.width, h: gb.height } : 'n/a',
+                toGlobal_origin: { x: tl.x, y: tl.y },
+                toGlobal_br:     { x: br.x, y: br.y },
+                anchor: sprite.anchor ? { x: sprite.anchor.x, y: sprite.anchor.y } : null,
+                scale:  { x: sprite.scale.x, y: sprite.scale.y },
+                width: sprite.width, height: sprite.height,
+                texture: sprite.texture ? { w: sprite.texture.width, h: sprite.texture.height } : null,
+                effectiveScale: { x: p.scaleX, y: p.scaleY },
+                hit: hit
+            });
+        }
+        return hit;
     }
 
     function findGlossaryItemIndex(listWindow, itemId) {
@@ -156,8 +229,15 @@
         return -1;
     }
 
+    // actorId для глоссария: актёр → свой ID, враг → 0 (fallback)
+    Battle_Hud.prototype._sgcGlossaryActorId = function() {
+        if (!this._battler) return 0;
+        if (this._battler.isActor()) return this._battler._actorId;
+        return 0;
+    };
+
     //=====================================================================
-    // Перехват клика по иконке
+    // Перехват клика по иконке (для HUD актёров/врагов)
     //=====================================================================
     var _update_sprites = Battle_Hud.prototype.update_sprites;
     Battle_Hud.prototype.update_sprites = function() {
@@ -166,7 +246,9 @@
     };
 
     Battle_Hud.prototype.processStateIconClick = function() {
-        if (!this._battler || !this._battler.isActor()) return;
+        if (!this._battler) return;
+        var isActor = this._battler.isActor();
+        if (!isActor && !ENABLE_FOR_ENEMIES) return;
         if (!TouchInput.isTriggered()) return;
         if (!this.is_hud_visible()) return;
         var scene = SceneManager._scene;
@@ -185,10 +267,7 @@
     };
 
     Battle_Hud.prototype.handleTimingModeClick = function(tx, ty, stateList, scene) {
-        // ---------------------------------------------------------------
-        // Новый режим: 2 иконки (TimingModeTwoIcons.js)
-        // Признаки: _stateDataList заполнен и _stateIcons содержит 2 слота
-        // ---------------------------------------------------------------
+        // --- 2 иконки (TimingModeTwoIcons.js) ---
         if (this._stateDataList && this._stateIcons &&
             this._stateIcons.length >= 1 && this._state_icon && this._state_icon.visible) {
             var n = this._stateDataList.length;
@@ -205,25 +284,21 @@
                 var entry = this._stateDataList[(shift + i) % n];
                 if (!entry) return;
 
-                var actorId = this._battler._actorId;   // ← актёр именно этого HUD
-                var data = getStateGlossaryData(entry.stateId, actorId);
+                var data = getStateGlossaryData(entry.stateId, this._sgcGlossaryActorId());
                 if (data) this.openGlossaryForState(scene, data);
                 return;
             }
             return;
         }
 
-        // ---------------------------------------------------------------
-        // Старый режим MOG (одна иконка в Timing Mode)
-        // ---------------------------------------------------------------
+        // --- Старый режим MOG (одна иконка в Timing Mode) ---
         if (!this._state_icon) return;
         if (!isHit(this._state_icon, tx, ty)) return;
 
         var idx = (this._states_data && this._states_data[1]) || 0;
         if (idx < 0 || idx >= stateList.length) return;
 
-        var actorId = this._battler._actorId;
-        var data = getStateGlossaryData(stateList[idx].id, actorId);
+        var data = getStateGlossaryData(stateList[idx].id, this._sgcGlossaryActorId());
         if (!data) return;
         this.openGlossaryForState(scene, data);
     };
@@ -236,8 +311,7 @@
             if (i < buffCount) return;
             var stateIdx = i - buffCount;
             if (stateIdx >= stateList.length) return;
-            var actorId = this._battler._actorId;
-            var data = getStateGlossaryData(stateList[stateIdx].id, actorId);
+            var data = getStateGlossaryData(stateList[stateIdx].id, this._sgcGlossaryActorId());
             if (data) this.openGlossaryForState(scene, data);
             return;
         }
@@ -312,8 +386,6 @@
         try {
             gWin.refreshPage(item, itemIdx);
             refreshOK = true;
-            console.log('[SGC] refreshPage OK. _maxPages=' + gWin._maxPages +
-                        ', _itemData=' + (gWin._itemData ? gWin._itemData.id : 'null'));
         } catch (e) {
             console.error('[SGC] refreshPage бросил исключение:', e);
         }
@@ -336,8 +408,6 @@
         if (data.pageNum > 1) {
             var maxPages = gWin._maxPages || 1;
             var pageIdx  = Math.min(data.pageNum - 1, maxPages - 1);
-            console.log('[SGC] navigate: pageNum=' + data.pageNum +
-                        ', maxPages=' + maxPages + ', targetIdx=' + pageIdx);
             if (pageIdx > 0) {
                 try {
                     gWin.contents.clear();
@@ -403,5 +473,132 @@
         _sceneBattleUpdate_sgc.call(this);
         if (this._stateGlossarySkipTouch > 0) this._stateGlossarySkipTouch--;
     };
+
+    //=====================================================================
+    // == StateGlossaryClick — ENEMY PATCH v1.1 ==
+    // Клик по иконке состояния врага (Olivia_OctoBattle / Window_WeaknessDisplay)
+    //=====================================================================
+    (function() {
+        'use strict';
+        if (typeof Battle_Hud === 'undefined') return;
+
+        var ICON = 32;
+
+        var _update_sprites_enemy = Battle_Hud.prototype.update_sprites;
+        Battle_Hud.prototype.update_sprites = function() {
+            _update_sprites_enemy.call(this);
+            // Защита от множественного запуска в одном кадре —
+            // первый HUD открывает глоссарий и ставит _stateGlossarySkipTouch = 2,
+            // последующие HUD'ы в этом же кадре увидят его и выйдут.
+            processEnemyClick();
+        };
+
+        function processEnemyClick() {
+            if (!TouchInput.isTriggered()) return;
+            var scene = SceneManager._scene;
+            if (!(scene instanceof Scene_Battle)) return;
+            if (scene._glossaryActive) return;
+            if (scene._glossaryCancelBlock > 0) return;
+            if (scene._stateGlossarySkipTouch > 0) return;  // ← защита от двойного открытия
+            if ($gameMessage.isBusy()) return;
+
+            var tx = TouchInput.x, ty = TouchInput.y;
+            var spriteset = scene._spriteset;
+
+            for (var i = 0; i < spriteset._enemySprites.length; i++) {
+                var spr = spriteset._enemySprites[i];
+                if (!spr || !spr._enemy) continue;
+                var ww = spr._weaknessWindow;
+                var icon = ww && ww._stateIconSprite;
+                if (!icon || !icon.visible) continue;
+
+                // getBounds учитывает _baseSprite, scale, anchor — то, что не учитывает ww.x + s.x
+                var b = icon.getBounds();
+                if (tx < b.x || tx >= b.x + b.width) continue;
+                if (ty < b.y || ty >= b.y + b.height) continue;
+
+                var activeStates = spr._enemy.states().filter(function(s){ return s.iconIndex > 0; });
+                if (activeStates.length === 0) continue;
+                var curIcon = icon._iconIndex;
+                var st = activeStates.find(function(s){ return s.iconIndex === curIcon; }) || activeStates[0];
+
+                var data = getEnemyGlossaryData(st.id);
+                if (!data) {
+                    console.warn('[SGC-ENEMY] state ' + st.id + ' (' + st.name + ') — нет тега <glossary:0|...> или <glossaryItem:...>');
+                    return;
+                }
+                openEnemyGlossary(scene, data);
+                return;
+            }
+        }
+
+        function getEnemyGlossaryData(stateId) {
+            var state = $dataStates[stateId];
+            if (!state || !state.note) return null;
+
+            // Новый формат: <glossary:0|itemId|desc|type|category>
+            var m = state.note.match(/<glossary:\s*0\s*\|([^>]+)>/i);
+            if (m) {
+                var parts = m[1].split('|').map(function(s){ return s.trim(); });
+                return {
+                    stateId: stateId,
+                    itemId: parseInt(parts[0]),
+                    pageNum: parts[1] ? parseInt(parts[1]) : 1,
+                    glossaryType: parts[2] ? parseInt(parts[2]) : 1,
+                    category: parts[3] || null
+                };
+            }
+            // Старый формат
+            var mi = state.note.match(/<glossaryItem:\s*(\d+)>/i);
+            if (!mi) return null;
+            var md = state.note.match(/<glossaryDesc:\s*(\d+)>/i);
+            var mt = state.note.match(/<glossaryType:\s*(\d+)>/i);
+            return {
+                stateId: stateId,
+                itemId: Number(mi[1]),
+                pageNum: md ? Number(md[1]) : 1,
+                glossaryType: mt ? Number(mt[1]) : 1
+            };
+        }
+
+        function openEnemyGlossary(scene, data) {
+            SoundManager.playOk();
+            if (typeof window.GlossaryOverlay !== 'function') {
+                console.warn('[SGC-ENEMY] window.GlossaryOverlay не определён');
+                return;
+            }
+            if (!$dataItems[data.itemId]) {
+                console.warn('[SGC-ENEMY] item id=' + data.itemId + ' не найден');
+                return;
+            }
+            $gameParty.setSelectedGlossaryType(data.glossaryType);
+            scene._stateGlossarySkipTouch = 2;
+            if (!scene._glossaryOverlay) scene._glossaryOverlay = new window.GlossaryOverlay(scene);
+            scene._glossaryOverlay.show(data.glossaryType);
+
+            // Навигация — через HUD-инстанс, если он есть; иначе через прототип
+            var navFn = null;
+            if (scene._spriteset && scene._spriteset.children) {
+                for (var k = 0; k < scene._spriteset.children.length; k++) {
+                    var c = scene._spriteset.children[k];
+                    if (c instanceof Battle_Hud && typeof c.navigateToItemAndPage === 'function') {
+                        navFn = c.navigateToItemAndPage.bind(c);
+                        break;
+                    }
+                }
+            }
+            if (!navFn && typeof Battle_Hud.prototype.navigateToItemAndPage === 'function') {
+                var fakeThis = {
+                    findCategoryIndex: Battle_Hud.prototype.findCategoryIndex
+                };
+                navFn = Battle_Hud.prototype.navigateToItemAndPage.bind(fakeThis);
+            }
+            if (navFn) {
+                navFn(scene._glossaryOverlay, data);
+            } else {
+                console.warn('[SGC-ENEMY] navigateToItemAndPage недоступен');
+            }
+        }
+    })();
 
 })();

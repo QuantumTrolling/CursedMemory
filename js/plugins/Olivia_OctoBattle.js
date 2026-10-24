@@ -3227,3 +3227,10 @@ if (Olivia.OctoBattle.BreakShield.Enabled) {
 		};
 	}
 }
+
+var _WWD_moveStateSprite = Window_WeaknessDisplay.prototype.moveStateSprite;
+Window_WeaknessDisplay.prototype.moveStateSprite = function() {
+  _WWD_moveStateSprite.call(this);
+  this._stateIconSprite.x += 5;   // сдвиг вправо
+  this._stateIconSprite.y += 10;   // сдвиг вниз
+};

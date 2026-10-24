@@ -3016,17 +3016,20 @@ Battle_Hud.prototype.refresh_meter_flow = function(sprite, value, value_max, typ
 //==============================
 Battle_Hud.prototype.refresh_number = function(sprites,value,img_data,x,y,type) {
     numbers = Math.abs(value).toString().split("");
-	    // === Центрирование MP по координате ===
-    // type для MP в MOG = 1 (HP=0, MP=1, TP=2)
+    // === Центрирование MP по координате ===
     if (type === 1) {
         var digitWidth = img_data[2];
         var digits = numbers.length;
         x += (digitWidth * (digits - 1)) / 2;
+        // >>> NEW: компенсация anchor 0.5 (только когда спрайты действительно центрированы)
+        if (sprites[0] && sprites[0].anchor && sprites[0].anchor.x === 0.5) {
+            x += img_data[2] / 2;
+            y += img_data[3] / 2;
+        }
     }
-
-	var nx = 0;
-	var ny = 0;
-	var dir = 1;
+    var nx = 0;
+    var ny = 0;
+    var dir = 1;
    	for (var i = 0; i < sprites.length ; i++) {sprites[i].visible = false;
 	   if (i > numbers.length) {return};
 	   var n = Number(numbers[i]);
@@ -3475,24 +3478,31 @@ Battle_Hud.prototype.create_mp_meter = function() {
 // * Create MP Number
 //==============================
 Battle_Hud.prototype.create_mp_number = function() {
-	if (String(Moghunter.bhud_mp_number_visible) != "true") {return};
-	if (this._mp_number) {for (var i = 0; i < this._mp_number.length; i++) {this.removeChild(this._mp_number[i]);}};
-	if (!this._battler) {return};
-	this._mp_number = [];
-	this._mp_img_data = [this._mp_number_img.width,this._mp_number_img.height,
-	                      this._mp_number_img.width / 10, this._mp_number_img.height / 2,
-						  this._pos_x + Moghunter.bhud_mp_number_pos_x,
-						  this._pos_y + Moghunter.bhud_mp_number_pos_y,
-						  ];
-	for (var i = 0; i < 5; i++) {
-	   this._mp_number[i] = new Sprite(this._mp_number_img);
-	   this._mp_number[i].visible = false;
-	   this._mp_number[i].x = this._mp_img_data[4];
-	   this._mp_number[i].y = this._mp_img_data[5] ;
-	   this.addChild(this._mp_number[i]);
-	};	
-	this._mp_number_old = this._battler.mp;
-	this.refresh_number(this._mp_number,this._mp_number_old,this._mp_img_data,this._mp_img_data[4],this._mp_img_data[5],1);	
+    if (String(Moghunter.bhud_mp_number_visible) != "true") {return};
+    if (this._mp_number) {for (var i = 0; i < this._mp_number.length; i++) {this.removeChild(this._mp_number[i]);}};
+    if (!this._battler) {return};
+    this._mp_number = [];
+    // >>> NEW: сброс состояния анимации
+    this._mp_anim_active = false;
+    this._mp_anim_frame  = 0;
+    this._mp_img_data = [this._mp_number_img.width,this._mp_number_img.height,
+                          this._mp_number_img.width / 10, this._mp_number_img.height / 2,
+                          this._pos_x + Moghunter.bhud_mp_number_pos_x,
+                          this._pos_y + Moghunter.bhud_mp_number_pos_y,
+                          ];
+    for (var i = 0; i < 5; i++) {
+       this._mp_number[i] = new Sprite(this._mp_number_img);
+       // >>> NEW: anchor в центр для пульсации
+       this._mp_number[i].anchor.x = 0.5;
+       this._mp_number[i].anchor.y = 0.5;
+       this._mp_number[i].visible = false;
+       // >>> NEW: компенсация позиции под anchor
+       this._mp_number[i].x = this._mp_img_data[4] + this._mp_img_data[2] / 2;
+       this._mp_number[i].y = this._mp_img_data[5] + this._mp_img_data[3] / 2;
+       this.addChild(this._mp_number[i]);
+    };	
+    this._mp_number_old = this._battler.mp;
+    this.refresh_number(this._mp_number,this._mp_number_old,this._mp_img_data,this._mp_img_data[4],this._mp_img_data[5],1);	
 };
 
 //==============================
@@ -3543,41 +3553,200 @@ Battle_Hud.prototype.update_mp = function() {
 			this.refresh_meter(this._mp_meter_red,this._mp_old_ani[0],this._battler.mmp,1);};
 		};
     };
-	if (this._mp_number) {
-		var dif_number = this.update_dif(this._mp_number_old,this._battler.mp,30)
-		if (this._mp_number_old != dif_number) {this._mp_number_old = dif_number;
-		this.refresh_number(this._mp_number,this._mp_number_old,this._mp_img_data,this._mp_img_data[4],this._mp_img_data[5],1);};
-	};
+	    if (this._mp_number) {
+        var dif_number = this.update_dif(this._mp_number_old,this._battler.mp,30)
+        if (this._mp_number_old != dif_number) {this._mp_number_old = dif_number;
+        this.refresh_number(this._mp_number,this._mp_number_old,this._mp_img_data,this._mp_img_data[4],this._mp_img_data[5],1);};
+        // >>> NEW: анимация MP-цифр
+        this.update_mp_number_animation();
+    };
 	if (this._maxmp_number) {
 		if (this._maxmp_number_old != this._battler.mmp) {this._maxmp_number_old = this._battler.mmp;
 		this.refresh_number(this._maxmp_number,this._maxmp_number_old,this._maxmp_img_data,this._maxmp_img_data[4],this._maxmp_img_data[5],1);};
 	};	
 	
+	
+};
+
+//==============================
+// * Update MP Number Animation
+//==============================
+Battle_Hud.prototype.update_mp_number_animation = function() {
+    if (!this._mp_number || !this._battler) return;
+
+    // --- Условия запуска анимации + запоминаем навык ---
+    var shouldAnimate = false;
+    var skillItem = null;
+    if (this._active && BattleManager.actor() === this._battler) {
+        var scene = SceneManager._scene;
+        if (scene && scene._skillWindow &&
+            scene._skillWindow.visible && scene._skillWindow.active) {
+            var item = scene._skillWindow.item();
+            if (item && item.mpCost && item.mpCost > 0) {
+                shouldAnimate = true;
+                skillItem = item;
+            }
+        }
+    }
+
+    if (shouldAnimate) {
+        if (!this._mp_anim_active) {
+            this._mp_anim_active = true;
+            this._mp_anim_frame  = 0;
+        }
+        this._mp_anim_frame++;
+
+        var shimmerPhase = this._mp_anim_frame * 0.12;   // частота переливания
+        var pulsePhase   = this._mp_anim_frame * 0.10;   // частота пульса
+
+        // ---- Переливание: цвет <-> белый (цвет зависит от достатка MP) ----
+        var s = (Math.sin(shimmerPhase) + 1) / 2;
+
+        var r, g, b;
+        if (skillItem.mpCost <= this._battler.mp) {
+            // ХВАТАЕТ MP: зелёный (64,255,64) ↔ белый (255,255,255)
+            r = Math.floor(64 + 191 * s);
+            g = 255;
+            b = Math.floor(64 + 191 * s);
+        } else {
+            // НЕ ХВАТАЕТ MP: красный (255,64,64) ↔ белый (255,255,255)
+            r = 255;
+            g = Math.floor(64 + 191 * s);
+            b = Math.floor(64 + 191 * s);
+        }
+        var tint = (r << 16) | (g << 8) | b;
+
+        // ---- Пульсация: прозрачность + размер (без изменений) ----
+        var p     = (Math.sin(pulsePhase) + 1) / 2;
+        var alpha = 0.70 + 0.30 * p;      // 0.70..1.00
+        var scale = 0.94 + 0.12 * p;      // 0.94..1.06
+
+        for (var i = 0; i < this._mp_number.length; i++) {
+            var sp = this._mp_number[i];
+            sp.tint    = tint;
+            sp.opacity = Math.floor(255 * alpha);
+            sp.scale.x = scale;
+            sp.scale.y = scale;
+        }
+    } else if (this._mp_anim_active) {
+        // ---- Возврат к нормальному виду ----
+        this._mp_anim_active = false;
+        this._mp_anim_frame  = 0;
+        for (var i = 0; i < this._mp_number.length; i++) {
+            var sp = this._mp_number[i];
+            sp.tint    = 0xFFFFFF;
+            sp.opacity = 255;
+            sp.scale.x = 1;
+            sp.scale.y = 1;
+        }
+    }
 };
 
 //==============================
 // * Create TP Meter
 //==============================
 Battle_Hud.prototype.create_tp_meter = function() {
-	if (String(Moghunter.bhud_tp_meter_visible) != "true") {return};
-	this.removeChild(this._tp_meter_blue);
-	this.removeChild(this._tp_meter_red);
-	if (!this._battler) {return};
-	this._tp_meter_red = new Sprite(this._tp_meter_img);
-	this._tp_meter_red.x = this._pos_x + Moghunter.bhud_tp_meter_pos_x;
-	this._tp_meter_red.y = this._pos_y + Moghunter.bhud_tp_meter_pos_y;
-	this._tp_meter_red.rotation = Moghunter.bhud_tp_meter_rotation * Math.PI / 180;
-	this.addChild(this._tp_meter_red);		
-	this._tp_meter_blue = new Sprite(this._tp_meter_img);
-	this._tp_meter_blue.x = this._tp_meter_red.x;
-	this._tp_meter_blue.y = this._tp_meter_red.y;
-	this._tp_meter_blue.rotation = this._tp_meter_red.rotation;
-	this.addChild(this._tp_meter_blue);
-	if (String(Moghunter.bhud_tp_meter_flow) === "true") {this._tp_flow[0] = true;
-	    this._tp_flow[2] = this._tp_meter_img.width / 3;
-		this._tp_flow[3] = this._tp_flow[2] * 2;
-		this._tp_flow[1] = Math.floor(Math.random() * this._tp_flow[2]);
-	};
+    if (String(Moghunter.bhud_tp_meter_visible) != "true") {return};
+    // >>> NEW: сбрасываем ссылки — они были детьми старого _tp_meter_blue
+    this._tp_full_shine = null;
+    this._tp_shine_mask = null;
+    this.removeChild(this._tp_meter_blue);
+    this.removeChild(this._tp_meter_red);
+    // >>> NEW: удаляем старый shine, если он был
+    if (this._tp_full_shine) { this.removeChild(this._tp_full_shine); this._tp_full_shine = null; }
+    if (!this._battler) {return};
+    this._tp_meter_red = new Sprite(this._tp_meter_img);
+    this._tp_meter_red.x = this._pos_x + Moghunter.bhud_tp_meter_pos_x;
+    this._tp_meter_red.y = this._pos_y + Moghunter.bhud_tp_meter_pos_y;
+    this._tp_meter_red.rotation = Moghunter.bhud_tp_meter_rotation * Math.PI / 180;
+    this.addChild(this._tp_meter_red);		
+    this._tp_meter_blue = new Sprite(this._tp_meter_img);
+    this._tp_meter_blue.x = this._tp_meter_red.x;
+    this._tp_meter_blue.y = this._tp_meter_red.y;
+    this._tp_meter_blue.rotation = this._tp_meter_red.rotation;
+    this.addChild(this._tp_meter_blue);
+    if (String(Moghunter.bhud_tp_meter_flow) === "true") {
+        this._tp_flow[0] = true;
+        this._tp_flow[2] = this._tp_meter_img.width / 3;
+        this._tp_flow[3] = this._tp_flow[2] * 2;
+        this._tp_flow[1] = Math.floor(Math.random() * this._tp_flow[2]);
+    };
+    // >>> NEW: создаём блик поверх шкалы
+    this.create_tp_full_shine();
+};
+
+//==============================
+// * Create Full TP Shine
+//==============================
+Battle_Hud.prototype.create_tp_full_shine = function() {
+    // Полная очистка старых объектов
+    if (this._tp_shine_mask) {
+        if (this._tp_shine_mask.parent) this._tp_shine_mask.parent.removeChild(this._tp_shine_mask);
+        this._tp_shine_mask = null;
+    }
+    if (this._tp_full_shine) {
+        if (this._tp_full_shine.parent) this._tp_full_shine.parent.removeChild(this._tp_full_shine);
+        this._tp_full_shine = null;
+    }
+    if (!this._tp_meter_img || !this._tp_meter_img.isReady()) return;
+    if (!this._tp_meter_blue) return;
+
+    // ============== НАСТРОЙКИ БЛИКА ==============
+    var shineWidth  = 30;     // ШИРИНА блика (px)
+    var shineSpeed  = 1;      // скорость (px за кадр)
+    var startOffset = 0;    // ТОЧКА ПОЯВЛЕНИЯ (X левого края блика относительно левого края бара)
+    var endOffset   = 70;     // ТОЧКА КОНЦА (-1 = правый край бара; иначе px)
+    var shineDelay  = 30;     // ЗАДЕРЖКА перед каждым новым бликом (в кадрах; 60 = 1 сек)
+    var fadeZone    = 20;     // ЗОНА ЗАТУХАНИЯ у краёв бара (px)
+    // ==============================================
+
+    var barWidth  = this._tp_meter_img.width;
+    var barHeight = this._tp_meter_img.height / 2;
+    if (barWidth <= 0 || barHeight <= 0) return;
+
+    // --- сам блик (белый градиент) ---
+    var bmp = new Bitmap(shineWidth, barHeight);
+    var ctx = bmp.context;
+    var grad = ctx.createLinearGradient(0, 0, shineWidth, 0);
+    grad.addColorStop(0.00, 'rgba(255,255,255,0.00)');
+    grad.addColorStop(0.35, 'rgba(255,255,255,0.85)');
+    grad.addColorStop(0.50, 'rgba(255,255,255,1.00)');
+    grad.addColorStop(0.65, 'rgba(255,255,255,0.85)');
+    grad.addColorStop(1.00, 'rgba(255,255,255,0.00)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, shineWidth, barHeight);
+    bmp._setDirty();
+
+    var shine = new Sprite(bmp);
+    shine.x = startOffset;
+    shine.y = 0;
+    shine.visible = false;
+    shine.opacity = 0;
+    shine._shineWidth      = shineWidth;
+    shine._shineOffset     = startOffset;
+    shine._shineStart      = startOffset;
+    shine._shineEnd        = endOffset;
+    shine._shineSpeed      = shineSpeed;
+    shine._shineDelay      = shineDelay;
+    shine._shineDelayTimer = shineDelay;
+    shine._fadeZone        = fadeZone;
+    shine._barWidth        = barWidth;
+    this._tp_meter_blue.addChild(shine);
+    this._tp_full_shine = shine;
+
+    // --- маска, обрезающая блик по границам бара ---
+    var maskBmp = new Bitmap(barWidth, barHeight);
+    var mctx = maskBmp.context;
+    mctx.fillStyle = '#ffffff';
+    mctx.fillRect(0, 0, barWidth, barHeight);
+    maskBmp._setDirty();
+
+    var mask = new Sprite(maskBmp);
+    mask.x = 0;
+    mask.y = 0;
+    this._tp_meter_blue.addChild(mask);
+    shine.mask = mask;
+    this._tp_shine_mask = mask;
 };
 
 //==============================
@@ -3658,6 +3827,103 @@ Battle_Hud.prototype.update_tp = function() {
 		if (this._tp_number_old != dif_number) {this._tp_number_old = dif_number;
 		this.refresh_number(this._tp_number,this._tp_number_old,this._tp_img_data,this._tp_img_data[4],this._tp_img_data[5],2);};
 	};
+	    // >>> NEW: блик TP
+    if (!this._tp_full_shine && this._tp_meter_blue && this._tp_meter_img.isReady()) {
+        this.create_tp_full_shine();
+    }
+    if (this._tp_full_shine) {
+        this.update_tp_full_shine();
+    }
+
+};
+
+//==============================
+// * Update Full TP Shine
+//==============================
+Battle_Hud.prototype.update_tp_full_shine = function() {
+    var shine = this._tp_full_shine;
+    if (!shine) return;
+
+    var tpMax  = this._battler.maxTp();
+    var isFull = tpMax > 0 && this._battler.tp >= tpMax;
+
+    if (!isFull) {
+        shine.visible = false;
+        shine._shineOffset     = shine._shineStart;
+        shine._shineDelayTimer = shine._shineDelay;
+        shine.opacity = 0;
+        return;
+    }
+
+    if (shine._shineDelayTimer > 0) {
+        shine._shineDelayTimer--;
+        shine.visible = false;
+        return;
+    }
+
+    shine._shineOffset += shine._shineSpeed;
+    var endOffset = shine._shineEnd < 0 ? shine._barWidth : shine._shineEnd;
+    if (shine._shineOffset > endOffset) {
+        shine._shineOffset     = shine._shineStart;
+        shine._shineDelayTimer = shine._shineDelay;
+        shine.visible = false;
+        return;
+    }
+
+    shine.x = shine._shineOffset;
+    shine.y = 0;
+    shine.visible = true;
+
+    var vis = this.calc_tp_shine_visibility(
+        shine._shineOffset, shine._shineWidth, shine._barWidth,
+        shine._fadeZone, shine._shineStart, endOffset
+    );
+    shine.opacity = Math.floor(255 * vis);
+};
+
+//==============================
+// * Calc TP Shine Visibility (0..1)
+//==============================
+Battle_Hud.prototype.calc_tp_shine_visibility = function(offset, shineWidth, barWidth, fadeZone, startOffset, endOffset) {
+    var fadeDist = Math.max(1, Math.min(fadeZone, shineWidth));
+
+    // === 1. Затухание по прогрессу пути (в начале и конце пролёта) ===
+    var travel      = offset - startOffset;
+    var totalTravel = Math.max(1, endOffset - startOffset);
+
+    var tripIn = 1;
+    if (travel < fadeDist) {
+        tripIn = Math.max(0, travel / fadeDist);
+    }
+
+    var remain = totalTravel - travel;
+    var tripOut = 1;
+    if (remain < fadeDist) {
+        tripOut = Math.max(0, remain / fadeDist);
+    }
+
+    var tripVis = Math.min(tripIn, tripOut);
+
+    // === 2. Затухание у краёв бара (если блик частично за пределами) ===
+    var shineLeft  = offset;
+    var shineRight = offset + shineWidth;
+
+    var barIn = 1;
+    if (shineLeft < 0) {
+        var entered = Math.min(shineWidth, Math.max(0, shineRight));
+        barIn = Math.max(0, Math.min(1, entered / fadeDist));
+    }
+
+    var barOut = 1;
+    if (shineRight > barWidth) {
+        var remainInBar = Math.max(0, Math.min(shineWidth, barWidth - shineLeft));
+        barOut = Math.max(0, Math.min(1, remainInBar / fadeDist));
+    }
+
+    var barVis = Math.min(barIn, barOut);
+
+    // === 3. Итог: более строгое из двух затуханий ===
+    return Math.min(tripVis, barVis);
 };
 
 //==============================
