@@ -669,9 +669,10 @@ Sprite_Battler.prototype.setupDamagePopup = function() {
     if (this._battler.isDamagePopupRequested()) {
 		if (this._battler.isSpriteVisible()) {
 			var sprite = new Sprite_Damage();
-			var code = LGP.Param.BDPpopPosCode;
-			sprite.setup(this._battler);
-			this._damages.push(sprite);
+            var code = LGP.Param.BDPpopPosCode;
+            sprite.setup(this._battler);
+            sprite._battlerSprite = this;          // ← добавить эту строку
+            this._damages.push(sprite);
 			if (code === "") {
 			    sprite.x = this._battler.spritePosX() + this.damageOffsetX();
 			    sprite.y = this._battler.spritePosY() + this.damageOffsetY();        
@@ -978,12 +979,19 @@ Sprite_Damage.prototype.drawDefaultNumber = function() {
     sprite.anchor.x = 0.5;
     sprite.anchor.y = 1;
 
-    var heals = this._target.battler()._damages.filter(function(dmg) {
-    	var result = dmg._result;
-    	if ((result.hpDamage < 0 || result.mpDamage < 0 || result.tpDamage < 0)) {
-	    	return dmg;
-    	}
-    });
+    var battlerSprite = this._battlerSprite;
+    if (!battlerSprite && typeof this._target.battler === 'function') {
+        battlerSprite = this._target.battler();
+    }
+    var heals = [];
+    if (battlerSprite && battlerSprite._damages) {
+        heals = battlerSprite._damages.filter(function(dmg) {
+            var result = dmg._result;
+            if ((result.hpDamage < 0 || result.mpDamage < 0 || result.tpDamage < 0)) {
+                return dmg;
+            }
+        });
+    }
     sprite.anchor.y += heals.length - 1;
 
     var value = 0;
