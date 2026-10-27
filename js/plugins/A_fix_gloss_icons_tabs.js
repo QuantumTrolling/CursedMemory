@@ -503,6 +503,15 @@ Window_Glossary.prototype.update = function () {
 
 Window_Glossary.prototype.updateSGTabsTouch = function () {
     if (!TouchInput.isTriggered()) return;
+
+    // === FIX: пропускаем тач в кадре(ах) открытия глоссария из боя ===
+    // Флаг _stateGlossarySkipTouch выставляется в A_fix_STATES+Gloss.js
+    // перед show()/refreshPage(), и уже учитывается в processTouch.
+    // Без этой проверки таб/футер мог «съесть» тот же клик, что открыл
+    // глоссарий по иконке состояния.
+    var scene = SceneManager._scene;
+    if (scene && (scene._stateGlossarySkipTouch > 0 || scene._glossaryCancelBlock > 0)) return;
+
     var localX = this.canvasToLocalX(TouchInput.x);
     var localY = this.canvasToLocalY(TouchInput.y);
 
