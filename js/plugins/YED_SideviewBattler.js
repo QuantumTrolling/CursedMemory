@@ -1,7 +1,7 @@
 /*:
  * Yami Engine Delta - Sideview Battler Enhancement
  *
- * @plugindesc v1.2.1 This plugin allows user to use any kind of sideview battler, with state overrides.
+ * @plugindesc v1.3.0 This plugin allows user to use any kind of sideview battler, with state overrides.
  * @author Yami Engine Delta [Dr.Yami] + state override mod
  *
  * @param [Default Setting]
@@ -77,32 +77,78 @@
  * property replaces an earlier state's property of the same kind, but
  * properties not touched by the later state are kept from the earlier one.
  *
+ * ---------------------------------------------------------------------------
+ * CONDITION SUPPORT (NEW)
+ * ---------------------------------------------------------------------------
+ * Every State notetag may include an optional condition suffix:
+ *
+ *   <TAG: VALUE|CONDITION>
+ *
+ * CONDITION is a '|' separated list of:
+ *
+ *   a:ID  - apply only if current battler is Actor with that ID
+ *   e:ID  - apply only if current battler is Enemy with that ID
+ *   s:ID  - apply only if state with ID is also present on the battler
+ *
+ * You may combine conditions, e.g. |a:1|s:12 or |e:3|s:5.
+ * Conditions are optional. If omitted, the tag applies unconditionally
+ * (same as before).
+ *
+ * Multiple tags inside ONE state with the SAME condition are merged into a
+ * single override entry. Tags with DIFFERENT conditions become separate
+ * entries that are evaluated independently.
+ *
+ * ---------------------------------------------------------------------------
+ * Available state tags:
+ * ---------------------------------------------------------------------------
+ *
  * <Sideview Battler State: FILENAME>
+ * <Sideview Battler State: FILENAME|a:ID>
+ * <Sideview Battler State: FILENAME|e:ID|s:ID>
  * Override the sprite filename.
  *
  * <Sideview Battler State Frames: X>
+ * <Sideview Battler State Frames: X|a:ID|s:ID>
  * Override default frames.
  *
  * <Sideview Battler State Speed: X>
+ * <Sideview Battler State Speed: X|a:ID>
  * Override default speed.
  *
  * <Sideview Battler State Size: WIDTH, HEIGHT>
+ * <Sideview Battler State Size: WIDTH, HEIGHT|e:ID|s:ID>
  * Override frame sizes.
  *
  * <Sideview Battler State Weapon: true/false>
+ * <Sideview Battler State Weapon: true/false|a:ID>
  * Override weapon visibility.
  *
  * <Sideview Battler State Motion: NAME, INDEX>
+ * <Sideview Battler State Motion: NAME, INDEX|a:ID|s:ID>
  * Quick override for a motion (row index).
  *
  * <Sideview Battler State Motion>
  *   Name: NAME
  *   Index: INDEX
+ *   Condition: a:ID|s:ID        (optional)
  *   Loop
  *   Frames: X
  *   Speed: Y
  * </Sideview Battler State Motion>
  * Full override for a motion.
+ *
+ * ---------------------------------------------------------------------------
+ * Example:
+ * ---------------------------------------------------------------------------
+ *   // For actor 1 while state 5 active: use flame_hero
+ *   <Sideview Battler State: flame_hero|a:1|s:5>
+ *
+ *   // For enemy 3 while state 5 active: use flame_enemy
+ *   <Sideview Battler State: flame_enemy|e:3|s:5>
+ *
+ *   // For enemy 2 while state 5 active: override attack row to 3
+ *   <Sideview Battler State Motion: attack, 3|e:2|s:5>
+ *
  * ============================================================================
  * Notes
  *
@@ -162,13 +208,13 @@ Imported.YED_SideviewBattler = true;
         MOTION_FRAMES: /Frames:[ ]*(\d+)/i,
         MOTION_SPEED: /Speed:[ ]*(\d+)/i,
 
-        // State overrides
-        STATE_FILENAME: /<Sideview Battler State:[ ]*(.*)>/i,
-        STATE_FRAMES: /<Sideview Battler State Frames:[ ]*(\d+)>/i,
-        STATE_SPEED: /<Sideview Battler State Speed:[ ]*(\d+)>/i,
-        STATE_SIZES: /<Sideview Battler State Size:[ ]*(\d+),[ ]*(\d+)>/i,
-        STATE_WEAPON: /<Sideview Battler State Weapon:[ ]*(true|false)>/i,
-        STATE_MOTION_QUICK: /<Sideview Battler State Motion:[ ]*(.*),[ ]*(\d+)>/i,
+        // State overrides — с поддержкой условий |a:ID|e:ID|s:ID|
+        STATE_FILENAME: /<Sideview Battler State:[ ]*([^|>]*)(?:\|([^>]*))?>/i,
+        STATE_FRAMES: /<Sideview Battler State Frames:[ ]*(\d+)(?:\|([^>]*))?>/i,
+        STATE_SPEED: /<Sideview Battler State Speed:[ ]*(\d+)(?:\|([^>]*))?>/i,
+        STATE_SIZES: /<Sideview Battler State Size:[ ]*(\d+),[ ]*(\d+)(?:\|([^>]*))?>/i,
+        STATE_WEAPON: /<Sideview Battler State Weapon:[ ]*(true|false)(?:\|([^>]*))?>/i,
+        STATE_MOTION_QUICK: /<Sideview Battler State Motion:[ ]*([^,]+?),\s*(\d+)(?:\|([^>]*))?>/i,
         STATE_MOTION_BEGIN: /<Sideview Battler State Motion>/i,
         STATE_MOTION_END: /<\/Sideview Battler State Motion>/i,
         STATE_MOTION_NAME: /Name:[ ]*(.*)/i,
@@ -176,6 +222,7 @@ Imported.YED_SideviewBattler = true;
         STATE_MOTION_LOOP: /Loop/i,
         STATE_MOTION_FRAMES: /Frames:[ ]*(\d+)/i,
         STATE_MOTION_SPEED: /Speed:[ ]*(\d+)/i,
+        STATE_MOTION_CONDITION: /Condition:[ ]*(.*)/i,
     };
 
     $SideviewBattler.Regexp = Regexp;
@@ -228,14 +275,8 @@ Imported.YED_SideviewBattler = true;
                 var notedata = state.note.split(/[\r\n]+/);
                 var helpers = {};
 
-                state._sideviewBattlerOverride = {
-                    filename: null,
-                    frames: null,
-                    speed: null,
-                    weapon: null,
-                    sizes: null,
-                    motions: {}
-                };
+                // Массив записей-переопределений (у каждой свой набор условий)
+                state._sideviewBattlerOverrides = [];
 
                 for (var n = 0; n < notedata.length; n++) {
                     var line = notedata[n];
@@ -354,56 +395,122 @@ Imported.YED_SideviewBattler = true;
         }
     };
 
+    // ---- Помощники для условий ----
+
+    Utils.parseStateCondition = function(str) {
+        var cond = { targetType: null, targetId: null, stateId: null };
+        if (!str) return cond;
+        var parts = String(str).split('|');
+        for (var i = 0; i < parts.length; i++) {
+            var part = parts[i].trim();
+            if (!part) continue;
+            var m;
+            if (m = part.match(/^a\s*:\s*(\d+)$/i)) {
+                cond.targetType = 'actor';
+                cond.targetId = Number(m[1]);
+            } else if (m = part.match(/^e\s*:\s*(\d+)$/i)) {
+                cond.targetType = 'enemy';
+                cond.targetId = Number(m[1]);
+            } else if (m = part.match(/^s\s*:\s*(\d+)$/i)) {
+                cond.stateId = Number(m[1]);
+            }
+        }
+        return cond;
+    };
+
+    Utils.stateConditionsEqual = function(a, b) {
+        if (!a || !b) return false;
+        return a.targetType === b.targetType &&
+               a.targetId   === b.targetId   &&
+               a.stateId    === b.stateId;
+    };
+
+    Utils.getOrCreateOverrideEntry = function(state, cond) {
+        var overrides = state._sideviewBattlerOverrides;
+        for (var i = 0; i < overrides.length; i++) {
+            if (Utils.stateConditionsEqual(overrides[i].condition, cond)) {
+                return overrides[i];
+            }
+        }
+        var entry = {
+            condition: cond,
+            filename: null,
+            frames: null,
+            speed: null,
+            weapon: null,
+            sizes: null,
+            motions: {}
+        };
+        overrides.push(entry);
+        return entry;
+    };
+
+    // ---- Обработка ноте-тегов состояний ----
+
     Utils._processStateNotetag = function(state, notetag, helpers) {
-        var override = state._sideviewBattlerOverride,
-            match,
-            motion;
+        var match, cond, entry, motion;
 
         match = notetag.match(Regexp.STATE_FILENAME);
         if (match) {
-            override.filename = String(match[1]);
+            cond = Utils.parseStateCondition(match[2]);
+            entry = Utils.getOrCreateOverrideEntry(state, cond);
+            entry.filename = String(match[1]).trim();
         }
 
         match = notetag.match(Regexp.STATE_FRAMES);
         if (match) {
-            override.frames = Number(match[1]);
+            cond = Utils.parseStateCondition(match[2]);
+            entry = Utils.getOrCreateOverrideEntry(state, cond);
+            entry.frames = Number(match[1]);
         }
 
         match = notetag.match(Regexp.STATE_SPEED);
         if (match) {
-            override.speed = Number(match[1]);
+            cond = Utils.parseStateCondition(match[2]);
+            entry = Utils.getOrCreateOverrideEntry(state, cond);
+            entry.speed = Number(match[1]);
         }
 
         match = notetag.match(Regexp.STATE_SIZES);
         if (match) {
-            override.sizes = [Number(match[1]), Number(match[2])];
+            cond = Utils.parseStateCondition(match[3]);
+            entry = Utils.getOrCreateOverrideEntry(state, cond);
+            entry.sizes = [Number(match[1]), Number(match[2])];
         }
 
         match = notetag.match(Regexp.STATE_WEAPON);
         if (match) {
-            override.weapon = eval(match[1].toLowerCase());
+            cond = Utils.parseStateCondition(match[2]);
+            entry = Utils.getOrCreateOverrideEntry(state, cond);
+            entry.weapon = eval(match[1].toLowerCase());
         }
 
         match = notetag.match(Regexp.STATE_MOTION_QUICK);
         if (match) {
+            cond = Utils.parseStateCondition(match[3]);
+            entry = Utils.getOrCreateOverrideEntry(state, cond);
             motion = {};
-            motion.name = match[1].toLowerCase();
+            motion.name = match[1].trim().toLowerCase();
             motion.index = Number(match[2]);
-            override.motions[motion.name] = motion;
+            entry.motions[motion.name] = motion;
         }
 
         match = notetag.match(Regexp.STATE_MOTION_BEGIN);
         if (match) {
             helpers.motionFlag = true;
             helpers.motion = {};
+            helpers.motionCondition = null;
             return;
         }
 
         match = notetag.match(Regexp.STATE_MOTION_END);
         if (match) {
             motion = helpers.motion;
+            var cond = helpers.motionCondition || Utils.parseStateCondition(null);
             helpers.motionFlag = false;
-            override.motions[motion.name] = motion;
+            helpers.motionCondition = null;
+            entry = Utils.getOrCreateOverrideEntry(state, cond);
+            if (motion.name) entry.motions[motion.name] = motion;
             return;
         }
 
@@ -418,6 +525,11 @@ Imported.YED_SideviewBattler = true;
             match = notetag.match(Regexp.STATE_MOTION_INDEX);
             if (match) {
                 motion.index = Number(match[1]);
+            }
+
+            match = notetag.match(Regexp.STATE_MOTION_CONDITION);
+            if (match) {
+                helpers.motionCondition = Utils.parseStateCondition(match[1]);
             }
 
             match = notetag.match(Regexp.STATE_MOTION_LOOP);
@@ -500,19 +612,59 @@ Imported.YED_SideviewBattler = true;
         return battler ? battler.isSideviewBattler() : false;
     };
 
-    // Merges overrides from ALL active states. Later states override earlier
-    // ones for the same property. Motions are merged by name.
-    Game_Battler.prototype.getActiveStateOverride = function() {
-        if (!this._states) return null;
-        var merged = null;
-        for (var i = 0; i < this._states.length; i++) {
-            var stateId = this._states[i];
-            var state = $dataStates[stateId];
-            if (!state || !state._sideviewBattlerOverride) continue;
+    // Проверка соответствия записи текущему баттлеру
+    Game_Battler.prototype.matchesStateOverrideCondition = function(cond) {
+    if (!cond) return true;
 
-            var o = state._sideviewBattlerOverride;
-            var hasAny = o.filename !== null || o.frames !== null || o.speed !== null ||
-                         o.weapon !== null || o.sizes !== null ||
+    var battlerType = null;
+    var battlerId   = 0;
+    if (this.isActor()) {
+        battlerType = 'actor';
+        battlerId   = this.actorId();
+    } else if (this.isEnemy()) {
+        battlerType = 'enemy';
+        battlerId   = this.enemyId();
+    }
+
+    if (cond.targetType === 'actor') {
+        if (battlerType !== 'actor' || battlerId !== cond.targetId) return false;
+    } else if (cond.targetType === 'enemy') {
+        if (battlerType !== 'enemy' || battlerId !== cond.targetId) return false;
+    }
+
+    if (cond.stateId !== null) {
+        // ВАЖНО: isStateAffected работает и для обычных, и для пассивных,
+        // и учитывает их собственные <Custom Passive Condition>.
+        if (!this.isStateAffected(cond.stateId)) return false;
+    }
+
+    return true;
+};
+
+    // Слияние всех подходящих записей из активных состояний.
+    // Поздние записи/состояния перекрывают более ранние по тем же свойствам.
+    Game_Battler.prototype.getActiveStateOverride = function() {
+    // this.states() включает и обычные (_states), и пассивные (Yanfly APS)
+    var states = this.states();
+    var merged = null;
+    var seen = {}; // защита от дубликатов (states() может отдать один ID дважды)
+
+    for (var i = 0; i < states.length; i++) {
+        var state = states[i];
+        if (!state) continue;
+        if (seen[state.id]) continue;
+        seen[state.id] = true;
+
+        if (!state._sideviewBattlerOverrides) continue;
+
+        for (var j = 0; j < state._sideviewBattlerOverrides.length; j++) {
+            var o = state._sideviewBattlerOverrides[j];
+
+            if (!this.matchesStateOverrideCondition(o.condition)) continue;
+
+            var hasAny = o.filename !== null || o.frames !== null ||
+                         o.speed !== null || o.weapon !== null ||
+                         o.sizes !== null ||
                          (o.motions && Object.keys(o.motions).length > 0);
             if (!hasAny) continue;
 
@@ -541,8 +693,9 @@ Imported.YED_SideviewBattler = true;
                 }
             }
         }
-        return merged;
-    };
+    }
+    return merged;
+};
 
     Game_Battler.prototype.isUseWeapon = function() {
         var override = this.getActiveStateOverride();
@@ -909,4 +1062,33 @@ Imported.YED_SideviewBattler = true;
         this.adjustMainBitmapSettings(bitmap);
         this.adjustSVShadowSettings();
     };
+
+    
+    
 }());
+
+(function() {
+    if (!Imported.YEP_X_AnimatedSVEnemies) return;
+
+    // Yanfly AnimatedSVEnemies читает имя сайдвью-файла из метаданных БД
+    // (enemy().meta.sideviewBattler) и не учитывает state-оверрайд.
+    // Полностью заменяем updateBitmap для сайдвью-врагов на путь через
+    // getSideviewFilename(), чтобы стейт-оверрайд переключал битмап,
+    // а при снятии состояния возвращал базовый.
+    var _Sprite_Enemy_updateBitmap = Sprite_Enemy.prototype.updateBitmap;
+
+    Sprite_Enemy.prototype.updateBitmap = function() {
+        if (this._enemy && this._enemy.isSideviewBattler()) {
+            var targetName = this._enemy.getSideviewFilename();
+            if (targetName && this._battlerName !== targetName) {
+                this._battlerName = targetName;
+                if (this._mainSprite) {
+                    this._mainSprite.bitmap = ImageManager.loadSvActor(targetName);
+                }
+            }
+            return; // пропускаем Yanfly-ветку
+        }
+        _Sprite_Enemy_updateBitmap.call(this);
+    };
+})();
+
