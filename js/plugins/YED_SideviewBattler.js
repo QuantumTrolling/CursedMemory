@@ -1070,25 +1070,26 @@ Imported.YED_SideviewBattler = true;
 (function() {
     if (!Imported.YEP_X_AnimatedSVEnemies) return;
 
-    // Yanfly AnimatedSVEnemies читает имя сайдвью-файла из метаданных БД
-    // (enemy().meta.sideviewBattler) и не учитывает state-оверрайд.
-    // Полностью заменяем updateBitmap для сайдвью-врагов на путь через
-    // getSideviewFilename(), чтобы стейт-оверрайд переключал битмап,
-    // а при снятии состояния возвращал базовый.
     var _Sprite_Enemy_updateBitmap = Sprite_Enemy.prototype.updateBitmap;
 
     Sprite_Enemy.prototype.updateBitmap = function() {
-        if (this._enemy && this._enemy.isSideviewBattler()) {
-            var targetName = this._enemy.getSideviewFilename();
-            if (targetName && this._battlerName !== targetName) {
-                this._battlerName = targetName;
-                if (this._mainSprite) {
-                    this._mainSprite.bitmap = ImageManager.loadSvActor(targetName);
-                }
-            }
-            return; // пропускаем Yanfly-ветку
+        // Если враг ещё не появился — работает штатная логика Yanfly
+        // (она сама решает, грузить ли битмап и как показывать спрайт)
+        if (!(this._enemy && this._enemy.isSideviewBattler() && this._enemy.isAppeared())) {
+            return _Sprite_Enemy_updateBitmap.call(this);
         }
-        _Sprite_Enemy_updateBitmap.call(this);
+
+        var targetName = this._enemy.getSideviewFilename();
+        if (!targetName) return;
+
+        var targetBitmap = ImageManager.loadSvActor(targetName);
+        if (this._battlerName !== targetName ||
+            (this._mainSprite && this._mainSprite.bitmap !== targetBitmap)) {
+            this._battlerName = targetName;
+            if (this._mainSprite) {
+                this._mainSprite.bitmap = targetBitmap;
+            }
+        }
     };
 })();
 
