@@ -144,5 +144,6 @@ var $plugins =
 {"name":"A_target_dead_and_alive","status":true,"description":"Позволяет навыкам/предметам с <Any Ally> выбирать любого союзника, включая мёртвых.","parameters":{}},
 {"name":"NoRightClick","status":true,"description":"Полностью отключает ПКМ в игре. Работает только ESC.","parameters":{}},
 {"name":"A_fix_STATES+Gloss","status":true,"description":"v1.5 - Клик по иконке состояния → глоссарий (с условной логикой по актёру)","parameters":{"ClickOffsetX":"-100","ClickOffsetY":"-100","EnableForEnemies":"true"}},
-{"name":"A_skill_shift","status":true,"description":"v1.0 - Shift по навыку в бою открывает глоссарий на предмете и SGDescriptionX","parameters":{"requireShiftHold":"false"}}
+{"name":"A_skill_shift","status":true,"description":"v1.0 - Shift по навыку в бою открывает глоссарий на предмете и SGDescriptionX","parameters":{"requireShiftHold":"false"}},
+{"name":"FixForcedActionStateTicks","status":true,"description":"","parameters":{}}
 ];
