@@ -819,52 +819,93 @@ Window_EquipItem.prototype.maxCols = function() {
 
 //=============================================================================
 // ** Slot Switching via Click (Переключение слотов без выхода из окна предметов)
+//   + подсветка слота по наведению мыши
 //=============================================================================
 
-// Позволяет кликать по неактивному окну слотов, пока открыто окно предметов
 var _mog_Window_EquipSlot_processTouch = Window_EquipSlot.prototype.processTouch;
 Window_EquipSlot.prototype.processTouch = function() {
     var scene = SceneManager._scene;
-    
-    // Если сцена экипировки открыта, окно слотов неактивно (заблокировано),
-    // но окно предметов активно (идёт выбор экипировки)
-    if (this.isOpen() && !this.isOpenAndActive() && 
-        scene instanceof Scene_Equip && 
+
+    // Сцена экипировки открыта, окно слотов открыто, но неактивно,
+    // а окно предметов активно (идёт выбор экипировки)
+    if (this.isOpen() && !this.isOpenAndActive() &&
+        scene instanceof Scene_Equip &&
         scene._itemWindow && scene._itemWindow.active) {
-        
+
+        // 1) Подсветка (курсор) по наведению мыши
+        if (TouchInput.isMoved() || TouchInput.isTriggered()) {
+            this.updateHoverHighlight(scene);
+        }
+
+        // 2) Клик — переключение слота
         if (TouchInput.isTriggered()) {
-            var x = this.canvasToLocalX(TouchInput.x);
-            var y = this.canvasToLocalY(TouchInput.y);
-            
-            // Проверяем, что клик находится внутри окна (по всей его ширине)
-            if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
-                // Определяем индекс строки по координате Y (обход проблем с hitTest)
-                var topIndex = this.topIndex();
-                var contentY = y - this.padding;
-                var row = Math.floor(contentY / this.itemHeight());
-                var index = topIndex + row;
-                
-                if (index >= 0 && index < this.maxItems()) {
-                    if (index !== this.index()) {
-                        // Переключаем слот
-                        this.select(index);
-                        SoundManager.playCursor();
-                        
-                        // Сбрасываем курсор в окне предметов на первый пункт
-                        // и обновляем окна (аналогично стандартному commandEquip)
-                        scene._itemWindow.select(0);
-                        scene._itemWindow.refresh();
-                        scene._statusWindow.refresh();
-                    }
-                    // Блокируем передачу клика в окно предметов,
-                    // чтобы оно не сбросило выделение из-за клика "мимо"
-                    scene._skipItemTouch = true;
-                }
-            }
+            this.processSlotClick(scene);
         }
         return;
     }
     _mog_Window_EquipSlot_processTouch.call(this);
+};
+
+// Перемещает курсор окна слотов на слот под мышью.
+// Если мышь вне окна слотов — возвращает курсор на «фактически выбранный»
+// слот (тот, чьи предметы отображаются в окне предметов).
+Window_EquipSlot.prototype.updateHoverHighlight = function(scene) {
+    var committed = (typeof scene._itemWindow._slotId === 'number' &&
+                     scene._itemWindow._slotId >= 0)
+                    ? scene._itemWindow._slotId
+                    : this.index();
+
+    var x = this.canvasToLocalX(TouchInput.x);
+    var y = this.canvasToLocalY(TouchInput.y);
+
+    var hoverIndex = -1;
+    if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+        var row = Math.floor((y - this.padding) / this.itemHeight());
+        var idx = this.topIndex() + row;
+        if (idx >= 0 && idx < this.maxItems()) {
+            hoverIndex = idx;
+        }
+    }
+
+    if (hoverIndex < 0) hoverIndex = committed;
+
+    if (hoverIndex >= 0 && hoverIndex !== this.index()) {
+        this.select(hoverIndex);
+    }
+};
+
+// Переключение слота по клику.
+// Сравнение идёт с _slotId (фактически выбранным слотом), а не с _index,
+// потому что _index может уже быть перемещён наведением.
+Window_EquipSlot.prototype.processSlotClick = function(scene) {
+    var x = this.canvasToLocalX(TouchInput.x);
+    var y = this.canvasToLocalY(TouchInput.y);
+
+    if (x < 0 || x >= this.width || y < 0 || y >= this.height) return;
+
+    var row = Math.floor((y - this.padding) / this.itemHeight());
+    var index = this.topIndex() + row;
+
+    if (index < 0 || index >= this.maxItems()) return;
+
+    var committed = scene._itemWindow._slotId;
+    if (index !== committed) {
+        // Переключаемся на новый слот
+        this.select(index);
+        SoundManager.playCursor();
+
+        // ВАЖНО: стандартный setSlotId обновляет _slotId и вызывает refresh().
+        // Без этого окно предметов продолжало бы показывать предметы старого слота.
+        scene._itemWindow.setSlotId(index);
+        scene._itemWindow.select(0);       // сброс курсора (через updateHelp
+                                           // пересчитается и _tempActor статуса)
+        scene._itemWindow.activate();
+        scene._statusWindow.refresh();
+    }
+
+    // Блокируем передачу клика в окно предметов,
+    // чтобы оно не сбросило выделение от клика «мимо»
+    scene._skipItemTouch = true;
 };
 
 // Игнорирует клик в окне предметов, если этот клик уже был обработан окном слотов

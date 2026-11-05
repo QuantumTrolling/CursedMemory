@@ -2890,7 +2890,6 @@ if (Olivia.OctoBattle.BreakShield.Enabled) {
       var func = new Function('a', 'b', 'target', 'action', 'return ' + expr + ';');
       return func(a, b, target, action);
     } catch (e) {
-      console.error('Break Shield evaluation error: ' + expr, e);
       return 0; // fallback value on error
     }
   };

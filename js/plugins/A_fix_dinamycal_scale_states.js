@@ -150,7 +150,6 @@
                     }
                 }
             } catch (e) {
-                console.error("Ошибка при расчете ауры:", e);
             }
 
             const states = this.states();
@@ -540,7 +539,6 @@
                         tempActor.refresh();
                     }
                 } catch (e) {
-                    console.warn('[DynamicScaleStates] tempActor.refresh() failed:', e);
                 }
             }
             _setTempActor.call(this, tempActor);

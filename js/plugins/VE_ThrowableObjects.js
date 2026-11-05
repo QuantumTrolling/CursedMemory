@@ -778,10 +778,6 @@ window.createThrow = function(user, target, imageType, imageId,
 (function() {
     var _Sprite_Battler_startAnimation = Sprite_Battler.prototype.startAnimation;
     Sprite_Battler.prototype.startAnimation = function(animationId, mirror, delay) {
-        if (this._battler) {
-            console.log('Animation', animationId, 'started on', this._battler.name(),
-                        'at position x:', this.x, 'y:', this.y);
-        }
         _Sprite_Battler_startAnimation.call(this, animationId, mirror, delay);
     };
 })();

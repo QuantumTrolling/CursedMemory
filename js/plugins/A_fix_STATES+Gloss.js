@@ -68,7 +68,6 @@
     var ENABLE_FOR_ENEMIES = (parameters['EnableForEnemies'] === 'true');
 
     if (typeof Battle_Hud === 'undefined') {
-        console.warn('[SGC] MOG_BattleHud.js не загружен.');
         return;
     }
 
@@ -178,7 +177,6 @@
                     scaleY: scaleY
                 };
             } catch (e) {
-                console.warn('[SGC] toGlobal failed, используем fallback:', e);
             }
         }
 
@@ -203,20 +201,6 @@
             var tl  = sprite.toGlobal(new PIXI.Point(0, 0));
             var br  = sprite.toGlobal(new PIXI.Point(sprite.width || 0, sprite.height || 0));
             var gb  = sprite.getBounds ? sprite.getBounds() : null;
-            console.log('[SGC] isHit', {
-                click: { x: tx, y: ty },
-                hitArea: { left: left, top: top, w: w, h: h,
-                           right: left + w, bottom: top + h },
-                getBounds: gb ? { x: gb.x, y: gb.y, w: gb.width, h: gb.height } : 'n/a',
-                toGlobal_origin: { x: tl.x, y: tl.y },
-                toGlobal_br:     { x: br.x, y: br.y },
-                anchor: sprite.anchor ? { x: sprite.anchor.x, y: sprite.anchor.y } : null,
-                scale:  { x: sprite.scale.x, y: sprite.scale.y },
-                width: sprite.width, height: sprite.height,
-                texture: sprite.texture ? { w: sprite.texture.width, h: sprite.texture.height } : null,
-                effectiveScale: { x: p.scaleX, y: p.scaleY },
-                hit: hit
-            });
         }
         return hit;
     }
@@ -324,12 +308,9 @@
         SoundManager.playOk();
 
         if (typeof window.GlossaryOverlay !== 'function') {
-            console.warn('[SGC] window.GlossaryOverlay не определён. ' +
-                         'Добавьте в конец BattleGlossaryButton.js: window.GlossaryOverlay = GlossaryOverlay;');
             return;
         }
         if (!$dataItems[data.itemId]) {
-            console.warn('[SGC] предмет id=' + data.itemId + ' не найден в БД.');
             return;
         }
 
@@ -361,15 +342,10 @@
         // --- 2. Предмет ---
         var listWin = overlay._windows.list;
         if (!listWin || listWin.maxItems() === 0) {
-            console.warn('[SGC] список пуст.');
             return;
         }
         var itemIdx = findGlossaryItemIndex(listWin, data.itemId);
         if (itemIdx < 0) {
-            console.warn('[SGC] предмет id=' + data.itemId + ' отсутствует в списке. ' +
-                         'Включите VisibleItemNotYet / UseItemHistory или получите предмет. ' +
-                         'В списке: [' +
-                         (listWin._data || []).map(function(it){return it.id;}).join(',') + ']');
             return;
         }
         listWin.select(itemIdx);
@@ -378,7 +354,6 @@
         var gWin = overlay._windows.glossary;
         var item = listWin.item();
         if (!gWin || !item) {
-            console.warn('[SGC] нет окна глоссария или предмета.');
             return;
         }
 
@@ -387,7 +362,6 @@
             gWin.refreshPage(item, itemIdx);
             refreshOK = true;
         } catch (e) {
-            console.error('[SGC] refreshPage бросил исключение:', e);
         }
 
         if (!refreshOK || !gWin._itemData) {
@@ -399,7 +373,6 @@
                 gWin._pageIndex = 0;
                 gWin.drawItem(0, true);
             } catch (e) {
-                console.error('[SGC] manual refresh бросил исключение:', e);
             }
         }
         if (typeof listWin.refresh === 'function') listWin.refresh();
@@ -420,11 +393,8 @@
                     gWin.drawItem(pageIdx, true);
                     gWin._forceDraw      = false;
                 } catch (e) {
-                    console.error('[SGC] drawItem(' + pageIdx + ') бросил:', e);
                 }
             } else if (maxPages <= 1) {
-                console.warn('[SGC] maxPages=1 — SGDescription' + data.pageNum +
-                             ' на этом предмете не найдена.');
             }
         }
     };
@@ -524,7 +494,6 @@
 
                 var data = getEnemyGlossaryData(st.id);
                 if (!data) {
-                    console.warn('[SGC-ENEMY] state ' + st.id + ' (' + st.name + ') — нет тега <glossary:0|...> или <glossaryItem:...>');
                     return;
                 }
                 openEnemyGlossary(scene, data);
@@ -564,11 +533,9 @@
         function openEnemyGlossary(scene, data) {
             SoundManager.playOk();
             if (typeof window.GlossaryOverlay !== 'function') {
-                console.warn('[SGC-ENEMY] window.GlossaryOverlay не определён');
                 return;
             }
             if (!$dataItems[data.itemId]) {
-                console.warn('[SGC-ENEMY] item id=' + data.itemId + ' не найден');
                 return;
             }
             $gameParty.setSelectedGlossaryType(data.glossaryType);
@@ -596,7 +563,6 @@
             if (navFn) {
                 navFn(scene._glossaryOverlay, data);
             } else {
-                console.warn('[SGC-ENEMY] navigateToItemAndPage недоступен');
             }
         }
     })();
