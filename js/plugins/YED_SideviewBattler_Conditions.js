@@ -1,91 +1,22 @@
 /*:
- * @plugindesc (v1.0.0) Addon for YED_SideviewBattler - conditional state overrides.
- * @author State Condition Override Addon
+ * @plugindesc (v1.0.1) Addon for YED_SideviewBattler - State Condition Overrides (no sprite shift).
+ * @author YED + Mod
  * @requires YED_SideviewBattler
  *
  * @help
  * ============================================================================
  * YED Sideview Battler - State Condition Override Addon
  * ============================================================================
- *
- * Расширяет YED_SideviewBattler (v1.2.1) условными оверрайдами в состояниях
- * (эквивалент v1.3.0). Старые нотетеги БЕЗ условий продолжают работать
- * без изменений — они попадают в запись с пустым условием, которая
- * матчится всегда (поведение v1.2.1 сохранено).
- *
- * ----------------------------------------------------------------------------
- * ПОРЯДОК ЗАГРУЗКИ
- * ----------------------------------------------------------------------------
- *
- * 1. YED_SideviewBattler          <- БАЗА (v1.2.1)
- * 2. YEP_BattleEngineCore         <- опционально
- * 3. YEP_X_AnimatedSVEnemies      <- опционально
- * 4. YED_SideviewBattler_StateConditionOverride  <- ЭТОТ АДДОН
- *
- * Без Yanfly-врагов аддон можно ставить прямо под базой.
- *
- * ВАЖНО: если используется YEP_X_AnimatedSVEnemies, аддон ОБЯЗАТЕЛЬНО
- * должен грузиться ПОСЛЕ него, иначе оверрайд спрайта врага в состоянии
- * не будет переключать битмап (Yanfly читает имя файла из метаданных БД,
- * а не через getSideviewFilename).
- *
- * ----------------------------------------------------------------------------
- * СИНТАКСИС УСЛОВИЙ
- * ----------------------------------------------------------------------------
- *
- *   <TAG: VALUE|CONDITION>
- *
- * CONDITION — список через '|', элементы:
- *   a:ID   — только если текущий баттлер — актёр с ID
- *   e:ID   — только если текущий баттлер — враг с ID
- *   s:ID   — только если на баттлере висит состояние с ID
- *
- * Примеры: |a:1   |e:3|s:5   |s:306
- *
- * Несколько тегов внутри одного состояния с ОДИНАКОВЫМ условием
- * объединяются в одну запись. С РАЗНЫМИ — независимые записи.
- *
- * ----------------------------------------------------------------------------
- * ДОСТУПНЫЕ STATE-ТЕГИ
- * ----------------------------------------------------------------------------
- *
- *   <Sideview Battler State: FILENAME|COND>
- *   <Sideview Battler State Frames: X|COND>
- *   <Sideview Battler State Speed: X|COND>
- *   <Sideview Battler State Size: W,H|COND>
- *   <Sideview Battler State Weapon: true/false|COND>
- *   <Sideview Battler State Motion: NAME, INDEX|COND>
- *
- *   <Sideview Battler State Motion>
- *     Name: NAME
- *     Index: INDEX
- *     Condition: a:ID|s:ID       (опционально)
- *     Loop
- *     Frames: X
- *     Speed: Y
- *   </Sideview Battler State Motion>
- *
- * ----------------------------------------------------------------------------
- * ПРИМЕР
- * ----------------------------------------------------------------------------
- *
- *   // Базовый скин берсерка (безусловный).
- *   <Sideview Battler State:berserk_enraged>
- *   <Sideview Battler State Size: 192, 216>
- *
- *   // "Светящийся" берсерк — только пока висит state 306.
- *   <Sideview Battler State:berserk_enraged_shine|s:306>
- *   <Sideview Battler State Size: 192, 216|s:306>
- *
- *   // Анимации берсерка — общие, безусловные.
- *   <Sideview Battler State Motion>
- *    Name: damage
- *    Index: 3
- *    Frames: 4
- *    Speed: 10
- *   </Sideview Battler State Motion>
- *   ...
- *
+ * 
+ * Полностью повторяет функционал v1.3.0 (условные суффиксы |a:ID|e:ID|s:ID),
+ * но НЕ СДВИГАЕТ спрайт персонажа при изменении размера кадра в состоянии.
+ * Размер кадра используется только для нарезки спрайта, а позиционирование
+ * всегда рассчитывается по базовому размеру из нотетегов актёра/врага.
+ * 
+ * Порядок загрузки:
+ * 1. YED_SideviewBattler (v1.2.1 или v1.3.0)
+ * 2. YEP_X_AnimatedSVEnemies (если используется)
+ * 3. Этот аддон
  * ============================================================================
  */
 
@@ -94,41 +25,27 @@ YED.SideviewBattler = YED.SideviewBattler || {};
 var Imported = Imported || {};
 
 (function() {
-    // ------------------------------------------------------------------
-    // 0. Проверка базового плагина
-    // ------------------------------------------------------------------
     if (!Imported.YED_SideviewBattler || !YED.SideviewBattler.Utils) {
-        console.error(
-            '[YED_SVB_StateCond] YED_SideviewBattler is required and must ' +
-            'be loaded above this addon.'
-        );
+        console.error('[YED_SVB_StateCond] YED_SideviewBattler is required and must be loaded above this addon.');
         return;
     }
 
+    var Regexp = YED.SideviewBattler.Regexp;
     var Utils = YED.SideviewBattler.Utils;
 
     // ==================================================================
-    // 1. РЕГЭКСПЫ С ПОДДЕРЖКОЙ |CONDITION
+    // 1. РЕГУЛЯРНЫЕ ВЫРАЖЕНИЯ С УСЛОВИЯМИ (из v1.3.0)
     // ==================================================================
-    var CondRegexp = {
-        STATE_FILENAME:     /<Sideview Battler State:[ ]*([^|>]*)(?:\|([^>]*))?>/i,
-        STATE_FRAMES:       /<Sideview Battler State Frames:[ ]*(\d+)(?:\|([^>]*))?>/i,
-        STATE_SPEED:        /<Sideview Battler State Speed:[ ]*(\d+)(?:\|([^>]*))?>/i,
-        STATE_SIZES:        /<Sideview Battler State Size:[ ]*(\d+),[ ]*(\d+)(?:\|([^>]*))?>/i,
-        STATE_WEAPON:       /<Sideview Battler State Weapon:[ ]*(true|false)(?:\|([^>]*))?>/i,
-        STATE_MOTION_QUICK: /<Sideview Battler State Motion:[ ]*([^,]+?),\s*(\d+)(?:\|([^>]*))?>/i,
-        STATE_MOTION_BEGIN: /<Sideview Battler State Motion>/i,
-        STATE_MOTION_END:   /<\/Sideview Battler State Motion>/i,
-        STATE_MOTION_NAME:  /Name:[ ]*(.*)/i,
-        STATE_MOTION_INDEX: /Index:[ ]*(\d+)/i,
-        STATE_MOTION_LOOP:  /Loop/i,
-        STATE_MOTION_FRAMES:/Frames:[ ]*(\d+)/i,
-        STATE_MOTION_SPEED: /Speed:[ ]*(\d+)/i,
-        STATE_MOTION_CONDITION: /Condition:[ ]*(.*)/i,
-    };
+    Regexp.STATE_FILENAME = /<Sideview Battler State:[ ]*([^|>]*)(?:\|([^>]*))?>/i;
+    Regexp.STATE_FRAMES = /<Sideview Battler State Frames:[ ]*(\d+)(?:\|([^>]*))?>/i;
+    Regexp.STATE_SPEED = /<Sideview Battler State Speed:[ ]*(\d+)(?:\|([^>]*))?>/i;
+    Regexp.STATE_SIZES = /<Sideview Battler State Size:[ ]*(\d+),[ ]*(\d+)(?:\|([^>]*))?>/i;
+    Regexp.STATE_WEAPON = /<Sideview Battler State Weapon:[ ]*(true|false)(?:\|([^>]*))?>/i;
+    Regexp.STATE_MOTION_QUICK = /<Sideview Battler State Motion:[ ]*([^,]+?),\s*(\d+)(?:\|([^>]*))?>/i;
+    Regexp.STATE_MOTION_CONDITION = /Condition:[ ]*(.*)/i;
 
     // ==================================================================
-    // 2. УТИЛИТЫ УСЛОВИЙ
+    // 2. УТИЛИТЫ УСЛОВИЙ (из v1.3.0)
     // ==================================================================
     Utils.parseStateCondition = function(str) {
         var cond = { targetType: null, targetId: null, stateId: null };
@@ -140,12 +57,12 @@ var Imported = Imported || {};
             var m;
             if ((m = part.match(/^a\s*:\s*(\d+)$/i))) {
                 cond.targetType = 'actor';
-                cond.targetId   = Number(m[1]);
+                cond.targetId = Number(m[1]);
             } else if ((m = part.match(/^e\s*:\s*(\d+)$/i))) {
                 cond.targetType = 'enemy';
-                cond.targetId   = Number(m[1]);
+                cond.targetId = Number(m[1]);
             } else if ((m = part.match(/^s\s*:\s*(\d+)$/i))) {
-                cond.stateId    = Number(m[1]);
+                cond.stateId = Number(m[1]);
             }
         }
         return cond;
@@ -167,32 +84,30 @@ var Imported = Imported || {};
         }
         var entry = {
             condition: cond,
-            filename:  null,
-            frames:    null,
-            speed:     null,
-            weapon:    null,
-            sizes:     null,
-            motions:   {}
+            filename: null,
+            frames: null,
+            speed: null,
+            weapon: null,
+            sizes: null,
+            motions: {}
         };
         overrides.push(entry);
         return entry;
     };
 
     // ==================================================================
-    // 3. ПОДМЕНА processNotetags
-    //    Актёры/враги — через базовые хелперы (без изменений).
-    //    Состояния  — через массив _sideviewBattlerOverrides.
+    // 3. ОБРАБОТКА НОТЕТЕГОВ (из v1.3.0)
     // ==================================================================
     Utils.processNotetags = function() {
         var groups = [$dataActors, $dataEnemies],
-            group, obj, notedata, line,
+            group, obj,
+            notedata, line,
             helpers = {};
 
         for (var j = 0; j < groups.length; j++) {
             group = groups[j];
             for (var i = 1; i < group.length; i++) {
                 obj = group[i];
-                if (!obj) continue;
                 notedata = obj.note.split(/[\r\n]+/);
 
                 Utils._processProperties.call(this, obj);
@@ -205,13 +120,13 @@ var Imported = Imported || {};
             }
         }
 
-        // Состояния — массив записей, каждая со своим условием.
+        // Process states
         if ($dataStates) {
             for (var i = 1; i < $dataStates.length; i++) {
                 var state = $dataStates[i];
                 if (!state) continue;
                 var notedata = state.note.split(/[\r\n]+/);
-                var helpers  = {};
+                var helpers = {};
 
                 state._sideviewBattlerOverrides = [];
 
@@ -223,70 +138,67 @@ var Imported = Imported || {};
         }
     };
 
-    // ==================================================================
-    // 4. ПОДМЕНА _processStateNotetag
-    // ==================================================================
     Utils._processStateNotetag = function(state, notetag, helpers) {
         var match, cond, entry, motion;
 
-        match = notetag.match(CondRegexp.STATE_FILENAME);
+        match = notetag.match(Regexp.STATE_FILENAME);
         if (match) {
-            cond  = Utils.parseStateCondition(match[2]);
+            cond = Utils.parseStateCondition(match[2]);
             entry = Utils.getOrCreateOverrideEntry(state, cond);
             entry.filename = String(match[1]).trim();
         }
 
-        match = notetag.match(CondRegexp.STATE_FRAMES);
+        match = notetag.match(Regexp.STATE_FRAMES);
         if (match) {
-            cond  = Utils.parseStateCondition(match[2]);
+            cond = Utils.parseStateCondition(match[2]);
             entry = Utils.getOrCreateOverrideEntry(state, cond);
             entry.frames = Number(match[1]);
         }
 
-        match = notetag.match(CondRegexp.STATE_SPEED);
+        match = notetag.match(Regexp.STATE_SPEED);
         if (match) {
-            cond  = Utils.parseStateCondition(match[2]);
+            cond = Utils.parseStateCondition(match[2]);
             entry = Utils.getOrCreateOverrideEntry(state, cond);
             entry.speed = Number(match[1]);
         }
 
-        match = notetag.match(CondRegexp.STATE_SIZES);
+        match = notetag.match(Regexp.STATE_SIZES);
         if (match) {
-            cond  = Utils.parseStateCondition(match[3]);
+            cond = Utils.parseStateCondition(match[3]);
             entry = Utils.getOrCreateOverrideEntry(state, cond);
             entry.sizes = [Number(match[1]), Number(match[2])];
         }
 
-        match = notetag.match(CondRegexp.STATE_WEAPON);
+        match = notetag.match(Regexp.STATE_WEAPON);
         if (match) {
-            cond  = Utils.parseStateCondition(match[2]);
+            cond = Utils.parseStateCondition(match[2]);
             entry = Utils.getOrCreateOverrideEntry(state, cond);
-            entry.weapon = (match[1].toLowerCase() === 'true');
+            entry.weapon = eval(match[1].toLowerCase());
         }
 
-        match = notetag.match(CondRegexp.STATE_MOTION_QUICK);
+        match = notetag.match(Regexp.STATE_MOTION_QUICK);
         if (match) {
-            cond  = Utils.parseStateCondition(match[3]);
+            cond = Utils.parseStateCondition(match[3]);
             entry = Utils.getOrCreateOverrideEntry(state, cond);
             motion = {};
-            motion.name  = match[1].trim().toLowerCase();
+            motion.name = match[1].trim().toLowerCase();
             motion.index = Number(match[2]);
             entry.motions[motion.name] = motion;
         }
 
-        match = notetag.match(CondRegexp.STATE_MOTION_BEGIN);
+        match = notetag.match(Regexp.STATE_MOTION_BEGIN);
         if (match) {
-            helpers.motionFlag      = true;
-            helpers.motion          = {};
+            helpers.motionFlag = true;
+            helpers.motion = {};
             helpers.motionCondition = null;
             return;
         }
 
-        match = notetag.match(CondRegexp.STATE_MOTION_END);
+        match = notetag.match(Regexp.STATE_MOTION_END);
         if (match) {
             motion = helpers.motion;
             var cond = helpers.motionCondition || Utils.parseStateCondition(null);
-            helpers.motionFlag      = false;
+            helpers.motionFlag = false;
             helpers.motionCondition = null;
             entry = Utils.getOrCreateOverrideEntry(state, cond);
             if (motion.name) entry.motions[motion.name] = motion;
@@ -296,28 +208,40 @@ var Imported = Imported || {};
         if (helpers.motionFlag) {
             motion = helpers.motion;
 
-            match = notetag.match(CondRegexp.STATE_MOTION_NAME);
-            if (match) motion.name = match[1].toLowerCase();
+            match = notetag.match(Regexp.STATE_MOTION_NAME);
+            if (match) {
+                motion.name = match[1].toLowerCase();
+            }
 
-            match = notetag.match(CondRegexp.STATE_MOTION_INDEX);
-            if (match) motion.index = Number(match[1]);
+            match = notetag.match(Regexp.STATE_MOTION_INDEX);
+            if (match) {
+                motion.index = Number(match[1]);
+            }
 
-            match = notetag.match(CondRegexp.STATE_MOTION_CONDITION);
-            if (match) helpers.motionCondition = Utils.parseStateCondition(match[1]);
+            match = notetag.match(Regexp.STATE_MOTION_CONDITION);
+            if (match) {
+                helpers.motionCondition = Utils.parseStateCondition(match[1]);
+            }
 
-            match = notetag.match(CondRegexp.STATE_MOTION_LOOP);
-            if (match) motion.loop = true;
+            match = notetag.match(Regexp.STATE_MOTION_LOOP);
+            if (match) {
+                motion.loop = true;
+            }
 
-            match = notetag.match(CondRegexp.STATE_MOTION_FRAMES);
-            if (match) motion.frames = Number(match[1]);
+            match = notetag.match(Regexp.STATE_MOTION_FRAMES);
+            if (match) {
+                motion.frames = Number(match[1]);
+            }
 
-            match = notetag.match(CondRegexp.STATE_MOTION_SPEED);
-            if (match) motion.speed = Number(match[1]);
+            match = notetag.match(Regexp.STATE_MOTION_SPEED);
+            if (match) {
+                motion.speed = Number(match[1]);
+            }
         }
     };
 
     // ==================================================================
-    // 5. ПРОВЕРКА УСЛОВИЙ И СБОРКА ОВЕРРАЙДА
+    // 4. ЛОГИКА СОСТОЯНИЙ (из v1.3.0)
     // ==================================================================
     Game_Battler.prototype.matchesStateOverrideCondition = function(cond) {
         if (!cond) return true;
@@ -339,8 +263,6 @@ var Imported = Imported || {};
         }
 
         if (cond.stateId !== null) {
-            // isStateAffected учитывает и обычные состояния, и пассивные
-            // (Yanfly APS), и их собственные <Custom Passive Condition>.
             if (!this.isStateAffected(cond.stateId)) return false;
         }
 
@@ -348,11 +270,9 @@ var Imported = Imported || {};
     };
 
     Game_Battler.prototype.getActiveStateOverride = function() {
-        if (!this._states) return null;
-
-        var states = this.states();  // включает и пассивные состояния
+        var states = this.states();
         var merged = null;
-        var seen   = {};             // дедуп по ID состояния
+        var seen = {};
 
         for (var i = 0; i < states.length; i++) {
             var state = states[i];
@@ -368,19 +288,19 @@ var Imported = Imported || {};
                 if (!this.matchesStateOverrideCondition(o.condition)) continue;
 
                 var hasAny = o.filename !== null || o.frames !== null ||
-                             o.speed    !== null || o.weapon !== null ||
-                             o.sizes    !== null ||
+                             o.speed !== null || o.weapon !== null ||
+                             o.sizes !== null ||
                              (o.motions && Object.keys(o.motions).length > 0);
                 if (!hasAny) continue;
 
                 if (!merged) {
                     merged = {
                         filename: null,
-                        frames:   null,
-                        speed:    null,
-                        weapon:   null,
-                        sizes:    null,
-                        motions:  {}
+                        frames: null,
+                        speed: null,
+                        weapon: null,
+                        sizes: null,
+                        motions: {}
                     };
                 }
 
@@ -403,25 +323,74 @@ var Imported = Imported || {};
     };
 
     // ==================================================================
-    // 6. YANFLY ANIMATEDSVENEMIES: переключение битмапа врага
-    //    (Yanfly читает имя из метаданных, а не из getSideviewFilename)
+    // 5. РАЗДЕЛЕНИЕ РАЗМЕРА ДЛЯ НАРЕЗКИ И ПОЗИЦИОНИРОВАНИЯ
+    // ==================================================================
+
+    // 5.1. getSideviewSizes теперь ВСЕГДА возвращает базовый размер
+    //      (используется движком для позиционирования спрайта).
+    var _Game_Battler_getSideviewSizes = Game_Battler.prototype.getSideviewSizes;
+    Game_Battler.prototype.getSideviewSizes = function() {
+        if (!this.isSideviewBattler()) return null;
+        return this.getSideviewBattler().sizes;
+    };
+
+    // 5.2. Новый метод для получения размера кадра с учётом состояния.
+    //      Используется только для нарезки спрайта (setFrame).
+    Game_Battler.prototype.getSideviewFrameSizes = function() {
+        var override = this.getActiveStateOverride();
+        if (override && override.sizes !== null) return override.sizes;
+
+        if (!this.isSideviewBattler()) return null;
+        return this.getSideviewBattler().sizes;
+    };
+
+    // 5.3. frameSizes в спрайтах теперь используют getSideviewFrameSizes.
+    var _Sprite_Actor_frameSizes = Sprite_Actor.prototype.frameSizes;
+    Sprite_Actor.prototype.frameSizes = function() {
+        return this._actor.getSideviewFrameSizes();
+    };
+
+    var _Sprite_Enemy_frameSizes = Sprite_Enemy.prototype.frameSizes;
+    Sprite_Enemy.prototype.frameSizes = function() {
+        return this._enemy.getSideviewFrameSizes();
+    };
+	
+    // ==================================================================
+    // 7. Интеграция с Yanfly AnimatedSVEnemies
     // ==================================================================
     if (Imported.YEP_X_AnimatedSVEnemies) {
-        var _Sprite_Enemy_updateBitmap = Sprite_Enemy.prototype.updateBitmap;
+        // 7.1. Заставляем Yanfly считать врага SV-врагом, если YED нашел спрайт
+        var _Game_Enemy_isSVEnemy = Game_Enemy.prototype.isSVEnemy;
+        Game_Enemy.prototype.isSVEnemy = function() {
+            if (this.isSideviewBattler()) return true;
+            return _Game_Enemy_isSVEnemy.call(this);
+        };
 
+        // 7.2. Подменяем имя файла, которое Yanfly берет из метаданных
+        if (Game_Enemy.prototype.svBattlerName) {
+            var _Game_Enemy_svBattlerName = Game_Enemy.prototype.svBattlerName;
+            Game_Enemy.prototype.svBattlerName = function() {
+                if (this.isSideviewBattler()) return this.getSideviewFilename();
+                return _Game_Enemy_svBattlerName.call(this);
+            };
+        }
+
+        // 7.3. Страховка: если Yanfly по какой-то причине пропустил смену,
+        // принудительно синхронизируем битмап (без сдвига позиционирования)
+        var _Sprite_Enemy_updateBitmap = Sprite_Enemy.prototype.updateBitmap;
         Sprite_Enemy.prototype.updateBitmap = function() {
-            if (this._enemy && this._enemy.isSideviewBattler()) {
+            _Sprite_Enemy_updateBitmap.call(this);
+
+            if (this._enemy && this._enemy.isSVEnemy() && this._mainSprite) {
                 var targetName = this._enemy.getSideviewFilename();
-                if (targetName && this._battlerName !== targetName) {
-                    this._battlerName = targetName;
-                    if (this._mainSprite) {
-                        this._mainSprite.bitmap = ImageManager.loadSvActor(targetName);
+                if (targetName) {
+                    var targetBitmap = ImageManager.loadSvActor(targetName);
+                    if (this._mainSprite.bitmap !== targetBitmap) {
+                        this._mainSprite.bitmap = targetBitmap;
                     }
                 }
-                return; // обходим Yanfly-ветку
             }
-            _Sprite_Enemy_updateBitmap.call(this);
         };
     }
-})();
+
 })();

@@ -146,5 +146,5 @@ var $plugins =
 {"name":"A_fix_STATES+Gloss","status":true,"description":"v1.5 - Клик по иконке состояния → глоссарий (с условной логикой по актёру)","parameters":{"ClickOffsetX":"-100","ClickOffsetY":"-100","EnableForEnemies":"true"}},
 {"name":"A_skill_shift","status":true,"description":"v1.0 - Shift по навыку в бою открывает глоссарий на предмете и SGDescriptionX","parameters":{"requireShiftHold":"false"}},
 {"name":"FixForcedActionStateTicks","status":true,"description":"","parameters":{}},
-{"name":"YED_SideviewBattler_Conditions","status":true,"description":"(v1.0.0) Addon for YED_SideviewBattler - conditional state overrides.","parameters":{}}
+{"name":"YED_SideviewBattler_Conditions","status":true,"description":"(v1.0.1) Addon for YED_SideviewBattler - State Condition Overrides (no sprite shift).","parameters":{}}
 ];
