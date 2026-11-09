@@ -772,3 +772,73 @@ VictorEngine.LoopAnimation = VictorEngine.LoopAnimation || {};
   };
 
 })();
+
+// =============================================================================
+// Add-on: Actor Loop Animation Offset
+// Notetag on Actor (Actors tab):
+//   <loop animation offset: x, y>
+// Examples:
+//   <loop animation offset: 0, -20>   // сдвиг на 20 px вверх
+//   <loop animation offset: -10, 5>   // сдвиг влево-вниз
+// =============================================================================
+(function() {
+
+  // Получение смещения из нотэтега актора (с кэшированием)
+  Game_Actor.prototype.loopAnimationOffset = function() {
+    if (this._loopAnimationOffset === undefined) {
+      var note = (this.actor() && this.actor().note) || '';
+      var match = note.match(/<loop animation offset:[ ]*(-?\d+)[ ]*,[ ]*(-?\d+)[ ]*>/i);
+      if (match) {
+        this._loopAnimationOffset = {
+          x: Number(match[1]) || 0,
+          y: Number(match[2]) || 0
+        };
+      } else {
+        this._loopAnimationOffset = null;
+      }
+    }
+    return this._loopAnimationOffset;
+  };
+
+  // По умолчанию смещения нет
+  Sprite_Base.prototype.loopAnimationOffset = function() {
+    return null;
+  };
+
+  // Спрайт баттлера (бой) — берём смещение, если баттлер актор
+  Sprite_Battler.prototype.loopAnimationOffset = function() {
+    if (this._battler && this._battler.isActor && this._battler.isActor()) {
+      return this._battler.loopAnimationOffset();
+    }
+    return null;
+  };
+
+  // Спрайт персонажа (карта) — берём смещение у связанного актора
+  Sprite_Character.prototype.loopAnimationOffset = function() {
+    var actor = this.actor();
+    return actor ? actor.loopAnimationOffset() : null;
+  };
+
+  // Прикрепляем смещение к вновь созданным спрайтам loop-анимаций
+  var _refreshLoopAnimation = Sprite_Base.prototype.refreshLoopAnimation;
+  Sprite_Base.prototype.refreshLoopAnimation = function(data, type, index) {
+    _refreshLoopAnimation.call(this, data, type, index);
+    var sprites = this._loopAnimSprites && this._loopAnimSprites[type];
+    if (sprites && sprites.length > 0) {
+      var offset = this.loopAnimationOffset();
+      if (offset) sprites[sprites.length - 1]._loopOffset = offset;
+    }
+  };
+
+  // Применяем смещение при позиционировании (затрагивает только спрайты
+  // с установленным _loopOffset, т.е. loop-анимации акторов)
+  var _updatePosition = Sprite_Animation.prototype.updatePosition;
+  Sprite_Animation.prototype.updatePosition = function() {
+    _updatePosition.call(this);
+    if (this._loopOffset) {
+      this.x += this._loopOffset.x;
+      this.y += this._loopOffset.y;
+    }
+  };
+
+})();

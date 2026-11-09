@@ -1,72 +1,215 @@
+
 //=============================================================================
 // FixForcedActionStateTicks.js
-// Blocks state turn reduction for non-subject battlers during and shortly
-// after forced actions triggered by queueForceAction.
-// Place BELOW: YEP_BattleEngineCore, YEP_BuffsStatesCore, YEP_X_BattleSysCTB,
-// CustomAfterActionEffect
+// RPG Maker MV
+//
+// Directly decreases state and buff turn counters after forced actions.
+// Does not call onTurnEnd(), so no extra regeneration is triggered.
+//
+// Place BELOW:
+//   YEP_BattleEngineCore
+//   YEP_BuffsStatesCore
+//   YEP_X_BattleSysCTB
+//   CustomAfterActionEffect
 //=============================================================================
 
 (function() {
+    'use strict';
 
-var Imported = Imported || {};
-Imported.FixForcedActionStateTicks = true;
+    var Imported = Imported || {};
+    Imported.FixForcedActionStateTicks = true;
 
-// --- 1) Hook queueForceAction: mark subject BEFORE forced action runs ---
-if (typeof BattleManager.queueForceAction === 'function') {
-    var _BM_queueForceAction = BattleManager.queueForceAction;
-    BattleManager.queueForceAction = function(subject, skillId, targetIndex) {
-        BattleManager._faSubject = subject;
-        BattleManager._faQueued = true;
-        return _BM_queueForceAction.apply(this, arguments);
+    //-------------------------------------------------------------------------
+    // Initialization
+    //-------------------------------------------------------------------------
+
+    BattleManager._faPendingSubjects = [];
+    BattleManager._faCurrentSubject = null;
+
+    function isBattler(obj) {
+        return obj &&
+            obj._states &&
+            obj._stateTurns &&
+            obj._buffTurns;
+    }
+
+    function battlerName(battler) {
+        if (!battler) return 'NULL';
+
+        if (battler.isActor && battler.isActor()) {
+            return 'Actor: ' + battler.name() +
+                ' (ID ' + battler.actorId() + ')';
+        }
+
+        if (battler.isEnemy && battler.isEnemy()) {
+            return 'Enemy: ' + battler.name() +
+                ' (Index ' + battler.index() + ')';
+        }
+
+        return 'Unknown battler';
+    }
+
+    //-------------------------------------------------------------------------
+    // 1. Remember queued forced-action subjects.
+    //-------------------------------------------------------------------------
+
+    if (typeof BattleManager.queueForceAction === 'function') {
+        var _FA_queueForceAction = BattleManager.queueForceAction;
+
+        BattleManager.queueForceAction = function(subject, skillId, targetIndex) {
+            if (isBattler(subject)) {
+                this._faPendingSubjects.push(subject);
+
+                console.log(
+                    '[FA TICKS] Queued:',
+                    battlerName(subject),
+                    'Skill:',
+                    skillId
+                );
+            }
+
+            return _FA_queueForceAction.apply(this, arguments);
+        };
+    }
+
+    //-------------------------------------------------------------------------
+    // 2. Detect the subject when the forced action starts.
+    //-------------------------------------------------------------------------
+
+    var _FA_processForcedAction = BattleManager.processForcedAction;
+
+    BattleManager.processForcedAction = function() {
+        var forcedSubject = null;
+
+        if (isBattler(this._actionForcedBattler)) {
+            forcedSubject = this._actionForcedBattler;
+        }
+
+        if (!forcedSubject && this._faPendingSubjects.length > 0) {
+            forcedSubject = this._faPendingSubjects.shift();
+        } else if (forcedSubject) {
+            var index = this._faPendingSubjects.indexOf(forcedSubject);
+
+            if (index >= 0) {
+                this._faPendingSubjects.splice(index, 1);
+            }
+        }
+
+        this._faCurrentSubject = forcedSubject;
+
+        console.log(
+            '[FA TICKS] Processing:',
+            battlerName(forcedSubject)
+        );
+
+        _FA_processForcedAction.call(this);
+
+        // Fallback for battle systems that assign the subject here.
+        if (!this._faCurrentSubject && isBattler(this._subject)) {
+            this._faCurrentSubject = this._subject;
+        }
     };
-}
 
-// --- 2) Hook processForcedAction: mark active + clear queued ---
-var _BM_processForcedAction = BattleManager.processForcedAction;
-BattleManager.processForcedAction = function() {
-    BattleManager._faQueued = false;
-    BattleManager._faActive = true;
-    _BM_processForcedAction.call(this);
-};
+    //-------------------------------------------------------------------------
+    // 3. Directly decrease durations.
+    //-------------------------------------------------------------------------
 
-// --- 3) Hook endAction: forced action ended → start grace window ---
-var _BM_endAction = BattleManager.endAction;
-BattleManager.endAction = function() {
-    var wasForced = BattleManager._faActive;
-    _BM_endAction.call(this);
-    if (wasForced) {
-        BattleManager._faActive = false;
-        BattleManager._faGrace = 120;   // frames of protection after forced action
+    function tickForcedActionDurations(battler) {
+        if (!isBattler(battler)) return;
+
+        var statesBefore = [];
+        var statesAfter = [];
+
+        // States: directly decrease every positive turn counter.
+        battler._states.slice().forEach(function(stateId) {
+            var turns = battler._stateTurns[stateId];
+
+            statesBefore.push({
+                id: stateId,
+                turns: turns
+            });
+
+            if (typeof turns === 'number' && turns > 0) {
+                battler._stateTurns[stateId] = turns - 1;
+            }
+        });
+
+        // Remove states whose turn duration has expired.
+        // Timing 2 corresponds to turn-end removal in RPG Maker MV.
+        if (typeof battler.removeStatesAuto === 'function') {
+            battler.removeStatesAuto(2);
+        }
+
+        // Buffs: directly decrease every positive turn counter.
+        for (var i = 0; i < battler._buffTurns.length; i++) {
+            if (battler._buffTurns[i] > 0) {
+                battler._buffTurns[i]--;
+            }
+        }
+
+        // Remove expired buffs.
+        if (typeof battler.removeBuffsAuto === 'function') {
+            battler.removeBuffsAuto();
+        }
+
+        // Collect the resulting state counters.
+        battler._states.forEach(function(stateId) {
+            statesAfter.push({
+                id: stateId,
+                turns: battler._stateTurns[stateId]
+            });
+        });
+
+        console.log(
+            '[FA TICKS] Finished:',
+            battlerName(battler),
+            'States BEFORE:',
+            JSON.stringify(statesBefore),
+            'States AFTER:',
+            JSON.stringify(statesAfter),
+            'Buff turns:',
+            JSON.stringify(battler._buffTurns)
+        );
     }
-};
 
-// --- 4) Decrement grace counter every frame ---
-var _BM_update = BattleManager.update;
-BattleManager.update = function() {
-    if (BattleManager._faGrace > 0) BattleManager._faGrace--;
-    _BM_update.call(this);
-};
+    //-------------------------------------------------------------------------
+    // 4. Tick only the subject of the action that actually ended.
+    //-------------------------------------------------------------------------
 
-// --- 5) Block updateStateTurns for non-subjects during forced + grace ---
-var _GBB_updateStateTurns = Game_BattlerBase.prototype.updateStateTurns;
-Game_BattlerBase.prototype.updateStateTurns = function() {
-    var active = BattleManager._faActive || BattleManager._faQueued;
-    var grace = BattleManager._faGrace > 0;
-    var subject = BattleManager._faSubject;
-    if ((active || grace) && subject && this !== subject) {
-        return;
-    }
-    _GBB_updateStateTurns.call(this);
-};
+    var _FA_endAction = BattleManager.endAction;
 
-// --- 6) Reset flags on battle setup ---
-var _BM_setup = BattleManager.setup;
-BattleManager.setup = function(troopId, canEscape, canLose) {
-    this._faActive = false;
-    this._faQueued = false;
-    this._faGrace = 0;
-    this._faSubject = null;
-    _BM_setup.call(this, troopId, canEscape, canLose);
-};
+    BattleManager.endAction = function() {
+        // Capture before original endAction:
+        // CustomAfterActionEffect can queue new actions inside it.
+        var endingSubject = this._subject;
+        var forcedSubject = this._faCurrentSubject;
+
+        var isForcedAction =
+            isBattler(forcedSubject) &&
+            endingSubject === forcedSubject;
+
+        _FA_endAction.call(this);
+
+        if (isForcedAction) {
+            tickForcedActionDurations(forcedSubject);
+
+            if (this._faCurrentSubject === forcedSubject) {
+                this._faCurrentSubject = null;
+            }
+        }
+    };
+
+    //-------------------------------------------------------------------------
+    // 5. Reset on battle setup.
+    //-------------------------------------------------------------------------
+
+    var _FA_setup = BattleManager.setup;
+
+    BattleManager.setup = function(troopId, canEscape, canLose) {
+        this._faPendingSubjects = [];
+        this._faCurrentSubject = null;
+
+        _FA_setup.call(this, troopId, canEscape, canLose);
+    };
 
 })();
