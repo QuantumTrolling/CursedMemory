@@ -1073,6 +1073,8 @@ DataManager.isDatabaseLoaded = function() {
     this.processRowNotetags3($dataArmors);
     this.processRowNotetags3($dataStates);
     this.processRowNotetags4($dataStates);
+    this.processRowOffsetNotetags($dataActors);      // уже есть
+    this.processRowAnimOffsetNotetags($dataActors);  // <-- ДОБАВИТЬ
     Yanfly._loaded_YEP_RowFormation = true;
   }
   return true;
@@ -1182,6 +1184,52 @@ DataManager.processRowNotetags4 = function(group) {
         var evalMode = 'none';
       } else if (evalMode === 'customRowCondition') {
         obj.rowConditionEval = obj.rowConditionEval + line + '\n';
+      }
+    }
+  }
+};
+
+//=============================================================================
+// Новый метод: парсинг нотэгов <OffsetX> и <OffsetY> для актёров
+//=============================================================================
+DataManager.processRowOffsetNotetags = function(group) {
+  for (var n = 1; n < group.length; n++) {
+    var obj = group[n];
+    var notedata = obj.note.split(/[\r\n]+/);
+
+    obj.rowOffsetX = 0;
+    obj.rowOffsetY = 0;
+
+    for (var i = 0; i < notedata.length; i++) {
+      var line = notedata[i];
+      // Поддерживает "OffsetX", "Offset X", "offsetx", "OFFSET Y" и т.п.
+      if (line.match(/<(?:OFFSET\s*X):\s*([+-]?\d+)>/i)) {
+        obj.rowOffsetX = parseInt(RegExp.$1, 10);
+      } else if (line.match(/<(?:OFFSET\s*Y):\s*([+-]?\d+)>/i)) {
+        obj.rowOffsetY = parseInt(RegExp.$1, 10);
+      }
+    }
+  }
+};
+
+//=============================================================================
+// НОВЫЙ МЕТОД: парсинг нотэгов <AnimOffsetX>/<AnimOffsetY> для актёров
+//=============================================================================
+DataManager.processRowAnimOffsetNotetags = function(group) {
+  for (var n = 1; n < group.length; n++) {
+    var obj = group[n];
+    var notedata = obj.note.split(/[\r\n]+/);
+
+    obj.animOffsetX = 0;
+    obj.animOffsetY = 0;
+
+    for (var i = 0; i < notedata.length; i++) {
+      var line = notedata[i];
+      // Работает и для "AnimOffsetX", и для "ANIM OFFSET X" и т.п.
+      if (line.match(/<(?:ANIM\s*OFFSET\s*X):\s*([+-]?\d+)>/i)) {
+        obj.animOffsetX = parseInt(RegExp.$1, 10);
+      } else if (line.match(/<(?:ANIM\s*OFFSET\s*Y):\s*([+-]?\d+)>/i)) {
+        obj.animOffsetY = parseInt(RegExp.$1, 10);
       }
     }
   }
@@ -1893,6 +1941,20 @@ Sprite_Actor.prototype.alterActorHome = function(index) {
       var homeY = 0;
       Yanfly.Util.displayError(e, code, 'ROW FORMATION ACTOR HOME Y ERROR');
     }
+
+    // --- ПРИМЕНЕНИЕ НОТЭГОВ <OffsetX>/<OffsetY> ---
+    // Используем this._actor (Game_Actor) и его .actor() ($dataActors[id]).
+    // this._battler — на случай, если по какой-то причине _actor не задан.
+    var gameBattler = this._actor || this._battler;
+    if (gameBattler && gameBattler.isActor && gameBattler.isActor()) {
+      var actorData = gameBattler.actor();
+      if (actorData) {
+        homeX += Number(actorData.rowOffsetX) || 0;
+        homeY += Number(actorData.rowOffsetY) || 0;
+      }
+    }
+    // ----------------------------------------------
+
     this._homeX = homeX;
     this._homeY = homeY;
 };
@@ -2691,6 +2753,58 @@ Sprite_Actor.prototype.setActorHome = function(index) {
     // Если в боковом виде и есть актёр – ставим зеркало согласно вашей расстановке
     if (this._actor && this._actor.isActor() && $gameSystem.isSideView()) {
         this._actor.setMirror(true); // true = смотрит вправо (находится слева)
+    }
+};
+
+
+//=============================================================================
+// ФИКС: позиционирование анимаций у актёров с <OffsetX>/<OffsetY>
+//=============================================================================
+
+//=============================================================================
+// ФИКС анимаций: учитываем <OffsetX>/<OffsetY> спрайта и <AnimOffsetX>/<AnimOffsetY>
+//=============================================================================
+
+// Помечаем создаваемые спрайты анимации доп. смещением, считая его из нотэгов актёра.
+var _Sprite_Battler_startAnimation = Sprite_Battler.prototype.startAnimation;
+Sprite_Battler.prototype.startAnimation = function(animation, mirror, delay) {
+    var px = this.x;
+    var py = this.y;
+
+    var offX = 0, offY = 0;
+    var gameBattler = this._actor || this._battler || this._enemy;
+    if (gameBattler && gameBattler.isActor && gameBattler.isActor()) {
+        var actorData = gameBattler.actor();
+        if (actorData) {
+            offX = Number(actorData.animOffsetX) || 0;
+            offY = Number(actorData.animOffsetY) || 0;
+        }
+    }
+
+    _Sprite_Battler_startAnimation.call(this, animation, mirror, delay);
+
+    var sprites = this._animationSprites;
+    if (sprites && sprites.length > 0) {
+        for (var i = 0; i < sprites.length; i++) {
+            var animSprite = sprites[i];
+            animSprite._animExtraOffsetX = offX;
+            animSprite._animExtraOffsetY = offY;
+            animSprite.x = px + offX;
+            animSprite.y = py + offY;
+        }
+    }
+};
+
+// Смещение применяется после штатного позиционирования кадра,
+// поэтому не ломает параметр "position" (мультиударные анимации).
+var _Sprite_Animation_updatePosition = Sprite_Animation.prototype.updatePosition;
+Sprite_Animation.prototype.updatePosition = function() {
+    _Sprite_Animation_updatePosition.call(this);
+    var ex = this._animExtraOffsetX || 0;
+    var ey = this._animExtraOffsetY || 0;
+    if (ex !== 0 || ey !== 0) {
+        this.x += ex;
+        this.y += ey;
     }
 };
 

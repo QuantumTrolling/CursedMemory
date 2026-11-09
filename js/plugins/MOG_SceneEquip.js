@@ -819,25 +819,79 @@ Window_EquipItem.prototype.maxCols = function() {
 
 //=============================================================================
 // ** Slot Switching via Click (Переключение слотов без выхода из окна предметов)
-//   + подсветка слота по наведению мыши
+//   + мигающая подсветка слота по наведению мыши (без мгновенного перехода)
 //=============================================================================
 
+// --- Инициализация: создаём спрайт подсветки наведения ---
+var _mog_Window_EquipSlot_initialize = Window_EquipSlot.prototype.initialize;
+Window_EquipSlot.prototype.initialize = function() {
+    _mog_Window_EquipSlot_initialize.apply(this, arguments);
+    this._hoverIndex = -1;
+    this._hoverHighlightSprite = new Sprite();
+    this._hoverHighlightSprite.bitmap = new Bitmap(1, 1);
+    this._hoverHighlightSprite.bitmap.fillAll('white');
+    this._hoverHighlightSprite.opacity = 0;
+    this._hoverHighlightSprite.visible = false;
+    this.addChild(this._hoverHighlightSprite);
+};
+
+// --- Обновление спрайта подсветки каждый кадр (позиция + мигание) ---
+var _mog_Window_EquipSlot_update = Window_EquipSlot.prototype.update;
+Window_EquipSlot.prototype.update = function() {
+    _mog_Window_EquipSlot_update.call(this);
+    this.updateHoverHighlightSprite();
+};
+
+Window_EquipSlot.prototype.updateHoverHighlightSprite = function() {
+    var s = this._hoverHighlightSprite;
+    if (!s) return;
+
+    var scene = SceneManager._scene;
+    if (!(scene instanceof Scene_Equip) ||
+        !scene._itemWindow || !scene._itemWindow.active) {
+        s.visible = false;
+        this._hoverIndex = -1;
+        return;
+    }
+
+    var hoverIdx  = this._hoverIndex;
+    var committed = scene._itemWindow._slotId;
+
+    if (typeof hoverIdx !== 'number' || hoverIdx < 0 ||
+        hoverIdx === committed || !this.visible) {
+        s.visible = false;
+        return;
+    }
+
+    var rect = this.itemRect(hoverIdx);
+    if (!rect || rect.width <= 0 || rect.height <= 0) {
+        s.visible = false;
+        return;
+    }
+
+    var pad = this.padding;
+    s.x = rect.x + pad - this.origin.x;
+    s.y = rect.y + pad - this.origin.y;
+    s.scale.x = rect.width;
+    s.scale.y = rect.height;
+    s.visible = true;
+
+    // Плавное мигание (синусоида), период ~0.5 сек
+    s.opacity = 40 + 40 * Math.sin(Graphics.frameCount * 0.1);
+};
+
+// --- Обработка касаний/мыши ---
 var _mog_Window_EquipSlot_processTouch = Window_EquipSlot.prototype.processTouch;
 Window_EquipSlot.prototype.processTouch = function() {
     var scene = SceneManager._scene;
 
-    // Сцена экипировки открыта, окно слотов открыто, но неактивно,
-    // а окно предметов активно (идёт выбор экипировки)
     if (this.isOpen() && !this.isOpenAndActive() &&
         scene instanceof Scene_Equip &&
         scene._itemWindow && scene._itemWindow.active) {
 
-        // 1) Подсветка (курсор) по наведению мыши
         if (TouchInput.isMoved() || TouchInput.isTriggered()) {
             this.updateHoverHighlight(scene);
         }
-
-        // 2) Клик — переключение слота
         if (TouchInput.isTriggered()) {
             this.processSlotClick(scene);
         }
@@ -846,14 +900,12 @@ Window_EquipSlot.prototype.processTouch = function() {
     _mog_Window_EquipSlot_processTouch.call(this);
 };
 
-// Перемещает курсор окна слотов на слот под мышью.
-// Если мышь вне окна слотов — возвращает курсор на «фактически выбранный»
-// слот (тот, чьи предметы отображаются в окне предметов).
+// Обновляет индекс слота под курсором БЕЗ перемещения курсора окна.
 Window_EquipSlot.prototype.updateHoverHighlight = function(scene) {
     var committed = (typeof scene._itemWindow._slotId === 'number' &&
                      scene._itemWindow._slotId >= 0)
                     ? scene._itemWindow._slotId
-                    : this.index();
+                    : -1;
 
     var x = this.canvasToLocalX(TouchInput.x);
     var y = this.canvasToLocalY(TouchInput.y);
@@ -867,16 +919,12 @@ Window_EquipSlot.prototype.updateHoverHighlight = function(scene) {
         }
     }
 
-    if (hoverIndex < 0) hoverIndex = committed;
-
-    if (hoverIndex >= 0 && hoverIndex !== this.index()) {
-        this.select(hoverIndex);
-    }
+    // Подсветка — только если это ДРУГОЙ слот, отличный от текущего
+    this._hoverIndex = (hoverIndex >= 0 && hoverIndex !== committed)
+                       ? hoverIndex : -1;
 };
 
-// Переключение слота по клику.
-// Сравнение идёт с _slotId (фактически выбранным слотом), а не с _index,
-// потому что _index может уже быть перемещён наведением.
+// Переключение слота только по клику.
 Window_EquipSlot.prototype.processSlotClick = function(scene) {
     var x = this.canvasToLocalX(TouchInput.x);
     var y = this.canvasToLocalY(TouchInput.y);
@@ -890,25 +938,18 @@ Window_EquipSlot.prototype.processSlotClick = function(scene) {
 
     var committed = scene._itemWindow._slotId;
     if (index !== committed) {
-        // Переключаемся на новый слот
-        this.select(index);
+        this.select(index);              // теперь курсор двигается именно здесь
         SoundManager.playCursor();
-
-        // ВАЖНО: стандартный setSlotId обновляет _slotId и вызывает refresh().
-        // Без этого окно предметов продолжало бы показывать предметы старого слота.
         scene._itemWindow.setSlotId(index);
-        scene._itemWindow.select(0);       // сброс курсора (через updateHelp
-                                           // пересчитается и _tempActor статуса)
+        scene._itemWindow.select(0);
         scene._itemWindow.activate();
         scene._statusWindow.refresh();
     }
 
-    // Блокируем передачу клика в окно предметов,
-    // чтобы оно не сбросило выделение от клика «мимо»
     scene._skipItemTouch = true;
 };
 
-// Игнорирует клик в окне предметов, если этот клик уже был обработан окном слотов
+// Игнорируем клик в окне предметов, если он уже обработан окном слотов
 var _mog_Window_EquipItem_processTouch = Window_EquipItem.prototype.processTouch;
 Window_EquipItem.prototype.processTouch = function() {
     var scene = SceneManager._scene;
