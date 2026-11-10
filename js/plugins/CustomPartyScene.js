@@ -232,6 +232,13 @@ var CustomPartyScene_Translations = {
         "Party": "Отряд"
     }
 };
+// Возвращает параметр из MOG_SceneMenu, если он подключён, иначе fallback
+function getMOGStatusParam(name, fallback) {
+    if (typeof Moghunter !== 'undefined' && Moghunter['scMenu_' + name] != null) {
+        return Moghunter['scMenu_' + name];
+    }
+    return fallback;
+}
 
 function CustomPartyScene_translateText(name) {
     if (!name) return name;
@@ -270,208 +277,179 @@ function loadStatusBitmaps() {
     this._iconSet = ImageManager.loadSystem('IconSet');
 }
 
-// ----------- Окно статуса персонажа -----------
-function MCharStatusParty(actor, scene) {
-    this.initialize(actor, scene);
+// ----------- Окно статуса персонажа (полная копия MOG_SceneMenu.MCharStatus) -----------
+function MCharStatusParty(actor, scene, index, maxMembers) {
+    this.initialize(actor, scene, index, maxMembers);
 }
 MCharStatusParty.prototype = Object.create(Sprite.prototype);
 MCharStatusParty.prototype.constructor = MCharStatusParty;
-MCharStatusParty.prototype.initialize = function(actor, scene) {
+
+MCharStatusParty.prototype.initialize = function(actor, scene, index, maxMembers) {
     Sprite.prototype.initialize.call(this);
     this._actor = actor;
     this._scene = scene;
-    this._targetX = null;
-    this._slideWait = 0;
-    this.opacity = 255;
-    this.createSprites();
-    this.refresh();
+    this._index = index || 0;
+    this._maxMembers = maxMembers || $gameParty.battleMembers().length;
+    this._slideWait = 5 + 5 * this._index;
+    this.x = 50;          // как в MOG: сползает влево до 0
+    this.opacity = 0;
 };
+
+MCharStatusParty.prototype.posX = function() {
+    var space = Math.floor((Graphics.boxWidth - 32) / this._maxMembers);
+    return 16 + (space / 2) + (space * this._index);
+};
+
 MCharStatusParty.prototype.createSprites = function() {
-    this._layout = new Sprite(this._scene._layoutStatusBmp);
-    this.addChild(this._layout);
-    this._hpMeter = new Sprite(this._scene._hpMeterBmp);
-    this.addChild(this._hpMeter);
-    this._mpMeter = new Sprite(this._scene._mpMeterBmp);
-    this.addChild(this._mpMeter);
-    this._hpNumbers = [];
-    for (var i = 0; i < 5; i++) {
-        var spr = new Sprite(this._scene._hpNumberBmp);
-        spr.visible = false;
-        this.addChild(spr);
-        this._hpNumbers.push(spr);
-    }
-    this._hpMaxNumbers = [];
-    for (var j = 0; j < 5; j++) {
-        var spr2 = new Sprite(this._scene._hpNumberBmp);
-        spr2.visible = false;
-        this.addChild(spr2);
-        this._hpMaxNumbers.push(spr2);
-    }
-    this._mpNumbers = [];
-    for (var k = 0; k < 5; k++) {
-        var spr3 = new Sprite(this._scene._mpNumberBmp);
-        spr3.visible = false;
-        this.addChild(spr3);
-        this._mpNumbers.push(spr3);
-    }
-    this._mpMaxNumbers = [];
-    for (var m = 0; m < 5; m++) {
-        var spr4 = new Sprite(this._scene._mpNumberBmp);
-        spr4.visible = false;
-        this.addChild(spr4);
-        this._mpMaxNumbers.push(spr4);
-    }
-    this._lvNumbers = [];
-    for (var n = 0; n < 3; n++) {
-        var spr5 = new Sprite(this._scene._lvNumberBmp);
-        spr5.visible = false;
-        this.addChild(spr5);
-        this._lvNumbers.push(spr5);
-    }
-    this._nameBitmap = new Bitmap(120, 32);
-    this._nameSprite = new Sprite(this._nameBitmap);
-    this.addChild(this._nameSprite);
+    this.createLayoutStatus();
+    this.createLVNumber();
+    this.createName();
     this._equipIcons = [];
-    for (var e = 0; e < 5; e++) {
-        var icon = new Sprite(this._scene._iconSet);
-        icon.visible = false;
-        this.addChild(icon);
-        this._equipIcons.push(icon);
-    }
-    this._stateIcon = null;
-    if (showStates) {
-        this._stateIcon = new Sprite(this._scene._iconSet);
-        this._stateIcon.visible = false;
-        this.addChild(this._stateIcon);
-    }
+    this.refreshEquipIcons();
 };
-MCharStatusParty.prototype.refresh = function() {
-    if (!this._actor || !this._scene._hpMeterBmp.isReady()) return;
-    var hpW = Math.floor(this._scene._hpMeterBmp.width * this._actor.hp / this._actor.mhp);
-    var mpW = Math.floor(this._scene._mpMeterBmp.width * this._actor.mp / this._actor.mmp);
-    this._hpMeter.setFrame(0, 0, hpW, this._scene._hpMeterBmp.height);
-    this._mpMeter.setFrame(0, 0, mpW, this._scene._mpMeterBmp.height);
-    this.refreshNumber(this._mpNumbers, this._actor.mp, this._scene._mpNumberBmp);
-    this.refreshNumber(this._mpMaxNumbers, this._actor.mmp, this._scene._mpNumberBmp);
-    this.refreshNumber(this._lvNumbers, this._actor.level, this._scene._lvNumberBmp);
-    this._nameBitmap.clear();
-    this._nameBitmap.fontSize = nameSize;
-    this._nameBitmap.drawText(this._actor.name(), 0, 0, 120, 32, 'center');
-    var equips = this._actor.equips();
-    for (var i = 0; i < this._equipIcons.length; i++) {
-        var item = i < equips.length ? equips[i] : null;
-        var icon = this._equipIcons[i];
-        if (item) {
-            icon.visible = true;
-            var sx = (item.iconIndex % 16) * 32;
-            var sy = Math.floor(item.iconIndex / 16) * 32;
-            icon.setFrame(sx, sy, 32, 32);
-            icon.x = equipX + i * equipSpace;
-            icon.y = equipY;
-        } else {
-            icon.visible = false;
-        }
-    }
-    if (this._stateIcon) {
-        var icons = this._actor.allIcons();
-        if (icons.length > 0) {
-            this._stateIcon.visible = true;
-            var iidx = icons[0];
-            var sx = (iidx % 16) * 32;
-            var sy = Math.floor(iidx / 16) * 32;
-            this._stateIcon.setFrame(sx, sy, 32, 32);
-            this._stateIcon.x = nameX + 130;
-            this._stateIcon.y = nameY;
-        } else {
-            this._stateIcon.visible = false;
-        }
-    }
+
+MCharStatusParty.prototype.createLayoutStatus = function() {
+    this._layout = new Sprite(this._scene._layoutStatusBmp);
+    this._layout.x = this.posX() - 70 + getMOGStatusParam('layoutStatusX', 0);
+    this._layout.y = Graphics.boxHeight - 280 + getMOGStatusParam('layoutStatusY', 0);
+    this.addChild(this._layout);
 };
-MCharStatusParty.prototype.refreshNumber = function(sprites, value, bitmap) {
-    var maxDigits = sprites.length;
-    var str = Math.min(value, Math.pow(10, maxDigits) - 1).toString();
-    var digitW = bitmap.width / 10;
-    for (var i = 0; i < maxDigits; i++) {
-        if (i < str.length) {
-            var n = parseInt(str[i]);
-            sprites[i].setFrame(n * digitW, 0, digitW, bitmap.height);
+
+MCharStatusParty.prototype.createLVNumber = function() {
+    this._lvNumbers = [];
+    this._NumberData = [
+        this._scene._lvNumberBmp.width / 10,
+        this._scene._lvNumberBmp.height
+    ];
+    var x = this._layout.x + getMOGStatusParam('LVNumberX', 95);
+    var y = this._layout.y + getMOGStatusParam('LVNumberY', 33);
+    for (var i = 0; i < 3; i++) {
+        var spr = new Sprite(this._scene._lvNumberBmp);
+        spr.visible = false;
+        spr.opacity = 255;
+        spr.x = x;
+        spr.y = y;
+        this.addChild(spr);
+        this._lvNumbers.push(spr);
+    }
+    this.refreshNumber(this._lvNumbers, this._actor.level, this._NumberData, x);
+};
+
+// Полная копия MOG.refresh_number
+MCharStatusParty.prototype.refreshNumber = function(sprites, value, img_data, x) {
+    if (value > 99999) value = 99999;
+    var numbers = Math.abs(value).toString().split("");
+    for (var i = 0; i < sprites.length; i++) {
+        sprites[i].visible = false;
+        if (i < numbers.length) {
+            var n = Number(numbers[i]);
+            sprites[i].setFrame(n * img_data[0], 0, img_data[0], img_data[1]);
+            var nx = -(img_data[0] * i) + (img_data[0] * numbers.length);
+            sprites[i].x = x - nx;
             sprites[i].visible = true;
         } else {
-            sprites[i].visible = false;
+            sprites[i].setFrame(0, 0, img_data[0], img_data[1]);
+            var nx = -(img_data[0] * i) + (img_data[0] * (sprites.length + numbers.length));
+            sprites[i].x = x - nx;
         }
     }
 };
-MCharStatusParty.prototype.layout = function(posX, posY) {
-    this._layout.x = -127;
-    this._layout.y = -80;
-    this._hpMeter.x = hpMeterX;
-    this._hpMeter.y = hpMeterY;
-    this._mpMeter.x = mpMeterX;
-    this._mpMeter.y = mpMeterY;
 
-    if (this._scene._hpNumberBmp.width > 0) {
-        var digitW = this._scene._hpNumberBmp.width / 10;
-        var lenHP = this._actor.hp.toString().length;
-        var startX = hpNumX - lenHP * digitW;
-        for (var i = 0; i < this._hpNumbers.length; i++) {
-            this._hpNumbers[i].x = startX + i * digitW;
-            this._hpNumbers[i].y = hpNumY;
-        }
-    }
-    if (this._scene._mpNumberBmp.width > 0) {
-        var digitWmp = this._scene._mpNumberBmp.width / 10;
-        var lenMP = this._actor.mp.toString().length;
-        var startXMp = mpNumX - lenMP * digitWmp;
-        for (var k = 0; k < this._mpNumbers.length; k++) {
-            this._mpNumbers[k].x = startXMp + k * digitWmp;
-            this._mpNumbers[k].y = mpNumY;
-        }
-        var lenMaxMP = this._actor.mmp.toString().length;
-        var startXMaxMp = mpMaxX - lenMaxMP * digitWmp;
-        for (var m = 0; m < this._mpMaxNumbers.length; m++) {
-            this._mpMaxNumbers[m].x = startXMaxMp + m * digitWmp;
-            this._mpMaxNumbers[m].y = mpMaxY;
-        }
-    }
-    if (this._scene._lvNumberBmp.width > 0) {
-        var lvDigitW = this._scene._lvNumberBmp.width / 10;
-        var lenLV = this._actor.level.toString().length;
-        var startLv = lvX - lenLV * lvDigitW;
-        for (var n = 0; n < this._lvNumbers.length; n++) {
-            this._lvNumbers[n].x = startLv + n * lvDigitW;
-            this._lvNumbers[n].y = lvY;
-        }
+MCharStatusParty.prototype.createName = function() {
+    this._nameBitmap = new Bitmap(120, 32);
+    this._nameSprite = new Sprite(this._nameBitmap);
+    this._nameSprite.x = this._layout.x + getMOGStatusParam('NameX', 20);
+    this._nameSprite.y = this._layout.y + getMOGStatusParam('NameY', 0);
+    this._nameBitmap.fontSize = getMOGStatusParam('NameFontSize', 20);
+    this.addChild(this._nameSprite);
+    this.refreshName();
+};
+
+MCharStatusParty.prototype.refreshName = function() {
+    if (!this._nameBitmap) return;
+    this._nameBitmap.clear();
+    this._nameBitmap.fontSize = getMOGStatusParam('NameFontSize', 20);
+    this._nameBitmap.drawText(this._actor.name(), 0, 0, 120, 32, 'center');
+};
+
+// Компактная укладка иконок экипировки, как в MOG (без пропусков для пустых слотов)
+MCharStatusParty.prototype.refreshEquipIcons = function() {
+    if (!this._scene._iconSet || !this._scene._iconSet.isReady()) return;
+    if (!this._equipIcons) this._equipIcons = [];
+
+    var equips = this._actor.equips();
+    var items = [];
+    for (var i = 0; i < equips.length; i++) {
+        if (equips[i]) items.push(equips[i]);
     }
 
-    this._nameSprite.x = nameX;
-    this._nameSprite.y = nameY;
-    for (var e = 0; e < this._equipIcons.length; e++) {
-        if (this._equipIcons[e].visible) {
-            this._equipIcons[e].x = equipX + e * equipSpace;
-            this._equipIcons[e].y = equipY;
-        }
+    // Досоздаём нужное количество спрайтов иконок
+    while (this._equipIcons.length < items.length) {
+        var spr = new Sprite(this._scene._iconSet);
+        this.addChild(spr);
+        this._equipIcons.push(spr);
     }
-    if (this._stateIcon && this._stateIcon.visible) {
-        this._stateIcon.x = nameX + 130;
-        this._stateIcon.y = nameY;
+
+    // Скрываем лишние
+    for (var j = items.length; j < this._equipIcons.length; j++) {
+        this._equipIcons[j].visible = false;
+    }
+
+    var equipX   = getMOGStatusParam('EquipIconX', 20);
+    var equipY   = getMOGStatusParam('EquipIconY', 120);
+    var spacing  = getMOGStatusParam('EquipIconSpacing', 36);
+
+    for (var k = 0; k < items.length; k++) {
+        var item = items[k];
+        var icon = this._equipIcons[k];
+        var sx = (item.iconIndex % 16) * 32;
+        var sy = Math.floor(item.iconIndex / 16) * 32;
+        icon.setFrame(sx, sy, 32, 32);
+        icon.x = this._layout.x + equipX + (k * spacing);
+        icon.y = this._layout.y + equipY;
+        icon.visible = true;
     }
 };
+
+MCharStatusParty.prototype.refresh = function() {
+    if (!this._actor) return;
+    if (!this._scene._lvNumberBmp || !this._scene._lvNumberBmp.isReady()) return;
+
+    if (this._lvNumbers && this._NumberData) {
+        var lvX = this._layout.x + getMOGStatusParam('LVNumberX', 95);
+        this.refreshNumber(this._lvNumbers, this._actor.level, this._NumberData, lvX);
+    }
+    this.refreshName();
+    this.refreshEquipIcons();
+};
+
 MCharStatusParty.prototype.update = function() {
     Sprite.prototype.update.call(this);
+    if (!this._actor) return;
+
+    // Отложенное создание — ждём загрузки битмапов
+    if (!this._lvNumbers) {
+        if (this._scene._lvNumberBmp && this._scene._lvNumberBmp.isReady() &&
+            this._scene._layoutStatusBmp && this._scene._layoutStatusBmp.isReady()) {
+            this.createSprites();
+        } else {
+            return;
+        }
+    }
+
+    // Анимация как в MOG: x от 50 до 0, opacity от 0 до 255
     if (this._slideWait > 0) {
         this._slideWait--;
-    } else if (this._targetX != null) {
-        if (this.x < this._targetX) {
-            this.x += 2;
-            if (this.x > this._targetX) this.x = this._targetX;
+    } else {
+        if (this.x > 0) {
+            this.x -= 2;
+            if (this.x < 0) this.x = 0;
         }
         this.opacity += 10;
         if (this.opacity > 255) this.opacity = 255;
-        if (this.x >= this._targetX && this.opacity >= 255) {
-            this._targetX = null;
-        }
     }
-    if (this._actor && Graphics.frameCount % 5 === 0) {
+
+    if (Graphics.frameCount % 10 === 0) {
         this.refresh();
     }
 };
@@ -966,28 +944,18 @@ Scene_PartyCustom.prototype.refreshParty = function() {
     }
 
     battleMembers.forEach(function(actor, i) {
-        var statusSpr = new MCharStatusParty(actor, this);
-        this._statusSprites.push(statusSpr);
-        this.addChild(statusSpr);
-        var maxSlots = $gameParty.maxBattleMembers();
-        var space = Math.floor((Graphics.boxWidth - 32) / maxSlots);
-        var charX = (typeof Moghunter !== 'undefined' && Moghunter.scMenu_CharX != null) ? Moghunter.scMenu_CharX : 0;
-        var posX = 16 + (space / 2) + (space * i) + charX;
-        var posY = Graphics.boxHeight;
-        statusSpr.layout(posX, posY);
+    var statusSpr = new MCharStatusParty(actor, this, i, battleMembers.length);
+    this._statusSprites.push(statusSpr);
+    this.addChild(statusSpr);
+    statusSpr.y = 0;   // позиционирование делает сам MCharStatusParty
 
-        if (!this._animationsDone) {
-            statusSpr._targetX = posX + statusBaseX;
-            statusSpr.y = posY + statusBaseY;
-            statusSpr.x = statusSpr._targetX - 50;
-            statusSpr._slideWait = 5 + 5 * i;
-            statusSpr.opacity = 0;
-        } else {
-            statusSpr.x = posX + statusBaseX;
-            statusSpr.y = posY + statusBaseY;
-            statusSpr.opacity = 255;
-        }
-    }, this);
+    if (this._animationsDone) {
+        statusSpr.x = 0;
+        statusSpr.opacity = 255;
+        statusSpr._slideWait = 0;
+    }
+    // иначе x=50/opacity=0 — анимация запустится в update()
+}, this);
 
     this.updateClickableList();
 };
@@ -1114,8 +1082,16 @@ Scene_PartyCustom.prototype.updatePauseArrow = function(sprite) {
 };
 
 Scene_PartyCustom.prototype.isPointInStatus = function(statusSpr) {
-    var bounds = statusSpr.getBounds();
-    if (bounds.width === 0) return false;
+    // Считаем попадание по плашке LayoutStatus, а не по всему statusSpr.
+    // У MCharStatusParty нет собственного bitmap'а, поэтому getBounds()
+    // самого статуса «захватывает» точку (0,0) и любой клик в левой
+    // верхней четверти экрана ошибочно считается кликом по HUD —
+    // из-за этого ломался swap и открывалась экипировка при клике
+    // на лица резерва. У _layout bitmap есть, его границы корректны.
+    var layout = statusSpr._layout;
+    if (!layout || !layout.visible) return false;
+    var bounds = layout.getBounds();
+    if (bounds.width === 0 || bounds.height === 0) return false;
     return TouchInput.x >= bounds.x && TouchInput.x <= bounds.x + bounds.width &&
            TouchInput.y >= bounds.y && TouchInput.y <= bounds.y + bounds.height;
 };

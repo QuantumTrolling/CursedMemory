@@ -208,7 +208,6 @@ Game_Interpreter.prototype.setConsBattes = function(command, args) {
 
 var _mog_consBat_sprtBat_createEnemies = Spriteset_Battle.prototype.createEnemies;
 Spriteset_Battle.prototype.createEnemies = function() {
-    console.log("[ConsBatFix] createEnemies вызван. Индекс волны:", $gameSystem._consBat.index);
     _mog_consBat_sprtBat_createEnemies.call(this);
     if (!this._conBatField) {
         this.createConBatField();
@@ -231,7 +230,6 @@ Spriteset_Battle.prototype.createConBatField = function() {
 
 Spriteset_Battle.prototype.turnEnemiesForNewWave = function() {
     if (!this._enemySprites) return;
-    console.log("[ConsBatFix] === TURN ENEMIES FOR NEW WAVE ===");
     this._enemySprites.forEach(function(sprite) {
         if (!sprite || !sprite._enemy) return;
         if (sprite._consBatOrientationChanged) return;
@@ -244,13 +242,11 @@ Spriteset_Battle.prototype.turnEnemiesForNewWave = function() {
             sprite._mainSprite.scale.x = -Math.abs(sprite._mainSprite.scale.x);
         }
         sprite._consBatOrientationChanged = true;
-        console.log("[ConsBatFix] Enemy:", sprite._enemy.name(), "temporary scale.x =", sprite.scale.x);
     });
 };
 
 Spriteset_Battle.prototype.restoreEnemyOrientation = function() {
     if (!this._enemySprites) return;
-    console.log("[ConsBatFix] === RESTORE ENEMY ORIENTATION ===");
     this._enemySprites.forEach(function(sprite) {
         if (!sprite || !sprite._enemy) return;
         if (!sprite._consBatOrientationChanged) return;
@@ -261,7 +257,6 @@ Spriteset_Battle.prototype.restoreEnemyOrientation = function() {
             sprite._mainSprite.scale.x = sprite._consBatOriginalMainScaleX;
         }
         sprite._consBatOrientationChanged = false;
-        console.log("[ConsBatFix] Enemy:", sprite._enemy.name(), "restored scale.x =", sprite.scale.x);
     });
 };
 
@@ -275,7 +270,6 @@ Spriteset_Battle.prototype.update = function() {
 };
 
 Spriteset_Battle.prototype.prepareConBatSprites = function() {
-    console.log("[ConsBatFix] === PREPARE NEW WAVE ===");
     $gameSystem._consBat.prepareSprite = false;
     this.prepareComBatBefore();
     this.removeEnemiesConBat();
@@ -420,7 +414,6 @@ var _mog_conscBat_BatMngr_processVictory = BattleManager.processVictory;
 BattleManager.processVictory = function() {
     if (this.isConsBattle()) {
         $gameScreen.startFadeOut(Moghunter.consBat_FadeOutDuration);
-        console.log("[ConsBatFix] Fade Out started before wave preparation.");
         this.prepareConBat();
         return;
     }
@@ -512,7 +505,6 @@ BattleManager.endTurn = function() {
             scene._spriteset.restoreEnemyOrientation();
         }
         this._consBatTemporaryEnemyTurn = false;
-        console.log("[ConsBatFix] Temporary enemy orientation finished.");
     }
 };
 

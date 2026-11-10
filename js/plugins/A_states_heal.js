@@ -69,7 +69,6 @@ Imported.HealStateTriggers = true;
             rewardAmount: Number(params[6]) || 50,
             rewardStateId: Number(params[7]) || 0
           };
-          console.log("State " + obj.id + " loaded Ally Pre-Action params:", JSON.stringify(obj.allyPreActionParams));
         }
 
         if (mode === "heal") obj.customHealEffect += line + "\n";
@@ -202,9 +201,6 @@ Imported.HealStateTriggers = true;
     if (!user || !user.isActor() || !user.isAlive()) return;
 
     var targets = this.makeTargets();   // те же цели, что будут использованы навыком
-    console.log("=== processAllyPreActionAll START ===");
-    console.log("User:", user.name ? user.name() : "unnamed");
-    console.log("Targets:", targets.map(function(t) { return t.name(); }));
 
     var states = user.states();
     for (var i = 0; i < states.length; i++) {
@@ -212,13 +208,11 @@ Imported.HealStateTriggers = true;
       if (!state || !state.allyPreActionParams) continue;
 
       var p = state.allyPreActionParams;
-      console.log("State", state.id, "params:", JSON.stringify(p));
 
       var eligible = [];
       for (var j = 0; j < targets.length; j++) {
         var t = targets[j];
         if (!t || !t.isActor() || !t.isAlive() || t === user) {
-          console.log("Skip", t ? t.name() : "null", "- not valid ally");
           continue;
         }
         var resValue = t[p.condResource];
@@ -230,35 +224,28 @@ Imported.HealStateTriggers = true;
           case '>=': ok = resValue >= p.condValue; break;
           case '==': ok = resValue == p.condValue; break;
         }
-        console.log("  " + t.name(), p.condResource + "=" + resValue, p.condOperator, p.condValue, "->", ok);
         if (ok) eligible.push(t);
       }
 
       var totalCost = eligible.length * p.costPerTarget;
-      console.log("Eligible:", eligible.length, "Total cost:", totalCost, "User", p.costResource, "=", user[p.costResource]);
 
       if (totalCost > 0 && user[p.costResource] >= totalCost) {
         if (p.costResource === 'mp') user.gainMp(-totalCost);
         else if (p.costResource === 'tp') user.gainTp(-totalCost);
         else if (p.costResource === 'hp') user.gainHp(-totalCost);
-        console.log("Cost PAID:", -totalCost, p.costResource);
 
         for (var k = 0; k < eligible.length; k++) {
           var ally = eligible[k];
           if (p.rewardResource === 'mp') ally.gainMp(p.rewardAmount);
           else if (p.rewardResource === 'tp') ally.gainTp(p.rewardAmount);
           else if (p.rewardResource === 'hp') ally.gainHp(p.rewardAmount);
-          console.log("Reward: +" + p.rewardAmount, p.rewardResource, "to", ally.name());
           if (p.rewardStateId > 0) {
             ally.addState(p.rewardStateId);
-            console.log("State", p.rewardStateId, "added to", ally.name());
           }
         }
       } else {
-        console.log("Cost NOT paid (insufficient or none)");
       }
     }
-    console.log("=== processAllyPreActionAll END ===");
   };
 
   // Старые eval-методы

@@ -344,15 +344,33 @@ var Imported = Imported || {};
         return this.getSideviewBattler().sizes;
     };
 
-    // 5.3. frameSizes в спрайтах теперь используют getSideviewFrameSizes.
-    var _Sprite_Actor_frameSizes = Sprite_Actor.prototype.frameSizes;
+    // ==================================================================
+    // 5.3. frameSizes в спрайтах — нарезка с учётом готовности битмапа
+    // ==================================================================
+
+    // Возвращает безопасный размер кадра: если битмап ещё не загрузился
+    // (ширина 0) или меньше одного кадра нового размера — откатываемся
+    // на базовый размер, чтобы движок не нарезал старую картинку "новой"
+    // сеткой и не показывал её целиком.
+    function safeFrameSizes(battler, sprite, currentBitmap) {
+        var sizes = battler.getSideviewFrameSizes();
+        if (!sizes) return sizes;
+
+        var bmp = currentBitmap;
+        if (bmp && bmp.width > 0 && bmp.width < sizes[0]) {
+            return battler.getSideviewSizes();
+        }
+        return sizes;
+    }
+
     Sprite_Actor.prototype.frameSizes = function() {
-        return this._actor.getSideviewFrameSizes();
+        var bmp = (this._mainSprite && this._mainSprite.bitmap) || this.bitmap;
+        return safeFrameSizes(this._actor, this, bmp);
     };
 
-    var _Sprite_Enemy_frameSizes = Sprite_Enemy.prototype.frameSizes;
     Sprite_Enemy.prototype.frameSizes = function() {
-        return this._enemy.getSideviewFrameSizes();
+        var bmp = (this._mainSprite && this._mainSprite.bitmap) || this.bitmap;
+        return safeFrameSizes(this._enemy, this, bmp);
     };
 	
     // ==================================================================
@@ -375,22 +393,44 @@ var Imported = Imported || {};
             };
         }
 
-        // 7.3. Страховка: если Yanfly по какой-то причине пропустил смену,
-        // принудительно синхронизируем битмап (без сдвига позиционирования)
-        var _Sprite_Enemy_updateBitmap = Sprite_Enemy.prototype.updateBitmap;
-        Sprite_Enemy.prototype.updateBitmap = function() {
-            _Sprite_Enemy_updateBitmap.call(this);
+        // 7.3. Синхронизация битмапа + защита от флипа при смене спрайта
+var _Sprite_Enemy_updateBitmap = Sprite_Enemy.prototype.updateBitmap;
+Sprite_Enemy.prototype.updateBitmap = function() {
+    var prevSX  = this.scale.x;
+    var prevSY  = this.scale.y;
+    var prevMSX = this._mainSprite ? this._mainSprite.scale.x : 1;
+    var prevMSY = this._mainSprite ? this._mainSprite.scale.y : 1;
 
-            if (this._enemy && this._enemy.isSVEnemy() && this._mainSprite) {
-                var targetName = this._enemy.getSideviewFilename();
-                if (targetName) {
-                    var targetBitmap = ImageManager.loadSvActor(targetName);
-                    if (this._mainSprite.bitmap !== targetBitmap) {
-                        this._mainSprite.bitmap = targetBitmap;
-                    }
-                }
-            }
-        };
+    _Sprite_Enemy_updateBitmap.call(this);
+
+    if (this._enemy && this._enemy.isSVEnemy() && this._mainSprite) {
+        var name = this._enemy.getSideviewFilename();
+        if (name) {
+            this._mainSprite.bitmap = ImageManager.loadSvActor(name);
+            this._frameSizesFilename = name;
+        }
+    }
+
+    // Yanfly / движок могли сбросить scale на MV-дефолт (-1) —
+    // возвращаем то, что было до смены битмапа.
+    this.scale.x = prevSX;
+    this.scale.y = prevSY;
+    if (this._mainSprite) {
+        this._mainSprite.scale.x = prevMSX;
+        this._mainSprite.scale.y = prevMSY;
+    }
+};
+
+// 7.4. Страховка на каждом кадре: YED-спрайты не отражаем.
+var _Sprite_Enemy_updatePosition = Sprite_Enemy.prototype.updatePosition;
+Sprite_Enemy.prototype.updatePosition = function() {
+    _Sprite_Enemy_updatePosition.call(this);
+    if (this._enemy && this._enemy.isSideviewBattler && this._enemy.isSideviewBattler()) {
+        // Спрайты в файле уже смотрят в нужную сторону — флип не нужен.
+        // Если у вас какой-то враг должен быть отражён, верните здесь -1.
+        this.scale.x = 1;
+    }
+};
     }
 
 })();
