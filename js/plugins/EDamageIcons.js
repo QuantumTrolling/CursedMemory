@@ -2,8 +2,8 @@
 // Element Damage Icons
 // EDamageIcons.js
 //=============================================================================
-// v1.11 – Исправлено смещение иконки при наличии других состояний в попапе
-//         (иконка теперь привязана к размеру текста, а не к битмапу спрайта).
+// v1.12 – Исправлено смещение иконки, дублирование иконок на статусных попапах,
+//         а также ошибка сброса базовых координат (baseY).
 // Требуется: YEP_ElementCore и LGP_BetterDamagePopup.
 // Разместите этот плагин НИЖЕ LGP_BetterDamagePopup.
 //=============================================================================
@@ -11,10 +11,10 @@
 var Imported = Imported || {};
 Imported.EDamageIcons = true;
 var EDamageIcons = EDamageIcons || {};
-EDamageIcons.version = '1.11';
+EDamageIcons.version = '1.12';
 
 /*:
- * @plugindesc v1.5 Иконки элементов и состояний в попапах урона.
+ * @plugindesc v1.12 Иконки элементов и состояний в попапах урона.
  * @author YourName
  *
  * @param Icon Mapping
@@ -126,7 +126,7 @@ EDamageIcons.version = '1.11';
         };
     }
 
-    // startDamagePopup – без изменений
+    // startDamagePopup – ИСПРАВЛЕНО: очищаем itemElements для статусов, чтобы не было дублей
     Game_Battler.prototype.startDamagePopup = function() {
         var result = this.result();
         if (result.missed || result.evaded) {
@@ -139,6 +139,7 @@ EDamageIcons.version = '1.11';
             copyResult.addedBuffs = [];
             copyResult.addedDebuffs = [];
             copyResult.removedBuffs = [];
+            copyResult.itemElements = []; // ФИКС
             this._damagePopup.push(copyResult);
         }
         if (result.hpAffected) {
@@ -169,6 +170,7 @@ EDamageIcons.version = '1.11';
             copyResult.addedBuffs = [];
             copyResult.addedDebuffs = [];
             copyResult.removedBuffs = [];
+            copyResult.itemElements = []; // ФИКС
             if (this._pendingStateDamageIcon !== undefined && this._pendingStateDamageIcon !== null) {
                 copyResult._stateDamageIcon = this._pendingStateDamageIcon;
                 delete this._pendingStateDamageIcon;
@@ -186,6 +188,7 @@ EDamageIcons.version = '1.11';
             copyResult.addedBuffs = [];
             copyResult.addedDebuffs = [];
             copyResult.removedBuffs = [];
+            copyResult.itemElements = []; // ФИКС
             if (this._pendingStateDamageIcon !== undefined && this._pendingStateDamageIcon !== null) {
                 copyResult._stateDamageIcon = this._pendingStateDamageIcon;
                 delete this._pendingStateDamageIcon;
@@ -200,17 +203,8 @@ EDamageIcons.version = '1.11';
             copyResult.addedBuffs = result.addedBuffs;
             copyResult.addedDebuffs = result.addedDebuffs;
             copyResult.removedBuffs = result.removedBuffs;
+            copyResult.itemElements = []; // ГЛАВНЫЙ ФИКС - убираем иконки стихий у статусов
             this._damagePopup.push(copyResult);
-        }
-    };
-
-    // Сохраняем реальные размеры текста урона сразу после отрисовки числа
-    var _Sprite_Damage_drawNumber = Sprite_Damage.prototype.drawNumber;
-    Sprite_Damage.prototype.drawNumber = function() {
-        _Sprite_Damage_drawNumber.call(this);
-        if (this._number && this._number.bitmap) {
-            this._number._textWidth = this._number.bitmap.width;
-            this._number._textHeight = this._number.bitmap.height;
         }
     };
 
@@ -243,9 +237,9 @@ EDamageIcons.version = '1.11';
         var ph = Window_Base._iconHeight;
         var iconIndex = this._result._stateDamageIcon;
 
-        // Используем сохранённые размеры текста; если нет – fallback на bitmap
-        var tw = numberSprite._textWidth  || (numberSprite.bitmap ? numberSprite.bitmap.width  : 0);
-        var th = numberSprite._textHeight || (numberSprite.bitmap ? numberSprite.bitmap.height : 0);
+        // Берем точные размеры прямо из текущего битмапа текста
+        var tw = numberSprite.bitmap ? numberSprite.bitmap.width  : 0;
+        var th = numberSprite.bitmap ? numberSprite.bitmap.height : 0;
         var totalWidth = pw * iconScale;
         var startX, startY;
 
@@ -270,6 +264,12 @@ EDamageIcons.version = '1.11';
 
         container.x = startX;
         container.y = startY;
+
+        // ФИКС: Сохраняем координаты ПОСЛЕ их установки
+        container._baseX = startX;
+        container._baseY = startY;
+        container._baseAnchorX = numberSprite.anchor.x;
+        container._baseAnchorY = numberSprite.anchor.y;
 
         var iconSprite = new Sprite();
         iconSprite.bitmap = new Bitmap(pw, ph);
@@ -308,8 +308,8 @@ EDamageIcons.version = '1.11';
         var pw = Window_Base._iconWidth;
         var ph = Window_Base._iconHeight;
 
-        var tw = numberSprite._textWidth  || (numberSprite.bitmap ? numberSprite.bitmap.width  : 0);
-        var th = numberSprite._textHeight || (numberSprite.bitmap ? numberSprite.bitmap.height : 0);
+        var tw = numberSprite.bitmap ? numberSprite.bitmap.width  : 0;
+        var th = numberSprite.bitmap ? numberSprite.bitmap.height : 0;
         var totalIconsWidth = elements.length * pw * iconScale;
         var startX, startY;
 
@@ -335,6 +335,12 @@ EDamageIcons.version = '1.11';
         container.x = startX;
         container.y = startY;
 
+        // ФИКС: Сохраняем координаты ПОСЛЕ их установки
+        container._baseX = startX;
+        container._baseY = startY;
+        container._baseAnchorX = numberSprite.anchor.x;
+        container._baseAnchorY = numberSprite.anchor.y;
+
         for (var i = 0; i < elements.length; i++) {
             var iconIndex = iconMapping[elements[i]];
             var iconSprite = new Sprite();
@@ -347,6 +353,36 @@ EDamageIcons.version = '1.11';
             iconSprite.x = i * pw * iconScale;
             container.addChild(iconSprite);
         }
+    };
+
+    //=============================================================================
+    // Fix: Element Icons Anchor Compensation
+    //=============================================================================
+
+    var _EDI_Sprite_Damage_update = Sprite_Damage.prototype.update;
+
+    Sprite_Damage.prototype.update = function() {
+        _EDI_Sprite_Damage_update.call(this);
+        this._updateElementIconPosition();
+    };
+
+    Sprite_Damage.prototype._updateElementIconPosition = function() {
+        var numberSprite = this.getChild('number');
+        if (!numberSprite || !numberSprite._elementIconContainer) return;
+
+        var container = numberSprite._elementIconContainer;
+        if (container._baseY === undefined) return;
+
+        // Считаем разницу в anchor, которую мог применить LGP_BetterDamagePopup
+        var anchorDiffX = numberSprite.anchor.x - container._baseAnchorX;
+        var anchorDiffY = numberSprite.anchor.y - container._baseAnchorY;
+
+        var w = numberSprite.bitmap ? numberSprite.bitmap.width : 0;
+        var h = numberSprite.bitmap ? numberSprite.bitmap.height : 0;
+
+        // Компенсируем смещение картинки, чтобы иконка оставалась на месте
+        container.x = container._baseX - anchorDiffX * w;
+        container.y = container._baseY - anchorDiffY * h;
     };
 
 })();
