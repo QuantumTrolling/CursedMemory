@@ -45,6 +45,7 @@ Imported.GlossaryUXFix = true;
     'use strict';
 
     if (typeof Scene_Glossary === 'undefined') {
+		console.warn('GlossaryUXFix: Scene_Glossary не найден.');
         return;
     }
 
@@ -55,6 +56,8 @@ Imported.GlossaryUXFix = true;
     var CLOSE_SCALE        = Number(parameters['closeBtnScale'] || 1);
 
     var DEBUG = true;
+	function log() { if (DEBUG) console.log.apply(console, arguments); }
+    log('[UXFix v5.2] Старт диагностики...');
 
     //=========================================================================
     // Расширение прототипа GlossaryOverlay
