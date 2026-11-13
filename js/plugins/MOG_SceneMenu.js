@@ -128,6 +128,54 @@ Moghunter.scMenu_translateText = function(name) {
     return name;
 };
 
+// Конвертирует текстовые коды (\N[n], \V[n], \P[n] и т.д.) в значения.
+// Bitmap.drawText не умеет этого делать сам, а convertEscapeCharacters
+// из YEP_MessageCore / YKNR_MessageKeyWord требует НАСТОЯЩИЙ Window_Base
+// (обращается к this.setWordWrap, this.contents и т.д.).
+Moghunter._scMenu_escapeWindow = null;
+
+Moghunter.scMenu_convertActorName = function(text) {
+    if (!text || typeof Window_Base === 'undefined') return text;
+
+    // Лениво создаём настоящий Window_Base, чтобы работали оверрайды YEP/YKNR
+    if (!Moghunter._scMenu_escapeWindow) {
+        try {
+            var w = new Window_Base(0, 0, 240, 72);
+            w.opacity = 0;
+            w.backOpacity = 0;
+            w.contentsOpacity = 0;
+            Moghunter._scMenu_escapeWindow = w;
+        } catch (e) {
+            Moghunter._scMenu_escapeWindow = null;
+        }
+    }
+
+    if (Moghunter._scMenu_escapeWindow) {
+        try {
+            var result = Window_Base.prototype.convertEscapeCharacters.call(
+                Moghunter._scMenu_escapeWindow, text
+            );
+            if (typeof result === 'string') return result;
+        } catch (e) {
+            // Падаем в ручной fallback
+        }
+    }
+
+    // Fallback: базовые коды (на случай, если плагины кинули исключение)
+    return text
+        .replace(/[\x1b\\]N\[(\d+)\]/gi, function(_, id) {
+            var a = $gameActors.actor(Number(id));
+            return a ? a.name() : '';
+        })
+        .replace(/[\x1b\\]V\[(\d+)\]/gi, function(_, id) {
+            return String($gameVariables.value(Number(id)));
+        })
+        .replace(/[\x1b\\]P\[(\d+)\]/gi, function(_, n) {
+            var a = $gameParty.members()[Number(n) - 1];
+            return a ? a.name() : '';
+        });
+};
+
 //=============================================================================
 // ** ImageManager
 //=============================================================================
@@ -510,7 +558,7 @@ Scene_Menu.prototype.refreshActorName = function() {
     // *** ИСПРАВЛЕНИЕ: получаем актёра из боевого отряда ***
     var actor = $gameParty.battleMembers()[this._statusWindow._index];
     if (!actor) {return}
-    this._commandName.bitmap.drawText(actor.name(),0,0,100,32,"center")
+    this._commandName.bitmap.drawText(Moghunter.scMenu_convertActorName(actor.name()),0,0,100,32,"center")
     this._commandName.x = Moghunter.scMenu_ComNameX - 100;
     this._commandName.y = Moghunter.scMenu_ComNameY;
     this._commandName.opacity = 0;
@@ -1032,7 +1080,7 @@ MCharStatus.prototype.createName = function() {
     this._name.x = this._layout.x + Moghunter.scMenu_NameX;
     this._name.y = this._layout.y + Moghunter.scMenu_NameY;
     this._name.bitmap.fontSize = Moghunter.scMenu_NameFontSize;
-    this._name.bitmap.drawText(this._actor.name(),0,0,120,32,"center");
+    this._name.bitmap.drawText(Moghunter.scMenu_convertActorName(this._actor.name()),0,0,120,32,"center");
     this.addChild(this._name);
 };
 
@@ -1379,7 +1427,7 @@ Window_MenuStatusM.prototype.drawItemStatus = function(index) {
     this.drawText("Agi",x + 260,y + 32 * 2,64,"left")
     this.drawText("Luk",x + 260,y + 32 * 3,80)
     this.changeTextColor(this.normalColor());
-    this.drawText(actor.name(),x,y)
+    this.drawText(this.convertEscapeCharacters(actor.name()),x,y)
     this.drawText(actor.level,x,y + 32 * 1,80,"right")
     this.drawText(actor.mhp,x,y + 32 * 2,80,"right")
     this.drawText(actor.mmp,x,y + 32 * 3,80,"right")

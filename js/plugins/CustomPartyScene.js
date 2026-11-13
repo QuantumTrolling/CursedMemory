@@ -253,6 +253,51 @@ function CustomPartyScene_translateText(name) {
     return name;
 }
 
+// Конвертирует текстовые коды (\N[n], \V[n], \P[n] и т.д.) в значения.
+// Аналогично версии для MOG_SceneMenu — используем настоящий Window_Base,
+// потому что YEP/YKNR-оверрайды convertEscapeCharacters требуют его методов.
+var _customPartyEscapeWindow = null;
+
+function convertActorName(text) {
+    if (!text || typeof Window_Base === 'undefined') return text;
+
+    if (!_customPartyEscapeWindow) {
+        try {
+            var w = new Window_Base(0, 0, 240, 72);
+            w.opacity = 0;
+            w.backOpacity = 0;
+            w.contentsOpacity = 0;
+            _customPartyEscapeWindow = w;
+        } catch (e) {
+            _customPartyEscapeWindow = null;
+        }
+    }
+
+    if (_customPartyEscapeWindow) {
+        try {
+            var result = Window_Base.prototype.convertEscapeCharacters.call(
+                _customPartyEscapeWindow, text
+            );
+            if (typeof result === 'string') return result;
+        } catch (e) {
+            // Падаем в ручной fallback
+        }
+    }
+
+    return text
+        .replace(/[\x1b\\]N\[(\d+)\]/gi, function(_, id) {
+            var a = $gameActors.actor(Number(id));
+            return a ? a.name() : '';
+        })
+        .replace(/[\x1b\\]V\[(\d+)\]/gi, function(_, id) {
+            return String($gameVariables.value(Number(id)));
+        })
+        .replace(/[\x1b\\]P\[(\d+)\]/gi, function(_, n) {
+            var a = $gameParty.members()[Number(n) - 1];
+            return a ? a.name() : '';
+        });
+}
+
 var ARROW_WIDTH  = 22;
 var ARROW_HEIGHT = 20;
 
@@ -369,7 +414,7 @@ MCharStatusParty.prototype.refreshName = function() {
     if (!this._nameBitmap) return;
     this._nameBitmap.clear();
     this._nameBitmap.fontSize = getMOGStatusParam('NameFontSize', 20);
-    this._nameBitmap.drawText(this._actor.name(), 0, 0, 120, 32, 'center');
+    this._nameBitmap.drawText(convertActorName(this._actor.name()), 0, 0, 120, 32, 'center');
 };
 
 // Компактная укладка иконок экипировки, как в MOG (без пропусков для пустых слотов)
@@ -675,7 +720,7 @@ Scene_PartyCustom.prototype.updateHoverActorName = function() {
         var win = this._hoverNameWindow;
         win.contents.clear();
         if (hoveredActor) {
-            win.contents.drawText(hoveredActor.name(), 0, 0, win.contents.width, win.contents.height, 'center');
+            win.contents.drawText(win.convertEscapeCharacters(hoveredActor.name()), 0, 0, win.contents.width, win.contents.height, 'center');
             this._hoverNameTargetY = hoverNameOffsetY;
         } else {
             this._hoverNameTargetY = -100;
