@@ -988,8 +988,9 @@ Scene_PartyCustom.prototype.refreshParty = function() {
         }
     }
 
+    var maxSlots = $gameParty.maxBattleMembers();
     battleMembers.forEach(function(actor, i) {
-    var statusSpr = new MCharStatusParty(actor, this, i, battleMembers.length);
+    var statusSpr = new MCharStatusParty(actor, this, i, maxSlots);
     this._statusSprites.push(statusSpr);
     this.addChild(statusSpr);
     statusSpr.y = 0;   // позиционирование делает сам MCharStatusParty
