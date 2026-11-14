@@ -665,7 +665,13 @@ Window_EquipStatus.prototype.refresh = function() {
 
         var oldFontSize = this.contents.fontSize;
         this.contents.fontSize = 26;
-        var name = this._actor.name();
+
+        // --- ИСПРАВЛЕНИЕ ---
+        // Приводим имя к строке (на случай, если в БД оно не строка)
+        // и подставляем переменные \V[n], \N[n], \evalText<<...>> и т.п.
+        var name = String(this._actor.name());
+        name = this.convertEscapeCharacters(name);
+
         var nameWidth = this.textWidth(name);
         this.changeTextColor(this.hpColor(this._actor));
         this.drawText(name, nameX - nameWidth / 2, nameY, nameWidth, 'center');
