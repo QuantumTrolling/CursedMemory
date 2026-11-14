@@ -1482,3 +1482,93 @@ if (Imported.MOG_TimeSystem) {
         $gameSystem._refresh_window_time = false;
     };
 }
+
+//=============================================================================
+// ** Сообщение при попытке открыть «Отряд» с 1 персонажем в отряде
+//=============================================================================
+(function() {
+    'use strict';
+
+    // --- Окно-уведомление по центру экрана (аналог ChoiceBlockMessageWindow) ---
+    function PartyBlockMessageWindow() {
+        this.initialize.apply(this, arguments);
+    }
+
+    PartyBlockMessageWindow.prototype = Object.create(Window_Base.prototype);
+    PartyBlockMessageWindow.prototype.constructor = PartyBlockMessageWindow;
+
+    PartyBlockMessageWindow.prototype.initialize = function() {
+        Window_Base.prototype.initialize.call(this, 0, 0, 500, 120);
+        this.visible = false;
+        this._hideTimerId = null;
+    };
+
+    PartyBlockMessageWindow.prototype.showText = function(text) {
+        this.resetFontSettings();
+
+        var padding = this.standardPadding();
+        var textWidth = this.textWidth(text);
+        var w = Math.max(400, textWidth + padding * 2 + 20);
+        var h = this.fittingHeight(1) + padding * 2;
+
+        this.width  = w;
+        this.height = h;
+        this.x = Math.floor((Graphics.boxWidth  - w) / 2);
+        this.y = Math.floor((Graphics.boxHeight - h) / 2);
+
+        this.createContents();
+        this.contents.clear();
+        this.drawTextEx(text, 0, 0);
+
+        this.visible  = true;
+        this.openness = 255;
+
+        if (this._hideTimerId) {
+            clearTimeout(this._hideTimerId);
+        }
+        var self = this;
+        this._hideTimerId = setTimeout(function() {
+            self.visible = false;
+            self._hideTimerId = null;
+        }, 2000);
+    };
+
+    function showPartyBlockMessage(text) {
+        var scene = SceneManager._scene;
+        if (!scene) return;
+        if (!scene._partyBlockMessageWindow) {
+            scene._partyBlockMessageWindow = new PartyBlockMessageWindow();
+            scene.addChild(scene._partyBlockMessageWindow);
+        }
+        scene._partyBlockMessageWindow.showText(text);
+    }
+
+        // --- Перехват нажатия OK по команде «Отряд» (formation) ---
+    // commandSymbol(index) — стандартный метод Window_MenuCommand,
+    // возвращает символ команды ('item', 'skill', 'formation', 'save', 'gameEnd' и т.д.)
+    var _Window_MenuCommand_processOk = Window_MenuCommand.prototype.processOk;
+    Window_MenuCommand.prototype.processOk = function() {
+        var symbol = this.commandSymbol(this.index());
+        if (symbol === 'formation' &&
+            $gameParty && $gameParty.battleMembers().length <= 1) {
+            SoundManager.playBuzzer();
+            showPartyBlockMessage('В отряде недостаточно персонажей');
+            return;
+        }
+        _Window_MenuCommand_processOk.call(this);
+    };
+
+    // --- Корректная очистка таймера/окна при выходе из сцены ---
+    var _mog_scmenu_terminate_block = Scene_Menu.prototype.terminate;
+    Scene_Menu.prototype.terminate = function() {
+        if (this._partyBlockMessageWindow) {
+            if (this._partyBlockMessageWindow._hideTimerId) {
+                clearTimeout(this._partyBlockMessageWindow._hideTimerId);
+                this._partyBlockMessageWindow._hideTimerId = null;
+            }
+            this.removeChild(this._partyBlockMessageWindow);
+            this._partyBlockMessageWindow = null;
+        }
+        _mog_scmenu_terminate_block.call(this);
+    };
+})();
