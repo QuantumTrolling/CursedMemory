@@ -1543,17 +1543,49 @@ if (Imported.MOG_TimeSystem) {
         scene._partyBlockMessageWindow.showText(text);
     }
 
-        // --- Перехват нажатия OK по команде «Отряд» (formation) ---
-    // commandSymbol(index) — стандартный метод Window_MenuCommand,
-    // возвращает символ команды ('item', 'skill', 'formation', 'save', 'gameEnd' и т.д.)
+    // --- Есть ли в резерве персонажи, которых можно добавить в отряд ---
+    // Использует ту же логику, что и CustomPartyScene.allReserveIds():
+    //   резерв = $gameParty._actors \ $gameParty._battleMembers
+    function hasReserveActors() {
+        if (!$gameParty || !$gameActors) return false;
+
+        var battle = $gameParty._battleMembers;
+        if (!battle) {
+            // Fallback (без YEP_PartySystem) — через battleMembers()
+            var battleSet = {};
+            $gameParty.battleMembers().forEach(function(a) {
+                if (a) battleSet[a.actorId()] = true;
+            });
+            return $gameParty._actors.some(function(id) {
+                return !battleSet[id] && $gameActors.actor(id);
+            });
+        }
+
+        var inBattle = {};
+        for (var i = 0; i < battle.length; i++) {
+            if (battle[i] > 0) inBattle[battle[i]] = true;
+        }
+        for (var j = 0; j < $gameParty._actors.length; j++) {
+            var id = $gameParty._actors[j];
+            if (!inBattle[id] && $gameActors.actor(id)) return true;
+        }
+        return false;
+    }
+
+    // --- Перехват нажатия OK по команде «Отряд» (formation) ---
     var _Window_MenuCommand_processOk = Window_MenuCommand.prototype.processOk;
     Window_MenuCommand.prototype.processOk = function() {
         var symbol = this.commandSymbol(this.index());
-        if (symbol === 'formation' &&
-            $gameParty && $gameParty.battleMembers().length <= 1) {
-            SoundManager.playBuzzer();
-            showPartyBlockMessage('В отряде недостаточно персонажей');
-            return;
+        if (symbol === 'formation' && $gameParty) {
+            var battleCount = $gameParty.battleMembers().length;
+            // Блокируем ТОЛЬКО когда в отряде <= 1 персонажа И нет резервов,
+            // которых можно добавить/переставить. Если резерв есть — пускаем:
+            // пользователь зайдёт и вернёт кого-нибудь в отряд.
+            if (battleCount <= 1 && !hasReserveActors()) {
+                SoundManager.playBuzzer();
+                showPartyBlockMessage('В отряде недостаточно персонажей');
+                return;
+            }
         }
         _Window_MenuCommand_processOk.call(this);
     };
