@@ -1185,4 +1185,127 @@
         scene.addChild(scene._autoSaveNotice);
     };
 
+        //=============================================================================
+    // Возврат в главное меню: затемнение + уведомление об автосохранении
+    //=============================================================================
+    // При выходе в главное меню (через меню окончания игры или команду события
+    // "Возврат к заголовку") экран плавно затемняется, поверх показывается
+    // анимированное уведомление "\i[39] Автосохранение...", после чего
+    // происходит переход на сцену заголовка (Scene_Title) с плавным
+    // появлением (стандартный fade-in Scene_Title).
+    //=============================================================================
+
+    //--------------------------------------------------------------------------
+    // Sprite_ReturnToTitleTransition
+    // Чёрный оверлей + уведомление, после завершения вызывает goto(Scene_Title).
+    //--------------------------------------------------------------------------
+    function Sprite_ReturnToTitleTransition() {
+        this.initialize.apply(this, arguments);
+    }
+    Sprite_ReturnToTitleTransition.prototype = Object.create(Sprite.prototype);
+    Sprite_ReturnToTitleTransition.prototype.constructor = Sprite_ReturnToTitleTransition;
+
+    Sprite_ReturnToTitleTransition.prototype.initialize = function() {
+        Sprite.prototype.initialize.call(this);
+        this.bitmap = new Bitmap(Graphics.boxWidth, Graphics.boxHeight);
+        this.bitmap.fillAll('black');
+        this.opacity = 0;
+        this._elapsed = 0;
+        this._fadeInFrames  = 20;   // ~0.33 сек — затемнение экрана
+        this._noticeFrames  = 130;  // ~2.2 сек — показ уведомления
+        this._notice = null;
+        this._gotoDone = false;
+    };
+
+    Sprite_ReturnToTitleTransition.prototype.update = function() {
+        Sprite.prototype.update.call(this);
+        this._elapsed++;
+
+        if (this._elapsed <= this._fadeInFrames) {
+            // Фаза затемнения
+            this.opacity = Math.min(255, Math.floor(255 * this._elapsed / this._fadeInFrames));
+            if (this._elapsed === this._fadeInFrames) {
+                this._addNotice();
+            }
+        } else if (this._elapsed >= this._fadeInFrames + this._noticeFrames) {
+            // Уведомление отыграло — переходим на заголовок
+            if (!this._gotoDone) {
+                this._gotoDone = true;
+                SceneManager.goto(Scene_Title);
+            }
+        }
+    };
+
+    Sprite_ReturnToTitleTransition.prototype._addNotice = function() {
+        if (!this.parent) return;
+        this._notice = new Sprite_AutoSaveNotice();
+        this.parent.addChild(this._notice);
+    };
+
+        //--------------------------------------------------------------------------
+    // Автосохранение в слот 1 перед выходом в главное меню
+    //--------------------------------------------------------------------------
+    function saveBeforeReturnToTitle() {
+        var success = false;
+        try {
+            $gameSystem.onBeforeSave();
+            success = DataManager.saveGame(1);
+        } catch (e) {
+            console.error('AutoSave (return to title) failed:', e);
+            success = false;
+        }
+        if (success) {
+            SoundManager.playSave();
+            // Сбрасываем кэш слотов в открытой сцене сохранения, если она есть
+            var scene = SceneManager._scene;
+            if (scene && scene._saveCache) {
+                delete scene._saveCache[1];
+                if (scene._slotWindows && scene._slotWindows[0]) {
+                    scene._slotWindows[0]._needsFaceRefresh = false;
+                    scene._slotWindows[0].refresh();
+                }
+            }
+        }
+        return success;
+    }
+
+    function showReturnToTitleTransition(scene) {
+        if (!scene || typeof scene.addChild !== 'function') {
+            saveBeforeReturnToTitle();
+            SceneManager.goto(Scene_Title);
+            return;
+        }
+        if (scene._returnToTitleTransition) return;
+        saveBeforeReturnToTitle();
+        scene._returnToTitleTransition = new Sprite_ReturnToTitleTransition();
+        scene.addChild(scene._returnToTitleTransition);
+    }
+
+    //--------------------------------------------------------------------------
+    // Scene_GameEnd — команда "Возврат к заголовку"
+    //--------------------------------------------------------------------------
+    if (typeof Scene_GameEnd !== 'undefined') {
+        Scene_GameEnd.prototype.commandToTitle = function() {
+            if (this._commandWindow) this._commandWindow.deactivate();
+            showReturnToTitleTransition(this);
+        };
+    }
+
+    //--------------------------------------------------------------------------
+    // Game_Interpreter — команда события 354 "Возврат к заголовку"
+    //--------------------------------------------------------------------------
+    var _Game_Interpreter_command354 = Game_Interpreter.prototype.command354;
+    Game_Interpreter.prototype.command354 = function() {
+        var scene = SceneManager._scene;
+        if (scene && scene._returnToTitleTransition) {
+            return true;
+        }
+        if (scene && typeof scene.addChild === 'function') {
+            showReturnToTitleTransition(scene);
+            this.wait(180); // ~3 сек — гарантированно больше, чем 150 кадров перехода
+            return true;
+        }
+        return _Game_Interpreter_command354.call(this);
+    };
+
 })();
