@@ -344,9 +344,14 @@ Window_Glossary.prototype.drawItemSub = function(bitmap, listIndex, pageIndex) {
 
 const _drawTextEx = Window_Base.prototype.drawTextEx;
 Window_Glossary.prototype.drawTextEx = function (text, x, y) {
-    return _drawTextEx.call(this, text, x, y);
+    // явный сброс состояния колонок — независимо от порядка плагинов
+    this._multiCol  = false;
+    this._colCount  = 0;
+    this._colIndex  = 0;
+    this._colBaseX  = 0;
+    this._colWidth  = 0;
+    return _drawTextEx.call(this, this.convertGlossaryColumns(text), x, y);
 };
-
 //==============================================================
 // ВЕРХНИЕ ТАБЫ (отрисовка)
 //==============================================================
@@ -637,5 +642,107 @@ Window_Glossary.prototype.refreshArrows = function() {
 };
 
 Window_Glossary.prototype.drawPageNumber = function() {};
+
+// ============================================================
+// ПОДДЕРЖКА text_box_v2Addon: \col[N], разделитель '|', \n
+// ============================================================
+// Сохраняем оригинальный обработчик SceneGlossary (для режима без колонок)
+const _gloss_original_processNormalCharacter = Window_Glossary.prototype.processNormalCharacter;
+
+Window_Glossary.prototype.processNormalCharacter = function (textState) {
+    var c = textState.text[textState.index];
+    var w = this.textWidth(c);
+
+    // Режим колонок активен (text_box_v2Addon)
+    if (this._multiCol && this._colWidth > 0) {
+        // Разделитель колонок '|' обрабатывает сам Window_Base (text_box_v2Addon).
+        // Мы не должны его переносить — иначе прыжок на новую строку сбросит _colIndex.
+        if (c !== '|') {
+            var colRightEdge = this._colBaseX + (this._colIndex + 1) * this._colWidth;
+            if (textState.x + w > colRightEdge) {
+                // Принудительный перенос ВНУТРИ текущей колонки
+                textState.x = this._colBaseX + this._colIndex * this._colWidth;
+                textState.y += textState.height;
+                textState.height = this.calcTextHeight(textState, false);
+                // index++ НЕ делаем — символ должен отрисоваться на новой строке
+            }
+        }
+        // Передаём в Window_Base — там уже стоит патч text_box_v2Addon (обработка '|')
+        Window_Base.prototype.processNormalCharacter.apply(this, arguments);
+    } else {
+        // Режим без колонок — стандартное поведение SceneGlossary
+        // (перенос по общей ширине окна)
+        _gloss_original_processNormalCharacter.call(this, textState);
+    }
+};
+
+// ============================================================
+// text_box_v2Addon в глоссарии: \col[N] рисуем вертикально
+//   \col[N] A|B|C \col[0]   →   A
+//                              B
+//                              C
+// Действует только в окне описания глоссария.
+// ============================================================
+Window_Glossary.prototype.convertGlossaryColumns = function (text) {
+    if (!text) return text;
+    var ESC = '\x1b';
+	
+	// Преобразуем обычные \col в ESC-коды до обработки колонок
+	text = text.replace(/\\col\[/gi, ESC + 'col[');
+
+    function verticalize(_m, n, body) {
+        var count = parseInt(n) || 0;
+        if (count <= 1) return body;
+
+        // body — строки, разделённые \n; ячейки в строке — через |
+        var lines = body.split('\n');
+
+        // Готовим count столбцов
+        var columns = [];
+        for (var c = 0; c < count; c++) columns.push([]);
+
+        for (var i = 0; i < lines.length; i++) {
+            var cells = lines[i].split('|');
+            for (var c = 0; c < count; c++) {
+                var cell = (cells[c] !== undefined) ? cells[c].trim() : '';
+                columns[c].push(cell);
+            }
+        }
+
+        // Каждый столбец — «сверху вниз», столбцы через пустую строку
+        var parts = [];
+        for (var c = 0; c < count; c++) {
+            var colLines = columns[c].filter(function (s) { return s.length > 0; });
+            if (colLines.length > 0) parts.push(colLines.join('\n'));
+        }
+        return parts.join('\n\n');
+    }
+
+    // закрытые блоки \col[N] ... \col[0|1]
+    text = text.replace(
+        new RegExp(ESC + 'col\\[([2-9]|\\d{2,})\\]([\\s\\S]*?)' + ESC + 'col\\[(?:0|1)\\]', 'gi'),
+        verticalize
+    );
+    // незакрытые \col[N] ... до конца
+    text = text.replace(
+        new RegExp(ESC + 'col\\[([2-9]|\\d{2,})\\]([\\s\\S]*)$', 'gi'),
+        verticalize
+    );
+    // оставшиеся одиночные маркеры
+    text = text.replace(new RegExp(ESC + 'col\\[(?:0|1)\\]', 'gi'), '');
+    return text;
+};
+
+// Чтобы calcItemTextHeight считал высоту уже по «разложенному» тексту
+var _Window_Glossary_calcItemTextHeight = Window_Glossary.prototype.calcItemTextHeight;
+Window_Glossary.prototype.calcItemTextHeight = function (text) {
+    return _Window_Glossary_calcItemTextHeight.call(this, this.convertGlossaryColumns(text));
+};
+
+// Чтобы «не入手説明» (drawNoItemText) тоже конвертировалось
+var _Window_Glossary_drawItemText = Window_Glossary.prototype.drawItemText;
+Window_Glossary.prototype.drawItemText = function (text, y) {
+    _Window_Glossary_drawItemText.call(this, this.convertGlossaryColumns(text), y);
+};
 
 })();
