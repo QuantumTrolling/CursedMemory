@@ -1,12 +1,15 @@
 //=============================================================================
 // CustomSaveLayout.js
 //=============================================================================
-// v3.54 – добавлена кнопка закрытия (как ESC) в правом верхнем углу
+// v3.55 – добавлена команда плагина AutoSave (принудительное сохранение
+//          в слот автосейва + анимированное уведомление)
+// + кнопка закрытия (как ESC) в правом верхнем углу
 // + перевод текстов при активном языке "Russian" (SRD_TranslationEngine)
 //=============================================================================
 
 /*:
- * @plugindesc v3.54 Кастомное меню сохранения/загрузки + кнопка закрытия.
+ * @plugindesc v3.55 Кастомное меню сохранения/загрузки + кнопка закрытия
+ * + команда плагина AutoSave.
  * @author YourName
  *
  * @param Save Button Text
@@ -143,11 +146,11 @@
  *
  * @help
  * Разместите плагин ниже YEP_SaveCore, MOG_Weather_EX и MOG_SceneMenu.
- * При активном диалоге выбора иконка «Сохранить» затемнена, но доступна для наведения.
- * Нажатие и клик заблокированы.
+ * При активном диалоге выбора иконка «Сохранить» затемнена, но доступна
+ * для наведения. Нажатие и клик заблокированы.
  *
- * Кнопки действий (Save/Load/Overwrite) активируются только кликом мыши или касанием.
- * Клавиша Enter в сценах сохранения/загрузки не действует.
+ * Кнопки действий (Save/Load/Overwrite) активируются только кликом мыши
+ * или касанием. Клавиша Enter в сценах сохранения/загрузки не действует.
  * Стрелки вверх/вниз переключают выбранный слот (без подсветки).
  * Cancel (Esc) возвращает в предыдущее меню.
  * Правая кнопка мыши также возвращает в предыдущее меню.
@@ -164,6 +167,21 @@
  * При изменении размеров шрифтов может потребоваться вручную подобрать
  * размеры окон через соответствующие параметры.
  *
+ * ─────────────────────────────────────────────────────────────────────────
+ * КОМАНДА ПЛАГИНА: AutoSave
+ * ─────────────────────────────────────────────────────────────────────────
+ * Использование в событии RPG Maker MV:
+ *   ◆Команда плагина: AutoSave
+ *
+ * Принудительно сохраняет прогресс в слот №1 (Autosave) и показывает
+ * на экране анимированное уведомление:
+ *   [icon 39] Автосохранение...
+ *
+ * Уведомление не блокирует управление игроком и автоматически
+ * исчезает через ~2 секунды. Команда не выполняется, если в данный
+ * момент открыт диалог выбора (будет проигран звук "buzzer").
+ *
+ * ─────────────────────────────────────────────────────────────────────────
  * Перевод при активном языке "Russian" (совместимо с SRD_TranslationEngine):
  *   Saves      -> Сохранения
  *   Autosave   -> Автосохранение
@@ -253,9 +271,6 @@
     var CLOSE_SCALE        = Number(parameters['Close Button Scale'] || 1);
 
     // === Перевод текстов сцены ===
-    // Работает ТОЛЬКО при активном языке "Russian" (SRD_TranslationEngine).
-    // При любом другом языке (в т.ч. "English", "Chinese", либо если
-    // SRD_TranslationEngine не подключён) — возвращается оригинал.
     var SceneSave_Translations = {
         "Russian": {
             "Saves":      "Сохранения",
@@ -447,20 +462,15 @@
     Window_SaveSingleButton.prototype.update = function() {
         Window_Base.prototype.update.call(this);
         if (!this.visible) return;
-
-        // Если сцена показывает окно подтверждения, игнорируем любые касания
         var scene = SceneManager._scene;
         if (scene && scene._confirmWindow && scene._confirmWindow.active) {
             return;
         }
-
         var x = this.canvasToLocalX(TouchInput.x);
         var y = this.canvasToLocalY(TouchInput.y);
         this._hover = (x >= 0 && y >= 0 && x < this.width && y < this.height);
-
         this._anim += 0.05;
         this.refresh();
-
         if (TouchInput.isTriggered() && this._enabled && this._hover) {
             if (this._actionCallback && this._action) {
                 this._actionCallback(this._action, this._slotIndex);
@@ -480,7 +490,6 @@
 
     Window_SaveTitle.prototype.initialize = function() {
         Window_Base.prototype.initialize.call(this, 0, 0, 0, 0);
-        // ▼ Перевод заголовка применяется только когда язык = "Russian"
         this._text = SceneSave_translateText(TITLE_TEXT);
         var originalFontSize = this.contents.fontSize;
         if (TITLE_FONT_SIZE > 0) {
@@ -490,16 +499,10 @@
         var lineHeight = this.lineHeight();
         var pad = this.standardPadding();
         var tw, th;
-        if (TITLE_WIDTH > 0) {
-            tw = TITLE_WIDTH;
-        } else {
-            tw = textWidth + pad * 2;
-        }
-        if (TITLE_HEIGHT > 0) {
-            th = TITLE_HEIGHT;
-        } else {
-            th = lineHeight + pad * 2;
-        }
+        if (TITLE_WIDTH > 0) tw = TITLE_WIDTH;
+        else tw = textWidth + pad * 2;
+        if (TITLE_HEIGHT > 0) th = TITLE_HEIGHT;
+        else th = lineHeight + pad * 2;
         this.contents.fontSize = originalFontSize;
         this.width = tw;
         this.height = th;
@@ -559,8 +562,6 @@
         var faceAreaWidth = 210;
         var faceAreaX = this.contents.width - 10 - faceAreaWidth;
         var textWidth = faceAreaX - textX - 10;
-        // ▼ Перевод метки слота применяется только когда язык = "Russian"
-        //   "Autosave" -> "Автосохранение", "Save1" -> "Сохранение 1", "Save2" -> "Сохранение 2"
         var labelRaw = (id === 1) ? 'Autosave' : 'Save ' + (id - 1);
         var label = SceneSave_translateText(labelRaw);
         var labelY = 2;
@@ -660,7 +661,6 @@
 
     Scene_CustomSaveBase.prototype.onRightClick = function(event) {
         event.preventDefault();
-        // Если открыто окно подтверждения, отменяем его, а не выходим из сцены
         if (this._confirmWindow && this._confirmWindow.active) {
             this._confirmWindow.processCancel();
             return;
@@ -687,8 +687,6 @@
         this._closeButton.scale.y = CLOSE_SCALE;
         this._closeButton.opacity = 255;
         this._closeBtnHovered = false;
-        // Авто-позиция в правом верхнем углу будет выставлена в update(),
-        // т.к. на момент создания картинка ещё не загружена.
         this.addChild(this._closeButton);
     };
 
@@ -703,30 +701,23 @@
     Scene_CustomSaveBase.prototype.updateCloseButton = function() {
         var s = this._closeButton;
         if (!s || !s.bitmap) return;
-
-        // Пересчитываем позицию, пока картинка грузится и при смене разрешения
         if (s.bitmap.isReady()) {
             var w = s.bitmap.width * CLOSE_SCALE;
             var h = s.bitmap.height * CLOSE_SCALE;
             s.x = Graphics.boxWidth - w - CLOSE_MARGIN_RIGHT;
             s.y = CLOSE_MARGIN_TOP;
         }
-
-        // Подсветка при наведении
         var hovered = this.isCloseButtonTouched();
         if (hovered !== this._closeBtnHovered) {
             this._closeBtnHovered = hovered;
             s.opacity = hovered ? 200 : 255;
         }
-
-        // Клик = ESC
         if (TouchInput.isTriggered() && hovered) {
             this.onCloseButtonClick();
         }
     };
 
     Scene_CustomSaveBase.prototype.onCloseButtonClick = function() {
-        // Если открыто окно подтверждения — отменяем его
         if (this._confirmWindow && this._confirmWindow.active) {
             this._confirmWindow.processCancel();
             return;
@@ -844,7 +835,6 @@
     };
 
     Scene_CustomSaveBase.prototype.updateSelection = function() {
-        // Если окно подтверждения активно — не трогаем слоты, передаём Cancel ему
         if (this._confirmWindow && this._confirmWindow.active) {
             if (Input.isTriggered('cancel')) {
                 this._confirmWindow.processCancel();
@@ -899,9 +889,7 @@
     };
 
     Scene_CustomSaveBase.prototype.onButtonAction = function(action, slotIndex) {
-        // Если открыто окно подтверждения, не реагируем на кнопки
         if (this._confirmWindow && this._confirmWindow.active) return;
-
         this._selectedSlot = slotIndex;
         switch (action) {
             case 'save': this.onActionSave(); break;
@@ -942,15 +930,12 @@
 
     Scene_CustomSaveBase.prototype.onActionOverwrite = function() {
         if (isChoiceActive()) { SoundManager.playBuzzer(); return; }
-
-        // На всякий случай закрываем предыдущее окно подтверждения, если зависло
         if (this._confirmWindow) {
             this._confirmWindow.close();
             this._confirmWindow.deactivate();
             this.removeChild(this._confirmWindow);
             this._confirmWindow = null;
         }
-
         this._overwriteSlotId = this._selectedSlot + 1;
         this.showConfirmWindow(CONFIRM_OVERWRITE);
     };
@@ -982,7 +967,6 @@
             this._slotWindows[this._selectedSlot]._needsFaceRefresh = false;
             this._slotWindows[this._selectedSlot].refresh();
         }
-        // Активируем выбранный слот, чтобы сцена не осталась без активного окна
         if (this._slotWindows[this._selectedSlot]) {
             this._slotWindows[this._selectedSlot].activate();
         }
@@ -995,7 +979,6 @@
             this.removeChild(this._confirmWindow);
             this._confirmWindow = null;
         }
-        // Активируем выбранный слот
         if (this._slotWindows[this._selectedSlot]) {
             this._slotWindows[this._selectedSlot].activate();
         }
@@ -1046,5 +1029,160 @@
         };
         Window_SaveConfirm.prototype.itemTextAlign = function() { return 'center'; };
     }
+
+    //=============================================================================
+    // Plugin Command: AutoSave
+    //=============================================================================
+    // Принудительное сохранение в слот автосохранения (slot 1).
+    // Показывает анимированную надпись "\i[39] Автосохранение..."
+    //
+    // Использование в событии:
+    //   ◆Команда плагина: AutoSave
+    //=============================================================================
+
+    //--------------------------------------------------------------------------
+    // Sprite_AutoSaveNotice — анимированное уведомление об автосохранении.
+    // Воспроизводит вид "\i[39] Автосохранение..." (иконка 39 + текст
+    // + анимированные точки), плавно появляется и исчезает.
+    //--------------------------------------------------------------------------
+    function Sprite_AutoSaveNotice() {
+        this.initialize.apply(this, arguments);
+    }
+    Sprite_AutoSaveNotice.prototype = Object.create(Sprite.prototype);
+    Sprite_AutoSaveNotice.prototype.constructor = Sprite_AutoSaveNotice;
+
+    Sprite_AutoSaveNotice.prototype.initialize = function() {
+        Sprite.prototype.initialize.call(this);
+        this._elapsed = 0;
+        this._dotCount = 0;
+        this._fadeInFrames  = 20;
+        this._fadeOutFrames = 20;
+        this._totalFrames   = 120; // ~2 секунды при 60 fps
+        this.opacity = 0;
+        this._createBitmap();
+        this.x = 0;
+        this.y = 10;
+    };
+
+    Sprite_AutoSaveNotice.prototype._createBitmap = function() {
+        this.bitmap = new Bitmap(Graphics.boxWidth, 64);
+        this._redrawContent();
+    };
+
+    Sprite_AutoSaveNotice.prototype._redrawContent = function() {
+        var bmp = this.bitmap;
+        if (!bmp) return;
+        bmp.clear();
+        bmp.fontSize = 28;
+        bmp.textColor = '#ffffff';
+        bmp.outlineColor = 'rgba(0,0,0,0.85)';
+        bmp.outlineWidth = 4;
+
+        var dots = '';
+        for (var i = 0; i < this._dotCount; i++) dots += '.';
+        var fullText = 'Автосохранение' + dots;
+
+        var iconSize = (typeof Window_Base !== 'undefined' && Window_Base._iconWidth) || 32;
+        var iconIndex = 39;
+        var gap = 8;
+        var iconSet = ImageManager.loadSystem('IconSet');
+
+        var textW = bmp.measureTextWidth(fullText);
+        var totalW = iconSize + gap + textW;
+        var startX = Math.floor((bmp.width - totalW) / 2);
+        var iconY  = Math.floor((bmp.height - iconSize) / 2);
+        var textX  = startX + iconSize + gap;
+        var textY  = Math.floor((bmp.height - bmp.fontSize) / 2);
+
+        if (iconSet && iconSet.isReady()) {
+            var pw = iconSize;
+            var sx = (iconIndex % 16) * pw;
+            var sy = Math.floor(iconIndex / 16) * pw;
+            bmp.blt(iconSet, sx, sy, pw, pw, startX, iconY, iconSize, iconSize);
+        }
+        bmp.drawText(fullText, textX, textY, textW + 20, bmp.fontSize);
+    };
+
+    Sprite_AutoSaveNotice.prototype.update = function() {
+        Sprite.prototype.update.call(this);
+        this._elapsed++;
+
+        // Анимация точек: 0 → 1 → 2 → 3, каждые 15 кадров
+        var newDotCount = Math.floor(this._elapsed / 15) % 4;
+        if (newDotCount !== this._dotCount) {
+            this._dotCount = newDotCount;
+            this._redrawContent();
+        }
+
+        // Плавное появление / исчезновение
+        if (this._elapsed <= this._fadeInFrames) {
+            this.opacity = Math.floor(255 * this._elapsed / this._fadeInFrames);
+        } else if (this._elapsed >= this._totalFrames - this._fadeOutFrames) {
+            var p = this._elapsed - (this._totalFrames - this._fadeOutFrames);
+            this.opacity = Math.floor(255 * (1 - p / this._fadeOutFrames));
+        } else {
+            this.opacity = 255;
+        }
+
+        if (this._elapsed >= this._totalFrames) {
+            if (this.parent) this.parent.removeChild(this);
+        }
+    };
+
+    //--------------------------------------------------------------------------
+    // Game_Interpreter — обработка команды AutoSave
+    //--------------------------------------------------------------------------
+    var _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
+    Game_Interpreter.prototype.pluginCommand = function(command, args) {
+        _Game_Interpreter_pluginCommand.call(this, command, args);
+        if (command === 'AutoSave') {
+            this.commandForceAutoSave();
+        }
+    };
+
+    Game_Interpreter.prototype.commandForceAutoSave = function() {
+        if (isChoiceActive()) {
+            SoundManager.playBuzzer();
+            return true;
+        }
+
+        var success = false;
+        try {
+            $gameSystem.onBeforeSave();
+            success = DataManager.saveGame(1);
+        } catch (e) {
+            console.error('AutoSave failed:', e);
+            success = false;
+        }
+
+        if (success) {
+            SoundManager.playSave();
+            this.showAutoSaveNotice();
+            // Обновим открытую сцену сохранения, если таковая имеется
+            var scene = SceneManager._scene;
+            if (scene && scene._slotWindows && scene._saveCache) {
+                delete scene._saveCache[1];
+                if (scene._slotWindows[0]) {
+                    scene._slotWindows[0]._needsFaceRefresh = false;
+                    scene._slotWindows[0].refresh();
+                }
+            }
+        } else {
+            SoundManager.playBuzzer();
+        }
+        this.wait(120); // ждём ~2 секунды, пока уведомление проиграется
+        return true;
+    };
+
+    Game_Interpreter.prototype.showAutoSaveNotice = function() {
+        var scene = SceneManager._scene;
+        if (!scene || typeof scene.addChild !== 'function') return;
+        // Убираем предыдущее уведомление, если есть
+        if (scene._autoSaveNotice && scene._autoSaveNotice.parent) {
+            scene._autoSaveNotice.parent.removeChild(scene._autoSaveNotice);
+        }
+        scene._autoSaveNotice = new Sprite_AutoSaveNotice();
+        scene.addChild(scene._autoSaveNotice);
+    };
 
 })();
