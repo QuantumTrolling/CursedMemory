@@ -158,6 +158,35 @@
 
             for (let i = 0; i < states.length; i++) {
                 const note = states[i].note || "";
+                
+                // <STAT Bonus if with state N from Actors PARAM: X%>
+                // Пример: <ATK Bonus if with state 5 from Actors ATK: 50%>
+                // Если владелец состояния имеет state N, он получает бонус к STAT
+                // = X% от суммы PARAM всех живых акторов на поле боя (включая себя).
+                {
+                    const regex = /<(\w+)\s+BONUS\s+IF\s+WITH\s+STATE\s+(\d+)\s+FROM\s+ACTORS\s+(\w+)\s*:\s*(-?\d+\.?\d*)\s*%?>/gi;
+                    let m;
+                    while ((m = regex.exec(note)) !== null) {
+                        const target      = m[1].toUpperCase();
+                        const stateId     = Number(m[2]);
+                        const sourceParam = m[3].toUpperCase();
+                        const percent     = Number(m[4]) / 100;
+
+                        if (PARAM_MAP[target] !== paramId) continue;
+                        if (PARAM_MAP[sourceParam] === undefined) continue;
+                        if (!this.isStateAffected(stateId)) continue;
+                        if (!this.friendsUnit) continue;
+
+                        const members = safeMembers(this.friendsUnit());
+                        let sum = 0;
+                        for (let k = 0; k < members.length; k++) {
+                            const mm = members[k];
+                            if (!mm || typeof mm._hp !== 'number' || mm._hp <= 0) continue;
+                            sum += _Game_BattlerBase_param.call(mm, PARAM_MAP[sourceParam]);
+                        }
+                        bonusFlat += Math.floor(sum * percent);
+                    }
+                }
 
                 // <STAT Bonus from Actors PARAM with state ID: X%>
                 {
