@@ -177,8 +177,8 @@ var removeButtonTextWidth= Number(parameters['removeButtonTextWidth'] || 200);
 
 var partyYOffset         = Number(parameters['partyYOffset'] || 50);
 
-var arrowOffsetX         = Number(parameters['arrowOffsetX'] || 12);
-var arrowOffsetY         = Number(parameters['arrowOffsetY'] || 16);
+var arrowOffsetX         = Number(parameters['arrowOffsetX'] || -20);
+var arrowOffsetY         = Number(parameters['arrowOffsetY'] || -20);
 
 var statusBaseX   = Number(parameters['statusBaseX'] || 0);
 var statusBaseY   = Number(parameters['statusBaseY'] || -150);
@@ -898,8 +898,19 @@ Scene_PartyCustom.prototype.refreshFaces = function() {
 
     var maxPages = this.maxReservePages();
     if (maxPages > 1) {
-        this.createArrow(-1, 10, 90 + faceSize/2 - ARROW_HEIGHT/2, this._reservePage > 0);
-        this.createArrow(1, Graphics.boxWidth - ARROW_WIDTH - 10, 90 + faceSize/2 - ARROW_HEIGHT/2, this._reservePage < maxPages - 1);
+            this.createArrow(
+                -1,
+                10 - arrowOffsetX,
+                90 + faceSize/2 - ARROW_HEIGHT/2 + arrowOffsetY,
+                this._reservePage > 0
+            );
+
+            this.createArrow(
+                1,
+                Graphics.boxWidth - ARROW_WIDTH - 10 + arrowOffsetX,
+                90 + faceSize/2 - ARROW_HEIGHT/2 + arrowOffsetY,
+                this._reservePage < maxPages - 1
+            );
     }
 
     if (this._selectedActor && !actors.contains(this._selectedActor)) {
@@ -922,6 +933,7 @@ Scene_PartyCustom.prototype.createArrow = function(direction, x, y, visible) {
     sprite.opacity = 255;
     sprite.visible = visible;
     this.setupInteraction(sprite);
+    sprite.startBlink();
     this._faceContainer.addChild(sprite);
 };
 
