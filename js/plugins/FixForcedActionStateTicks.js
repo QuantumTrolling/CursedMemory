@@ -13,6 +13,7 @@
     BattleManager._faCurrentSubject = null;
     BattleManager._faCurrentWasForcedContext = false;
     BattleManager._faInForcedAction = false;
+    BattleManager._faSkipTickFor = null; // кому пропускаем тик
 
     function isBattler(obj) {
         return obj && obj._states && obj._stateTurns && obj._buffTurns;
@@ -30,8 +31,7 @@
     }
 
     //-------------------------------------------------------------------------
-    // 1. При постановке в очередь запоминаем, был ли вызов из принудительного
-    //    действия (wasForcedContext) — это и есть наш "Случай 2".
+    // 1. При постановке в очередь запоминаем контекст и оригинального субъекта
     //-------------------------------------------------------------------------
 
     if (typeof BattleManager.queueForceAction === 'function') {
@@ -39,14 +39,19 @@
 
         BattleManager.queueForceAction = function(subject, skillId, targetIndex) {
             if (isBattler(subject)) {
+                // Оригинальный субъект — тот, кто сейчас действует (a),
+                // либо явно переданный через override.
+                var original = this._faOriginalSubjectOverride || this._subject;
                 this._faPendingSubjects.push({
                     subject: subject,
-                    wasForcedContext: this._faInForcedAction
+                    wasForcedContext: this._faInForcedAction,
+                    originalSubject: isBattler(original) ? original : null
                 });
                 console.log(
                     '[FA TICKS] Queued:', battlerName(subject),
                     'Skill:', skillId,
-                    'FromForcedContext:', this._faInForcedAction
+                    'FromForcedContext:', this._faInForcedAction,
+                    'OriginalSubject:', battlerName(original)
                 );
             }
             return _FA_queueForceAction.apply(this, arguments);
@@ -62,6 +67,7 @@
     BattleManager.processForcedAction = function() {
         var forcedSubject = null;
         var wasForcedContext = false;
+        var originalSubject = null;
 
         if (isBattler(this._actionForcedBattler)) {
             forcedSubject = this._actionForcedBattler;
@@ -70,6 +76,7 @@
             });
             if (idx >= 0) {
                 wasForcedContext = this._faPendingSubjects[idx].wasForcedContext;
+                originalSubject = this._faPendingSubjects[idx].originalSubject;
                 this._faPendingSubjects.splice(idx, 1);
             }
         }
@@ -78,15 +85,22 @@
             var entry = this._faPendingSubjects.shift();
             forcedSubject = entry.subject;
             wasForcedContext = entry.wasForcedContext;
+            originalSubject = entry.originalSubject;
         }
 
         this._faCurrentSubject = forcedSubject;
         this._faCurrentWasForcedContext = wasForcedContext;
         this._faInForcedAction = isBattler(forcedSubject);
 
+        // ВАЖНО: для Case 1 пропускаем тик состояний/баффов оригинального
+        // субъекта, пока активно принудительное действие.
+        this._faSkipTickFor =
+            (!wasForcedContext && isBattler(originalSubject)) ? originalSubject : null;
+
         console.log(
             '[FA TICKS] Processing:', battlerName(forcedSubject),
-            'FromForcedContext:', wasForcedContext
+            'FromForcedContext:', wasForcedContext,
+            'SkipTickFor:', battlerName(this._faSkipTickFor)
         );
 
         _FA_processForcedAction.call(this);
@@ -94,11 +108,34 @@
         if (!this._faCurrentSubject && isBattler(this._subject)) {
             this._faCurrentSubject = this._subject;
             this._faCurrentWasForcedContext = false;
+            this._faSkipTickFor = null;
         }
     };
 
     //-------------------------------------------------------------------------
-    // 3. Непосредственное уменьшение длительностей (без изменений)
+    // 3. Хуки на тик состояний и баффов
+    //-------------------------------------------------------------------------
+
+    var _FA_updateStateTurns = Game_Battler.prototype.updateStateTurns;
+    Game_Battler.prototype.updateStateTurns = function() {
+        if (BattleManager._faInForcedAction && this === BattleManager._faSkipTickFor) {
+            console.log('[FA TICKS] Skipped state tick for original subject:', battlerName(this));
+            return;
+        }
+        _FA_updateStateTurns.call(this);
+    };
+
+    var _FA_updateBuffTurns = Game_Battler.prototype.updateBuffTurns;
+    Game_Battler.prototype.updateBuffTurns = function() {
+        if (BattleManager._faInForcedAction && this === BattleManager._faSkipTickFor) {
+            console.log('[FA TICKS] Skipped buff tick for original subject:', battlerName(this));
+            return;
+        }
+        _FA_updateBuffTurns.call(this);
+    };
+
+    //-------------------------------------------------------------------------
+    // 4. Ручной тик принудительного субъекта (Case 2)
     //-------------------------------------------------------------------------
 
     function tickForcedActionDurations(battler) {
@@ -143,7 +180,7 @@
     }
 
     //-------------------------------------------------------------------------
-    // 4. Тикаем ТОЛЬКО если действие было вызвано другим принудительным
+    // 5. Завершение действия
     //-------------------------------------------------------------------------
 
     var _FA_endAction = BattleManager.endAction;
@@ -159,11 +196,8 @@
 
         if (isForcedAction) {
             if (wasForcedContext) {
-                // Случай 2 — тикаем вручную
                 tickForcedActionDurations(forcedSubject);
             } else {
-                // Случай 1 — тик уже произошёл снаружи (YEP CTB / onTurnStart),
-                // чтобы не было двойного понижения — пропускаем
                 console.log(
                     '[FA TICKS] Skipped tick (normal-triggered forced action):',
                     battlerName(forcedSubject)
@@ -171,6 +205,7 @@
             }
 
             this._faInForcedAction = false;
+            this._faSkipTickFor = null;
             if (this._faCurrentSubject === forcedSubject) {
                 this._faCurrentSubject = null;
                 this._faCurrentWasForcedContext = false;
@@ -179,7 +214,7 @@
     };
 
     //-------------------------------------------------------------------------
-    // 5. Сброс при старте боя
+    // 6. Сброс при старте боя
     //-------------------------------------------------------------------------
 
     var _FA_setup = BattleManager.setup;
@@ -189,6 +224,8 @@
         this._faCurrentSubject = null;
         this._faCurrentWasForcedContext = false;
         this._faInForcedAction = false;
+        this._faSkipTickFor = null;
+        this._faOriginalSubjectOverride = null;
         _FA_setup.call(this, troopId, canEscape, canLose);
     };
 
