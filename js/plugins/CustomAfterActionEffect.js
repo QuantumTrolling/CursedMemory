@@ -109,16 +109,8 @@
                 // настоящего startAction все авто-тики будут пропускаться.
                 if (!this._faChainActive) {
                     this._faChainActive = true;
-                    console.log('[FA TICKS] Chain ACTIVE (opened by', battlerName(subject) + ')');
                 }
 
-                console.log(
-                    '[FA TICKS] Queued:', battlerName(subject),
-                    'Skill:', skillId,
-                    'FromForcedContext:', this._faInForcedAction,
-                    'OriginalSubject:', battlerName(original),
-                    'Pending:', this._faPendingSubjects.length
-                );
             }
             return _FA_queueForceAction.apply(this, arguments);
         };
@@ -158,12 +150,6 @@
         this._faCurrentWasForcedContext = wasForcedContext;
         this._faInForcedAction = isBattler(forcedSubject);
 
-        console.log(
-            '[FA TICKS] Processing:', battlerName(forcedSubject),
-            'FromForcedContext:', wasForcedContext,
-            'OriginalSubject:', battlerName(originalSubject),
-            'Pending left:', this._faPendingSubjects.length
-        );
 
         _FA_processForcedAction.call(this);
 
@@ -187,10 +173,6 @@
     Game_Battler.prototype.updateStateTurns = function() {
 
         if (BattleManager._faInForcedAction || BattleManager._faChainActive) {
-            console.log(
-                '[FA TICKS] updateStateTurns SKIPPED (forced/chain active):',
-                battlerName(this)
-            );
             return;
         }
 
@@ -199,17 +181,6 @@
         var after = faSnapshotStateTurns(this);
         var diffs = faDiffStateTurns(before, after);
 
-        if (diffs.length > 0) {
-            console.log(
-                '[FA TICKS] updateStateTurns DECREASED:', battlerName(this),
-                'Changes:', JSON.stringify(diffs)
-            );
-        } else {
-            console.log(
-                '[FA TICKS] updateStateTurns:', battlerName(this),
-                'No state duration changes'
-            );
-        }
     };
 
     var _FA_updateBuffTurns = Game_Battler.prototype.updateBuffTurns;
@@ -217,10 +188,6 @@
     Game_Battler.prototype.updateBuffTurns = function() {
 
         if (BattleManager._faInForcedAction || BattleManager._faChainActive) {
-            console.log(
-                '[FA TICKS] updateBuffTurns SKIPPED (forced/chain active):',
-                battlerName(this)
-            );
             return;
         }
 
@@ -229,101 +196,9 @@
         var after = faSnapshotBuffTurns(this);
         var diffs = faDiffBuffTurns(before, after);
 
-        if (diffs.length > 0) {
-            console.log(
-                '[FA TICKS] updateBuffTurns DECREASED:', battlerName(this),
-                'Changes:', JSON.stringify(diffs)
-            );
-        } else {
-            console.log(
-                '[FA TICKS] updateBuffTurns:', battlerName(this),
-                'No buff duration changes'
-            );
-        }
+
     };
 
-    //-------------------------------------------------------------------------
-    // 3b. Трассировка удаления состояний и диагностика onTurnStart/onTurnEnd
-    //-------------------------------------------------------------------------
-
-    var _FA_removeState_DEBUG = Game_Battler.prototype.removeState;
-
-    Game_Battler.prototype.removeState = function(stateId) {
-        var turns = this._stateTurns ? this._stateTurns[stateId] : undefined;
-
-        if (stateId !== 1 && typeof turns === 'number') {
-            console.log(
-                '[STATE REMOVE TRACE]',
-                'Battler:', battlerName(this),
-                'State ID:', stateId,
-                'State name:', $dataStates[stateId] ? $dataStates[stateId].name : 'Unknown',
-                'Turns before:', turns,
-                'Current subject:', battlerName(BattleManager._subject),
-                'Forced action:', BattleManager._faInForcedAction,
-                'Chain active:', BattleManager._faChainActive
-            );
-            console.trace('[STATE REMOVE CALL STACK]');
-        }
-
-        _FA_removeState_DEBUG.call(this, stateId);
-    };
-
-    var _FA_onTurnStart_DEBUG = Game_Battler.prototype.onTurnStart;
-
-    Game_Battler.prototype.onTurnStart = function() {
-        console.log(
-            '[FA TICKS] onTurnStart ENTER:', battlerName(this),
-            'Chain active:', BattleManager._faChainActive
-        );
-        _FA_onTurnStart_DEBUG.call(this);
-    };
-
-    var _FA_onTurnEnd_DEBUG = Game_Battler.prototype.onTurnEnd;
-
-    Game_Battler.prototype.onTurnEnd = function() {
-        console.log(
-            '[FA TICKS] onTurnEnd ENTER:', battlerName(this),
-            'Chain active:', BattleManager._faChainActive
-        );
-        _FA_onTurnEnd_DEBUG.call(this);
-    };
-
-    var _FA_removeStatesAuto = Game_Battler.prototype.removeStatesAuto;
-
-    Game_Battler.prototype.removeStatesAuto = function(timing) {
-        var before = this._states ? this._states.slice() : [];
-        _FA_removeStatesAuto.call(this, timing);
-        var after = this._states ? this._states.slice() : [];
-
-        var removed = [];
-        for (var i = 0; i < before.length; i++) {
-            if (after.indexOf(before[i]) === -1) removed.push(before[i]);
-        }
-
-        if (removed.length > 0) {
-            console.log(
-                '[FA TICKS] removeStatesAuto(timing=' + timing + ') on:',
-                battlerName(this),
-                'Removed state(s) (duration expired):', JSON.stringify(removed)
-            );
-        }
-    };
-
-    var _FA_removeBuffsAuto = Game_Battler.prototype.removeBuffsAuto;
-
-    Game_Battler.prototype.removeBuffsAuto = function() {
-        var before = faSnapshotBuffTurns(this);
-        _FA_removeBuffsAuto.call(this);
-        var after = faSnapshotBuffTurns(this);
-        var diffs = faDiffBuffTurns(before, after);
-
-        if (diffs.length > 0) {
-            console.log(
-                '[FA TICKS] removeBuffsAuto on:', battlerName(this),
-                'Removed/cleared buff(s) (duration expired):', JSON.stringify(diffs)
-            );
-        }
-    };
 
     //-------------------------------------------------------------------------
     // 4. Ручной тик принудительного субъекта (Case 2)
@@ -366,12 +241,7 @@
             });
         });
 
-        console.log(
-            '[FA TICKS] Ticked:', battlerName(battler),
-            'Before:', JSON.stringify(statesBefore),
-            'After:', JSON.stringify(statesAfter),
-            'Buffs:', JSON.stringify(battler._buffTurns)
-        );
+
     }
 
     //-------------------------------------------------------------------------
@@ -398,12 +268,7 @@
                 this._faCurrentWasForcedContext = false;
             }
 
-            console.log(
-                '[FA TICKS] endAction done. Forced subject:',
-                battlerName(forcedSubject),
-                'Pending left:', this._faPendingSubjects.length,
-                'Chain active:', this._faChainActive
-            );
+
         }
     };
 
@@ -418,7 +283,6 @@
         if (!this._faInForcedAction && this._faChainActive) {
             // Реальная (не форс) акция началась — цепочка завершена.
             this._faChainActive = false;
-            console.log('[FA TICKS] Chain DEACTIVATED (real startAction)');
         }
 
         _FA_startAction.call(this);
