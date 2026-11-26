@@ -1,4 +1,3 @@
-
 //=============================================================================
 // FixForcedActionStateTicks.js
 // RPG Maker MV
@@ -14,8 +13,12 @@
     BattleManager._faCurrentSubject = null;
     BattleManager._faCurrentWasForcedContext = false;
     BattleManager._faInForcedAction = false;
-    BattleManager._faSkipTickFor = null; // кому пропускаем тик
-    BattleManager._faSkipBuffTickFor = null;
+
+    // Цепочка взаимных форс-действий активна с момента первого queueForceAction
+    // до следующего РЕАЛЬНОГО (не форс) startAction. Пока активна — любой
+    // автоматический тик (onTurnEnd/onTurnStart от CTB и т.п.) пропускается;
+    // длительности уменьшаются только вручную в tickForcedActionDurations.
+    BattleManager._faChainActive = false;
 
     function isBattler(obj) {
         return obj && obj._states && obj._stateTurns && obj._buffTurns;
@@ -33,6 +36,60 @@
     }
 
     //-------------------------------------------------------------------------
+    // Логирующие helpers
+    //-------------------------------------------------------------------------
+
+    function faSnapshotStateTurns(battler) {
+        var snap = {};
+        if (!battler || !battler._states || !battler._stateTurns) return snap;
+        for (var i = 0; i < battler._states.length; i++) {
+            var id = battler._states[i];
+            snap[id] = battler._stateTurns[id];
+        }
+        return snap;
+    }
+
+    function faSnapshotBuffTurns(battler) {
+        if (!battler || !battler._buffTurns) return [];
+        return battler._buffTurns.slice();
+    }
+
+    function faDiffStateTurns(before, after) {
+        var result = [];
+        var id;
+        for (id in before) {
+            if (!Object.prototype.hasOwnProperty.call(before, id)) continue;
+            if (Object.prototype.hasOwnProperty.call(after, id)) {
+                if (before[id] !== after[id]) {
+                    result.push({ id: Number(id), from: before[id], to: after[id] });
+                }
+            } else {
+                result.push({ id: Number(id), from: before[id], to: 'REMOVED' });
+            }
+        }
+        for (id in after) {
+            if (!Object.prototype.hasOwnProperty.call(after, id)) continue;
+            if (!Object.prototype.hasOwnProperty.call(before, id)) {
+                result.push({ id: Number(id), from: 'NEW', to: after[id] });
+            }
+        }
+        return result;
+    }
+
+    function faDiffBuffTurns(before, after) {
+        var result = [];
+        var len = Math.max(before.length, after.length);
+        for (var i = 0; i < len; i++) {
+            var b = before[i];
+            var a = after[i];
+            if (b !== a) {
+                result.push({ stat: i, from: b, to: a });
+            }
+        }
+        return result;
+    }
+
+    //-------------------------------------------------------------------------
     // 1. При постановке в очередь запоминаем контекст и оригинального субъекта
     //-------------------------------------------------------------------------
 
@@ -41,19 +98,26 @@
 
         BattleManager.queueForceAction = function(subject, skillId, targetIndex) {
             if (isBattler(subject)) {
-                // Оригинальный субъект — тот, кто сейчас действует (a),
-                // либо явно переданный через override.
                 var original = this._faOriginalSubjectOverride || this._subject;
                 this._faPendingSubjects.push({
                     subject: subject,
                     wasForcedContext: this._faInForcedAction,
                     originalSubject: isBattler(original) ? original : null
                 });
+
+                // Открываем «цепочку»: с этого момента и до следующего
+                // настоящего startAction все авто-тики будут пропускаться.
+                if (!this._faChainActive) {
+                    this._faChainActive = true;
+                    console.log('[FA TICKS] Chain ACTIVE (opened by', battlerName(subject) + ')');
+                }
+
                 console.log(
                     '[FA TICKS] Queued:', battlerName(subject),
                     'Skill:', skillId,
                     'FromForcedContext:', this._faInForcedAction,
-                    'OriginalSubject:', battlerName(original)
+                    'OriginalSubject:', battlerName(original),
+                    'Pending:', this._faPendingSubjects.length
                 );
             }
             return _FA_queueForceAction.apply(this, arguments);
@@ -94,18 +158,11 @@
         this._faCurrentWasForcedContext = wasForcedContext;
         this._faInForcedAction = isBattler(forcedSubject);
 
-        // ВАЖНО: для Case 1 пропускаем тик состояний/баффов оригинального
-        // субъекта, пока активно принудительное действие.
-        this._faSkipStateTickFor =
-            (!wasForcedContext && isBattler(originalSubject)) ? originalSubject : null;
-
-        this._faSkipBuffTickFor =
-            (!wasForcedContext && isBattler(originalSubject)) ? originalSubject : null;
-
         console.log(
             '[FA TICKS] Processing:', battlerName(forcedSubject),
             'FromForcedContext:', wasForcedContext,
-            'SkipTickFor:', battlerName(this._faSkipTickFor)
+            'OriginalSubject:', battlerName(originalSubject),
+            'Pending left:', this._faPendingSubjects.length
         );
 
         _FA_processForcedAction.call(this);
@@ -113,84 +170,171 @@
         if (!this._faCurrentSubject && isBattler(this._subject)) {
             this._faCurrentSubject = this._subject;
             this._faCurrentWasForcedContext = false;
-            this._faSkipTickFor = null;
         }
     };
 
     //-----------------------------------------------------------------------------
     // 3. Контроль тиков состояний и баффов
     //-----------------------------------------------------------------------------
-    function removeBattlerFromList(list, battler) {
-        var index = list.indexOf(battler);
-
-        if (index >= 0) {
-            list.splice(index, 1);
-        }
-    }
-
-    function skipNextAutomaticTick(list, battler) {
-        if (list.indexOf(battler) >= 0) {
-            removeBattlerFromList(list, battler);
-            return true;
-        }
-
-        return false;
-    }
+    // Пока активен форс-контекст ИЛИ цепочка — пропускаем любые авто-тики.
+    // Это гарантирует ровно один ручной тик на каждое форс-действие и ноль
+    // авто-тиков «в хвосте» цепочки, независимо от того, сколько раз CTB
+    // вызовет onTurnEnd для каждого бойца.
+    //-----------------------------------------------------------------------------
 
     var _FA_updateStateTurns = Game_Battler.prototype.updateStateTurns;
 
     Game_Battler.prototype.updateStateTurns = function() {
 
-        if (skipNextAutomaticTick(
-            BattleManager._faSkipStateTicks, this
-        )) return;
-
-        if (BattleManager._faInForcedAction) return;
-
-        if (this === BattleManager._faSkipStateTickFor) {
-            BattleManager._faSkipStateTickFor = null;
+        if (BattleManager._faInForcedAction || BattleManager._faChainActive) {
+            console.log(
+                '[FA TICKS] updateStateTurns SKIPPED (forced/chain active):',
+                battlerName(this)
+            );
             return;
         }
 
+        var before = faSnapshotStateTurns(this);
         _FA_updateStateTurns.call(this);
+        var after = faSnapshotStateTurns(this);
+        var diffs = faDiffStateTurns(before, after);
+
+        if (diffs.length > 0) {
+            console.log(
+                '[FA TICKS] updateStateTurns DECREASED:', battlerName(this),
+                'Changes:', JSON.stringify(diffs)
+            );
+        } else {
+            console.log(
+                '[FA TICKS] updateStateTurns:', battlerName(this),
+                'No state duration changes'
+            );
+        }
     };
 
     var _FA_updateBuffTurns = Game_Battler.prototype.updateBuffTurns;
 
     Game_Battler.prototype.updateBuffTurns = function() {
 
-        if (skipNextAutomaticTick(
-            BattleManager._faSkipBuffTicks, this
-        )) return;
-
-        if (BattleManager._faInForcedAction) return;
-
-        if (this === BattleManager._faSkipBuffTickFor) {
-            BattleManager._faSkipBuffTickFor = null;
+        if (BattleManager._faInForcedAction || BattleManager._faChainActive) {
+            console.log(
+                '[FA TICKS] updateBuffTurns SKIPPED (forced/chain active):',
+                battlerName(this)
+            );
             return;
         }
 
+        var before = faSnapshotBuffTurns(this);
         _FA_updateBuffTurns.call(this);
+        var after = faSnapshotBuffTurns(this);
+        var diffs = faDiffBuffTurns(before, after);
+
+        if (diffs.length > 0) {
+            console.log(
+                '[FA TICKS] updateBuffTurns DECREASED:', battlerName(this),
+                'Changes:', JSON.stringify(diffs)
+            );
+        } else {
+            console.log(
+                '[FA TICKS] updateBuffTurns:', battlerName(this),
+                'No buff duration changes'
+            );
+        }
+    };
+
+    //-------------------------------------------------------------------------
+    // 3b. Трассировка удаления состояний и диагностика onTurnStart/onTurnEnd
+    //-------------------------------------------------------------------------
+
+    var _FA_removeState_DEBUG = Game_Battler.prototype.removeState;
+
+    Game_Battler.prototype.removeState = function(stateId) {
+        var turns = this._stateTurns ? this._stateTurns[stateId] : undefined;
+
+        if (stateId !== 1 && typeof turns === 'number') {
+            console.log(
+                '[STATE REMOVE TRACE]',
+                'Battler:', battlerName(this),
+                'State ID:', stateId,
+                'State name:', $dataStates[stateId] ? $dataStates[stateId].name : 'Unknown',
+                'Turns before:', turns,
+                'Current subject:', battlerName(BattleManager._subject),
+                'Forced action:', BattleManager._faInForcedAction,
+                'Chain active:', BattleManager._faChainActive
+            );
+            console.trace('[STATE REMOVE CALL STACK]');
+        }
+
+        _FA_removeState_DEBUG.call(this, stateId);
+    };
+
+    var _FA_onTurnStart_DEBUG = Game_Battler.prototype.onTurnStart;
+
+    Game_Battler.prototype.onTurnStart = function() {
+        console.log(
+            '[FA TICKS] onTurnStart ENTER:', battlerName(this),
+            'Chain active:', BattleManager._faChainActive
+        );
+        _FA_onTurnStart_DEBUG.call(this);
+    };
+
+    var _FA_onTurnEnd_DEBUG = Game_Battler.prototype.onTurnEnd;
+
+    Game_Battler.prototype.onTurnEnd = function() {
+        console.log(
+            '[FA TICKS] onTurnEnd ENTER:', battlerName(this),
+            'Chain active:', BattleManager._faChainActive
+        );
+        _FA_onTurnEnd_DEBUG.call(this);
+    };
+
+    var _FA_removeStatesAuto = Game_Battler.prototype.removeStatesAuto;
+
+    Game_Battler.prototype.removeStatesAuto = function(timing) {
+        var before = this._states ? this._states.slice() : [];
+        _FA_removeStatesAuto.call(this, timing);
+        var after = this._states ? this._states.slice() : [];
+
+        var removed = [];
+        for (var i = 0; i < before.length; i++) {
+            if (after.indexOf(before[i]) === -1) removed.push(before[i]);
+        }
+
+        if (removed.length > 0) {
+            console.log(
+                '[FA TICKS] removeStatesAuto(timing=' + timing + ') on:',
+                battlerName(this),
+                'Removed state(s) (duration expired):', JSON.stringify(removed)
+            );
+        }
+    };
+
+    var _FA_removeBuffsAuto = Game_Battler.prototype.removeBuffsAuto;
+
+    Game_Battler.prototype.removeBuffsAuto = function() {
+        var before = faSnapshotBuffTurns(this);
+        _FA_removeBuffsAuto.call(this);
+        var after = faSnapshotBuffTurns(this);
+        var diffs = faDiffBuffTurns(before, after);
+
+        if (diffs.length > 0) {
+            console.log(
+                '[FA TICKS] removeBuffsAuto on:', battlerName(this),
+                'Removed/cleared buff(s) (duration expired):', JSON.stringify(diffs)
+            );
+        }
     };
 
     //-------------------------------------------------------------------------
     // 4. Ручной тик принудительного субъекта (Case 2)
     //-------------------------------------------------------------------------
+    // Skip-лист больше не нужен: во время цепочки авто-тики и так
+    // пропускаются по флагу _faChainActive. Оставлен только фактический
+    // ручной тик — ровно один на каждое форс-действие.
+    //-------------------------------------------------------------------------
 
     function tickForcedActionDurations(battler) {
         if (!isBattler(battler)) return;
-
-        // Запоминаем исполнителя, чтобы пропустить повторный
-        // автоматический тик длительности.
-        if (BattleManager._faSkipStateTicks.indexOf(battler) < 0) {
-            BattleManager._faSkipStateTicks.push(battler);
-        }
-
-        if (BattleManager._faSkipBuffTicks.indexOf(battler) < 0) {
-            BattleManager._faSkipBuffTicks.push(battler);
-        }
-
-        // Далее идёт прежний код ручного уменьшения состояний и баффов.
 
         var statesBefore = [];
         var statesAfter = [];
@@ -237,46 +381,44 @@
     var _FA_endAction = BattleManager.endAction;
 
     BattleManager.endAction = function() {
-        var endingSubject = this._subject;
         var forcedSubject = this._faCurrentSubject;
-        var wasForcedContext = this._faCurrentWasForcedContext;
-
-        // Проверяем наличие отслеживаемого принудительного действия.
         var isForcedAction = isBattler(forcedSubject);
 
         _FA_endAction.call(this);
 
         if (isForcedAction) {
-
             forcedSubject._revengeCounterPending = false;
 
-            // Всегда уменьшаем длительность состояний исполнителя.
             tickForcedActionDurations(forcedSubject);
 
             this._faInForcedAction = false;
-            this._faSkipTickFor = null;
 
             if (this._faCurrentSubject === forcedSubject) {
                 this._faCurrentSubject = null;
                 this._faCurrentWasForcedContext = false;
             }
+
+            console.log(
+                '[FA TICKS] endAction done. Forced subject:',
+                battlerName(forcedSubject),
+                'Pending left:', this._faPendingSubjects.length,
+                'Chain active:', this._faChainActive
+            );
         }
     };
 
     //-----------------------------------------------------------------------------
-    // Сброс устаревших флагов перед следующим обычным действием
+    // Сброс флагов перед следующим НАСТОЯЩИМ (не форс) действием
     //-----------------------------------------------------------------------------
 
     var _FA_startAction = BattleManager.startAction;
 
     BattleManager.startAction = function() {
 
-        if (!this._faInForcedAction) {
-            this._faSkipStateTicks = [];
-            this._faSkipBuffTicks = [];
-
-            this._faSkipStateTickFor = null;
-            this._faSkipBuffTickFor = null;
+        if (!this._faInForcedAction && this._faChainActive) {
+            // Реальная (не форс) акция началась — цепочка завершена.
+            this._faChainActive = false;
+            console.log('[FA TICKS] Chain DEACTIVATED (real startAction)');
         }
 
         _FA_startAction.call(this);
@@ -293,9 +435,7 @@
         this._faCurrentSubject = null;
         this._faCurrentWasForcedContext = false;
         this._faInForcedAction = false;
-        // Не сбрасываем _faSkipStateTickFor и _faSkipBuffTickFor здесь.
-        // Они должны сохраниться до фактического обновления длительности
-        // прерванного бойца.
+        this._faChainActive = false;
         this._faOriginalSubjectOverride = null;
         _FA_setup.call(this, troopId, canEscape, canLose);
     };
@@ -339,7 +479,6 @@ DataManager.isDatabaseLoaded = function() {
 DataManager.processAAENotetags = function(group) {
     for (var n = 1; n < group.length; n++) {
         var obj = group[n];
-        // Ensure the eval container exists
         if (!obj.customEffectEval) {
             obj.customEffectEval = {};
         }
@@ -349,7 +488,6 @@ DataManager.processAAENotetags = function(group) {
         var evalMode = 'none';
         for (var i = 0; i < notedata.length; i++) {
             var line = notedata[i];
-            // Match <Custom After Action Effect> or <Custom Post Action Effect>
             if (line.match(/<CUSTOM[ ](AFTER ACTION|POST ACTION)[ ]EFFECT>/i)) {
                 evalMode = 'afterActionState';
             } else if (line.match(/<\/CUSTOM[ ](AFTER ACTION|POST ACTION)[ ]EFFECT>/i)) {
@@ -371,9 +509,8 @@ Game_Battler.prototype.customAfterActionEval = function(stateId, subject) {
     var code = state.customEffectEval['afterActionState'];
     if (!code || code === '') return;
 
-    // Set up variables as in other BSC custom effects
-    var a = subject;                   // attacker
-    var b = this;                      // target (the battler with this state)
+    var a = subject;
+    var b = this;
     var user = subject;
     var target = this;
     var origin = this.stateOrigin ? this.stateOrigin(stateId) : null;
@@ -402,29 +539,18 @@ Game_Battler.prototype.processAfterActionStateEffects = function(subject) {
 
 var AAE_BattleManager_endAction = BattleManager.endAction;
 BattleManager.endAction = function() {
-    // Remember subject before it is cleared by the original method.
     var subject = this._subject;
-
-    // Fallback list: if _allTargets is populated, keep old behaviour; but
-    // for the general case we'll iterate over ALL battlers below.
     var allTargets = this._allTargets ? this._allTargets.slice() : [];
 
-    // Call original (this cleans up action and moves battlers back, etc.)
     AAE_BattleManager_endAction.call(this);
 
     if (!subject) return;
 
-    // Build a set of battlers to process.
-    // The old code only used _allTargets, which is unreliable when an action
-    // sequence hits several targets one after another (e.g. via multiple
-    // "action effect: target" calls, especially under CTB).
     var targets = [];
     if (allTargets.length > 0) {
         targets = targets.concat(allTargets);
     }
 
-    // Add every actor and enemy in the battle to guarantee that any battler
-    // hit earlier in the action is also processed.
     var party = $gameParty && $gameParty.battleMembers ? $gameParty.battleMembers() : [];
     var troop = $gameTroop && $gameTroop.members ? $gameTroop.members() : [];
     for (var i = 0; i < party.length; i++) {
@@ -434,9 +560,6 @@ BattleManager.endAction = function() {
         if (targets.indexOf(troop[i]) === -1) targets.push(troop[i]);
     }
 
-    // Now run the custom after-action effects on every battler.
-    // Each state's own code is responsible for checking whether it should do
-    // anything (e.g. via its own per-battler flags).
     for (var i = 0; i < targets.length; i++) {
         var target = targets[i];
         if (target && target.processAfterActionStateEffects) {
