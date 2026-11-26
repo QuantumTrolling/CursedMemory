@@ -1227,35 +1227,139 @@ Sprite_Damage.prototype.drawDefaultState = function() {
     }
 };
 
-Sprite_Damage.prototype.drawDefaultCustomText = function() {
-    var result = this._result;
-    var sprite = new Sprite();
-    this.addChild(sprite);
 
-    var string = result.customText.string;
+    Sprite_Damage.prototype.drawDefaultCustomText = function() {
+        var result = this._result;
+        var sprite = new Sprite();
+        this.addChild(sprite);
 
-    var w = this.getTextWidth(string) + LGP.Param.BDPfontSizeBuffer;
-    var h = this._fontSize;
+        var string = result.customText.string;
 
-    sprite.bitmap = new Bitmap(w, this._fontSize);
-    sprite.bitmap.fontFace = this._fontFace;
-    sprite.bitmap.fontSize = this._fontSize;
-    sprite.anchor.x = 0.5;
-    sprite.anchor.y = 0.5;
-    if (Imported.LGP_CustomWindowText) sprite.bitmap.textShadow = LGP.Param.BDPtextShadow;
+        sprite.anchor.x = 0.5;
+        sprite.anchor.y = 0.5;
 
-    var bitmap = sprite.bitmap;  
+        var fontFace = this._fontFace;
+        var fontSize = this._fontSize;
+        var iconSize = Window_Base._iconWidth;
 
-    if (result.customText.format == 2) {   
-        bitmap.textColor = LGP.Param.BDPhpDmgC;   
-        bitmap.outlineColor = LGP.Param.BDPhpDmgOC;        
-    } else if (result.customText.format == 1) {
-        bitmap.textColor = LGP.Param.BDPhpRecC;   
-        bitmap.outlineColor = LGP.Param.BDPhpRecOC;    
-    }
+        // Подготавливаем Bitmap для измерения текста
+        var measureBitmap = new Bitmap(1, 1);
+        measureBitmap.fontFace = fontFace;
+        measureBitmap.fontSize = fontSize;
 
-    bitmap.drawText(string, 0, 0, w, h);
-};
+        // Разделяем текст на обычные фрагменты и иконки
+        var regex = /\\i\[(\d+)\]/gi;
+        var parts = [];
+        var lastIndex = 0;
+        var match;
+
+        while ((match = regex.exec(string)) !== null) {
+            if (match.index > lastIndex) {
+                var textPart = string.substring(lastIndex, match.index);
+                parts.push({
+                    type: 'text',
+                    value: textPart,
+                    width: measureBitmap.measureTextWidth(textPart)
+                });
+            }
+
+            parts.push({
+                type: 'icon',
+                value: Number(match[1]),
+                width: iconSize
+            });
+
+            lastIndex = regex.lastIndex;
+        }
+
+        // Оставшийся текст после последней иконки
+        if (lastIndex < string.length) {
+            var remainingText = string.substring(lastIndex);
+            parts.push({
+                type: 'text',
+                value: remainingText,
+                width: measureBitmap.measureTextWidth(remainingText)
+            });
+        }
+
+        // Если иконок нет, текст всё равно обрабатывается
+        if (parts.length === 0) {
+            parts.push({
+                type: 'text',
+                value: string,
+                width: measureBitmap.measureTextWidth(string)
+            });
+        }
+
+        // Вычисляем общую ширину
+        var totalWidth = 0;
+
+        for (var i = 0; i < parts.length; i++) {
+            totalWidth += parts[i].width;
+        }
+
+        var padding = LGP.Param.BDPfontSizeBuffer;
+        var width = Math.ceil(totalWidth + padding);
+        var height = Math.max(fontSize, iconSize);
+
+        sprite.bitmap = new Bitmap(Math.max(1, width), height);
+
+        var bitmap = sprite.bitmap;
+        bitmap.fontFace = fontFace;
+        bitmap.fontSize = fontSize;
+
+        if (Imported.LGP_CustomWindowText) {
+            bitmap.textShadow = LGP.Param.BDPtextShadow;
+        }
+
+        // Сохраняем оригинальные цвета попапов
+        if (result.customText.format == 2) {
+            bitmap.textColor = LGP.Param.BDPhpDmgC;
+            bitmap.outlineColor = LGP.Param.BDPhpDmgOC;
+        } else if (result.customText.format == 1) {
+            bitmap.textColor = LGP.Param.BDPhpRecC;
+            bitmap.outlineColor = LGP.Param.BDPhpRecOC;
+        }
+
+        // Рисуем текст и иконки слева направо
+        var drawContent = function() {
+            var x = 0;
+
+            for (var i = 0; i < parts.length; i++) {
+                var part = parts[i];
+
+                if (part.type === 'icon') {
+                    this.drawPopupIcon(
+                        bitmap,
+                        part.value,
+                        x,
+                        Math.floor((height - iconSize) / 2)
+                    );
+                } else {
+                    bitmap.drawText(
+                        part.value,
+                        x,
+                        0,
+                        Math.ceil(part.width) + 2,
+                        height,
+                        'left'
+                    );
+                }
+
+                x += part.width;
+            }
+        }.bind(this);
+
+        // Дожидаемся загрузки IconSet
+        var iconBitmap = ImageManager.loadSystem('IconSet');
+
+        if (iconBitmap.isReady()) {
+            drawContent();
+        } else {
+            iconBitmap.addLoadListener(drawContent);
+        }
+    };
+
 
 Sprite_Damage.prototype.drawPopupIcon = function(bitmap, iconIndex, x, y) {
     var iconBitmap = ImageManager.loadSystem('IconSet');
