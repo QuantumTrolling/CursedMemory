@@ -15,6 +15,7 @@
     BattleManager._faCurrentWasForcedContext = false;
     BattleManager._faInForcedAction = false;
     BattleManager._faSkipTickFor = null; // кому пропускаем тик
+    BattleManager._faSkipBuffTickFor = null;
 
     function isBattler(obj) {
         return obj && obj._states && obj._stateTurns && obj._buffTurns;
@@ -95,7 +96,10 @@
 
         // ВАЖНО: для Case 1 пропускаем тик состояний/баффов оригинального
         // субъекта, пока активно принудительное действие.
-        this._faSkipTickFor =
+        this._faSkipStateTickFor =
+            (!wasForcedContext && isBattler(originalSubject)) ? originalSubject : null;
+
+        this._faSkipBuffTickFor =
             (!wasForcedContext && isBattler(originalSubject)) ? originalSubject : null;
 
         console.log(
@@ -113,25 +117,59 @@
         }
     };
 
-    //-------------------------------------------------------------------------
-    // 3. Хуки на тик состояний и баффов
-    //-------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------
+    // 3. Контроль тиков состояний и баффов
+    //-----------------------------------------------------------------------------
+    function removeBattlerFromList(list, battler) {
+        var index = list.indexOf(battler);
+
+        if (index >= 0) {
+            list.splice(index, 1);
+        }
+    }
+
+    function skipNextAutomaticTick(list, battler) {
+        if (list.indexOf(battler) >= 0) {
+            removeBattlerFromList(list, battler);
+            return true;
+        }
+
+        return false;
+    }
 
     var _FA_updateStateTurns = Game_Battler.prototype.updateStateTurns;
+
     Game_Battler.prototype.updateStateTurns = function() {
-        if (BattleManager._faInForcedAction && this === BattleManager._faSkipTickFor) {
-            console.log('[FA TICKS] Skipped state tick for original subject:', battlerName(this));
+
+        if (skipNextAutomaticTick(
+            BattleManager._faSkipStateTicks, this
+        )) return;
+
+        if (BattleManager._faInForcedAction) return;
+
+        if (this === BattleManager._faSkipStateTickFor) {
+            BattleManager._faSkipStateTickFor = null;
             return;
         }
+
         _FA_updateStateTurns.call(this);
     };
 
     var _FA_updateBuffTurns = Game_Battler.prototype.updateBuffTurns;
+
     Game_Battler.prototype.updateBuffTurns = function() {
-        if (BattleManager._faInForcedAction && this === BattleManager._faSkipTickFor) {
-            console.log('[FA TICKS] Skipped buff tick for original subject:', battlerName(this));
+
+        if (skipNextAutomaticTick(
+            BattleManager._faSkipBuffTicks, this
+        )) return;
+
+        if (BattleManager._faInForcedAction) return;
+
+        if (this === BattleManager._faSkipBuffTickFor) {
+            BattleManager._faSkipBuffTickFor = null;
             return;
         }
+
         _FA_updateBuffTurns.call(this);
     };
 
@@ -141,6 +179,18 @@
 
     function tickForcedActionDurations(battler) {
         if (!isBattler(battler)) return;
+
+        // Запоминаем исполнителя, чтобы пропустить повторный
+        // автоматический тик длительности.
+        if (BattleManager._faSkipStateTicks.indexOf(battler) < 0) {
+            BattleManager._faSkipStateTicks.push(battler);
+        }
+
+        if (BattleManager._faSkipBuffTicks.indexOf(battler) < 0) {
+            BattleManager._faSkipBuffTicks.push(battler);
+        }
+
+        // Далее идёт прежний код ручного уменьшения состояний и баффов.
 
         var statesBefore = [];
         var statesAfter = [];
@@ -187,36 +237,49 @@
     var _FA_endAction = BattleManager.endAction;
 
     BattleManager.endAction = function() {
-    var endingSubject = this._subject;
-    var forcedSubject = this._faCurrentSubject;
-    var wasForcedContext = this._faCurrentWasForcedContext;
+        var endingSubject = this._subject;
+        var forcedSubject = this._faCurrentSubject;
+        var wasForcedContext = this._faCurrentWasForcedContext;
 
-    // Проверяем наличие отслеживаемого принудительного действия,
-    // не полагаясь на совпадение _subject и forcedSubject.
-    var isForcedAction = isBattler(forcedSubject);
+        // Проверяем наличие отслеживаемого принудительного действия.
+        var isForcedAction = isBattler(forcedSubject);
 
         _FA_endAction.call(this);
 
         if (isForcedAction) {
 
-        forcedSubject._revengeCounterPending = false;
+            forcedSubject._revengeCounterPending = false;
 
-            if (wasForcedContext) {
-                tickForcedActionDurations(forcedSubject);
-            } else {
-                console.log(
-                    '[FA TICKS] Skipped tick (normal-triggered forced action):',
-                    battlerName(forcedSubject)
-                );
-            }
+            // Всегда уменьшаем длительность состояний исполнителя.
+            tickForcedActionDurations(forcedSubject);
 
             this._faInForcedAction = false;
             this._faSkipTickFor = null;
+
             if (this._faCurrentSubject === forcedSubject) {
                 this._faCurrentSubject = null;
                 this._faCurrentWasForcedContext = false;
             }
         }
+    };
+
+    //-----------------------------------------------------------------------------
+    // Сброс устаревших флагов перед следующим обычным действием
+    //-----------------------------------------------------------------------------
+
+    var _FA_startAction = BattleManager.startAction;
+
+    BattleManager.startAction = function() {
+
+        if (!this._faInForcedAction) {
+            this._faSkipStateTicks = [];
+            this._faSkipBuffTicks = [];
+
+            this._faSkipStateTickFor = null;
+            this._faSkipBuffTickFor = null;
+        }
+
+        _FA_startAction.call(this);
     };
 
     //-------------------------------------------------------------------------
@@ -230,7 +293,9 @@
         this._faCurrentSubject = null;
         this._faCurrentWasForcedContext = false;
         this._faInForcedAction = false;
-        this._faSkipTickFor = null;
+        // Не сбрасываем _faSkipStateTickFor и _faSkipBuffTickFor здесь.
+        // Они должны сохраниться до фактического обновления длительности
+        // прерванного бойца.
         this._faOriginalSubjectOverride = null;
         _FA_setup.call(this, troopId, canEscape, canLose);
     };
