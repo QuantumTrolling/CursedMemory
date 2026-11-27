@@ -1830,7 +1830,7 @@ VWSprite = class VWSprite extends Sprite {
 (function () {
 
     //=============================================================================
-    // Общий кэш и инициализация (объединённая версия)
+    // Общий кэш и инициализация
     //=============================================================================
 
     const _GameSystem_initialize = Game_System.prototype.initialize;
@@ -1850,7 +1850,7 @@ VWSprite = class VWSprite extends Sprite {
     // Сохранение в кэш при уходе с карты (меню / кнопки)
     //=============================================================================
 
-    function saveCurrentAnimationsToCache(prefix = '') {
+    function saveCurrentAnimationsToCache() {
         const scene = SceneManager._scene;
         if (scene && scene._vwStorage) {
             const cache = VAnimRestoreCache();
@@ -1864,7 +1864,6 @@ VWSprite = class VWSprite extends Sprite {
                         y: vm.y,
                         isLoop: vm._loop
                     };
-                    console.log(`🔄 ${prefix}Saved animation: [${id}] ${vm.filename}`);
                 }
             }
         }
@@ -1873,14 +1872,14 @@ VWSprite = class VWSprite extends Sprite {
     // Перехват создания меню (на случай, если сцена меню создаётся не через callMenu)
     const _Scene_Menu_create = Scene_Menu.prototype.create;
     Scene_Menu.prototype.create = function () {
-        saveCurrentAnimationsToCache('[Menu create] ');
+        saveCurrentAnimationsToCache();
         _Scene_Menu_create.call(this);
     };
 
     // Перехват вызова меню с карты
     const _Scene_Map_callMenu = Scene_Map.prototype.callMenu;
     Scene_Map.prototype.callMenu = function () {
-        saveCurrentAnimationsToCache('[callMenu] ');
+        saveCurrentAnimationsToCache();
         _Scene_Map_callMenu.call(this);
     };
 
@@ -1890,17 +1889,16 @@ VWSprite = class VWSprite extends Sprite {
         Scene_Base.prototype.gButtonScript = function(script) {
             if (script.includes("SceneManager.push(Scene_Menu") ||
                 script.includes("SceneManager.goto(Scene_Menu")) {
-                saveCurrentAnimationsToCache('[GalvBtn] ');
+                saveCurrentAnimationsToCache();
             }
             _gButtonScript.call(this, script);
         };
     }
 
     //=============================================================================
-    // Улучшенный ReplaceVAnimSmooth с минимальной защитой от повторных вызовов
+    // ReplaceVAnimSmooth с защитой от повторных вызовов
     //=============================================================================
 
-    // Флаг блокировки, чтобы избежать наложения замен для одного ID
     if (!window._ReplaceVAnimLock) {
         window._ReplaceVAnimLock = {};
     }
@@ -1908,7 +1906,6 @@ VWSprite = class VWSprite extends Sprite {
     window.ReplaceVAnimSmooth = function (oldId, tempId, newName, x = 0, y = 0, isLoop = true) {
         // Защита от повторного вызова для того же oldId
         if (window._ReplaceVAnimLock[oldId]) {
-            console.warn(`[ReplaceVAnimSmooth] Замена для ${oldId} уже выполняется, повторный вызов проигнорирован.`);
             return;
         }
         window._ReplaceVAnimLock[oldId] = true;
@@ -1932,11 +1929,7 @@ VWSprite = class VWSprite extends Sprite {
             // 2. Пробуем получить временную VM
             const newVM = scene._getVM(tempId);
 
-            // Если VM ещё не создалась, ждём, но с выводом диагностики
             if (!newVM) {
-                if (frame % 60 === 0) {
-                    console.warn(`[ReplaceVAnimSmooth] Waiting for VM to exist: ${tempId} (frame ${frame})`);
-                }
                 if (frame < MAX_FRAMES) {
                     requestAnimationFrame(checkReady);
                 } else {
@@ -1955,8 +1948,6 @@ VWSprite = class VWSprite extends Sprite {
 
             // 4. Если загрузилась — выполняем замену
             if (newVM.isLoaded()) {
-                console.log(`[ReplaceVAnimSmooth] VM loaded after ${frame} frames`);
-
                 if (scene._getVM(oldId)) {
                     DeleteVAnim(oldId);
                 }
@@ -1979,21 +1970,16 @@ VWSprite = class VWSprite extends Sprite {
                     $gameMap._saveVW(oldId, newName, x, y, isLoop, 1);
                 }
 
-                console.log(`✅ Replaced animation: [${oldId}] -> ${newName}`);
                 delete window._ReplaceVAnimLock[oldId];
                 return;
             }
 
             // 5. Видео ещё загружается — продолжаем ожидание
-            if (frame % 60 === 0) {
-                console.log(`[ReplaceVAnimSmooth] Loading VM ${tempId}... (frame ${frame})`);
-            }
-
             if (frame < MAX_FRAMES) {
                 requestAnimationFrame(checkReady);
             } else {
                 console.error(`[ReplaceVAnimSmooth] Timeout waiting for VM to load: ${tempId}`);
-                // Можно принудительно удалить временную VM, чтобы не оставлять мусор
+                // Принудительно удаляем временную VM, чтобы не оставлять мусор
                 try { DeleteVAnim(tempId); } catch (e) {}
                 delete window._ReplaceVAnimLock[oldId];
             }
@@ -2020,7 +2006,7 @@ VWSprite = class VWSprite extends Sprite {
     };
 
     //=============================================================================
-    // Восстановление анимаций (объединённая логика из modificated и AnimFix)
+    // Восстановление анимаций
     //=============================================================================
 
     // 1. Восстановление при загрузке карты (из сохранения) — переопределение PKD
@@ -2030,7 +2016,6 @@ VWSprite = class VWSprite extends Sprite {
             const data = cache[id];
             if (data) {
                 ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
-                console.log(`♻️ [Fix] Re-applied from cache: [${id}] ${data.name}`);
             }
         }
     };
@@ -2044,7 +2029,6 @@ VWSprite = class VWSprite extends Sprite {
             const data = cache[id];
             if (!SceneManager._scene._getVM(id)) {
                 ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
-                console.log(`♻️ Restored after menu: [${id}] ${data.name}`);
             }
         }
     };
@@ -2059,7 +2043,6 @@ VWSprite = class VWSprite extends Sprite {
                 const data = cache[id];
                 if (!SceneManager._scene._getVM(id)) {
                     ShowVAnimOnSpriteset(data.id, data.name, data.x, data.y, data.isLoop);
-                    console.log(`🗂 Scene start restore: [${id}] ${data.name}`);
                 }
             }
         }

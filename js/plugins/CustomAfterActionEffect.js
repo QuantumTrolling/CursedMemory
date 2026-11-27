@@ -24,71 +24,6 @@
         return obj && obj._states && obj._stateTurns && obj._buffTurns;
     }
 
-    function battlerName(battler) {
-        if (!battler) return 'NULL';
-        if (battler.isActor && battler.isActor()) {
-            return 'Actor: ' + battler.name() + ' (ID ' + battler.actorId() + ')';
-        }
-        if (battler.isEnemy && battler.isEnemy()) {
-            return 'Enemy: ' + battler.name() + ' (Index ' + battler.index() + ')';
-        }
-        return 'Unknown battler';
-    }
-
-    //-------------------------------------------------------------------------
-    // Логирующие helpers
-    //-------------------------------------------------------------------------
-
-    function faSnapshotStateTurns(battler) {
-        var snap = {};
-        if (!battler || !battler._states || !battler._stateTurns) return snap;
-        for (var i = 0; i < battler._states.length; i++) {
-            var id = battler._states[i];
-            snap[id] = battler._stateTurns[id];
-        }
-        return snap;
-    }
-
-    function faSnapshotBuffTurns(battler) {
-        if (!battler || !battler._buffTurns) return [];
-        return battler._buffTurns.slice();
-    }
-
-    function faDiffStateTurns(before, after) {
-        var result = [];
-        var id;
-        for (id in before) {
-            if (!Object.prototype.hasOwnProperty.call(before, id)) continue;
-            if (Object.prototype.hasOwnProperty.call(after, id)) {
-                if (before[id] !== after[id]) {
-                    result.push({ id: Number(id), from: before[id], to: after[id] });
-                }
-            } else {
-                result.push({ id: Number(id), from: before[id], to: 'REMOVED' });
-            }
-        }
-        for (id in after) {
-            if (!Object.prototype.hasOwnProperty.call(after, id)) continue;
-            if (!Object.prototype.hasOwnProperty.call(before, id)) {
-                result.push({ id: Number(id), from: 'NEW', to: after[id] });
-            }
-        }
-        return result;
-    }
-
-    function faDiffBuffTurns(before, after) {
-        var result = [];
-        var len = Math.max(before.length, after.length);
-        for (var i = 0; i < len; i++) {
-            var b = before[i];
-            var a = after[i];
-            if (b !== a) {
-                result.push({ stat: i, from: b, to: a });
-            }
-        }
-        return result;
-    }
-
     //-------------------------------------------------------------------------
     // 1. При постановке в очередь запоминаем контекст и оригинального субъекта
     //-------------------------------------------------------------------------
@@ -105,12 +40,9 @@
                     originalSubject: isBattler(original) ? original : null
                 });
 
-                // Открываем «цепочку»: с этого момента и до следующего
-                // настоящего startAction все авто-тики будут пропускаться.
                 if (!this._faChainActive) {
                     this._faChainActive = true;
                 }
-
             }
             return _FA_queueForceAction.apply(this, arguments);
         };
@@ -150,7 +82,6 @@
         this._faCurrentWasForcedContext = wasForcedContext;
         this._faInForcedAction = isBattler(forcedSubject);
 
-
         _FA_processForcedAction.call(this);
 
         if (!this._faCurrentSubject && isBattler(this._subject)) {
@@ -171,34 +102,20 @@
     var _FA_updateStateTurns = Game_Battler.prototype.updateStateTurns;
 
     Game_Battler.prototype.updateStateTurns = function() {
-
         if (BattleManager._faInForcedAction || BattleManager._faChainActive) {
             return;
         }
-
-        var before = faSnapshotStateTurns(this);
         _FA_updateStateTurns.call(this);
-        var after = faSnapshotStateTurns(this);
-        var diffs = faDiffStateTurns(before, after);
-
     };
 
     var _FA_updateBuffTurns = Game_Battler.prototype.updateBuffTurns;
 
     Game_Battler.prototype.updateBuffTurns = function() {
-
         if (BattleManager._faInForcedAction || BattleManager._faChainActive) {
             return;
         }
-
-        var before = faSnapshotBuffTurns(this);
         _FA_updateBuffTurns.call(this);
-        var after = faSnapshotBuffTurns(this);
-        var diffs = faDiffBuffTurns(before, after);
-
-
     };
-
 
     //-------------------------------------------------------------------------
     // 4. Ручной тик принудительного субъекта (Case 2)
@@ -211,12 +128,8 @@
     function tickForcedActionDurations(battler) {
         if (!isBattler(battler)) return;
 
-        var statesBefore = [];
-        var statesAfter = [];
-
         battler._states.slice().forEach(function(stateId) {
             var turns = battler._stateTurns[stateId];
-            statesBefore.push({ id: stateId, turns: turns });
             if (typeof turns === 'number' && turns > 0) {
                 battler._stateTurns[stateId] = turns - 1;
             }
@@ -233,15 +146,6 @@
         if (typeof battler.removeBuffsAuto === 'function') {
             battler.removeBuffsAuto();
         }
-
-        battler._states.forEach(function(stateId) {
-            statesAfter.push({
-                id: stateId,
-                turns: battler._stateTurns[stateId]
-            });
-        });
-
-
     }
 
     //-------------------------------------------------------------------------
@@ -267,8 +171,6 @@
                 this._faCurrentSubject = null;
                 this._faCurrentWasForcedContext = false;
             }
-
-
         }
     };
 
@@ -279,12 +181,9 @@
     var _FA_startAction = BattleManager.startAction;
 
     BattleManager.startAction = function() {
-
         if (!this._faInForcedAction && this._faChainActive) {
-            // Реальная (не форс) акция началась — цепочка завершена.
             this._faChainActive = false;
         }
-
         _FA_startAction.call(this);
     };
 
@@ -371,7 +270,7 @@ Game_Battler.prototype.customAfterActionEval = function(stateId, subject) {
     var state = $dataStates[stateId];
     if (!state) return;
     var code = state.customEffectEval['afterActionState'];
-    if (!code || code === '') return;
+    if (!code) return;
 
     var a = subject;
     var b = this;
@@ -410,10 +309,7 @@ BattleManager.endAction = function() {
 
     if (!subject) return;
 
-    var targets = [];
-    if (allTargets.length > 0) {
-        targets = targets.concat(allTargets);
-    }
+    var targets = allTargets;
 
     var party = $gameParty && $gameParty.battleMembers ? $gameParty.battleMembers() : [];
     var troop = $gameTroop && $gameTroop.members ? $gameTroop.members() : [];
