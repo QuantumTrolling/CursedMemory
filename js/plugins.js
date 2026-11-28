@@ -147,5 +147,5 @@ var $plugins =
 {"name":"YED_SideviewBattler_Conditions","status":true,"description":"(v1.0.1) Addon for YED_SideviewBattler - State Condition Overrides (no sprite shift).","parameters":{}},
 {"name":"A_fix_icons_state_right_buffs_states_bugfix","status":true,"description":"Hides state icons in the target selection help window.","parameters":{}},
 {"name":"f5Disable","status":true,"description":"(v1.0) Отключает перезагрузку игры по клавише F5.","parameters":{}},
-{"name":"ForceBattleFade","status":true,"description":"Принудительное 5-секундное затемнение перед каждым боем.","parameters":{}}
+{"name":"ForceBattleFade","status":true,"description":"v7.1 Объединённый: запрет разворота спрайтов в бою + затемнение боя/волн MOG CTB.","parameters":{"Actor Scale X":"-1","Enemy Scale X":"1","Fade Frames":"60","Black Duration (ms)":"500","-дефолты)\r":"","-дефолт (-1 / 1 / 60 / 5000).\r":""}}
 ];
