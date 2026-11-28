@@ -492,6 +492,32 @@
                         bonusFlat += Math.floor(sourceValue * percent);
                     }
                 }
+
+                // <STAT Bonus per Actor SOURCE: ID, X% per STEP>
+                // Пример: <DEF Bonus per Actor MDF: 2, -1% per 10>
+                //   — за каждые 10 MDF актёра с id 2 даёт -1% к DEF.
+                {
+                    const regex = /<(\w+)\s+BONUS\s+PER\s+ACTOR\s+(\w+)\s*:\s*(\d+)\s*,\s*(-?\d+\.?\d*)\s*%\s+PER\s+(\d+)\s*>/gi;
+                    let m;
+                    while ((m = regex.exec(note)) !== null) {
+                        const target      = m[1].toUpperCase();
+                        const sourceParam = m[2].toUpperCase();
+                        const actorId     = Number(m[3]);
+                        const percent     = Number(m[4]) / 100;
+                        const step        = Number(m[5]);
+
+                        if (PARAM_MAP[target] !== paramId) continue;
+                        if (PARAM_MAP[sourceParam] === undefined) continue;
+                        if (step <= 0) continue;
+
+                        const actor = safeGetActor(actorId);
+                        if (!actor) continue;
+
+                        const sourceValue = _Game_BattlerBase_param.call(actor, PARAM_MAP[sourceParam]);
+                        const units = Math.floor(sourceValue / step);
+                        bonusPercent += units * percent;   // percent уже в долях
+                    }
+                }
             }
 
             return (
